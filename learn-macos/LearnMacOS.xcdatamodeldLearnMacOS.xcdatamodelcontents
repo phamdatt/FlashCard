@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22758" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="SubjectEntity" representedClassName="SubjectEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="icon" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <relationship name="topics" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="TopicEntity" inverseName="subject" inverseEntity="TopicEntity"/>
+    </entity>
+    <entity name="TopicEntity" representedClassName="TopicEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <attribute name="subjectName" optional="NO" attributeType="String"/>
+        <relationship name="flashcards" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="FlashcardEntity" inverseName="topic" inverseEntity="FlashcardEntity"/>
+        <relationship name="subject" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="SubjectEntity" inverseName="topics" inverseEntity="SubjectEntity"/>
+    </entity>
+    <entity name="FlashcardEntity" representedClassName="FlashcardEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="answer" optional="NO" attributeType="String"/>
+        <attribute name="correctAnswer" optional="YES" attributeType="String"/>
+        <attribute name="exerciseType" optional="NO" attributeType="String"/>
+        <attribute name="hint" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="options" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromData" customClassName="[String]"/>
+        <attribute name="question" optional="NO" attributeType="String"/>
+        <relationship name="topic" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TopicEntity" inverseName="flashcards" inverseEntity="TopicEntity"/>
+    </entity>
+</model>
