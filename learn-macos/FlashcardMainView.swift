@@ -11,28 +11,100 @@ import SwiftUI
 struct FlashcardMainView: View {
     @ObservedObject var viewModel: ContentViewModel
     let topic: Topic
-    @State private var practiceMode: Bool = false
+    
+    // Mode selection
+    enum ViewMode: String, CaseIterable {
+        case list = "Danh sách"
+        case practice = "Luyện tập"
+        case reading = "Bài đọc"
+    }
+    
+    @State private var selectedMode: ViewMode = .list
     @State private var shuffledFlashcards: [Flashcard] = []
     @State private var currentIndex: Int = 0
     @State private var score: Int = 0
     @State private var totalAnswered: Int = 0
+    @State private var selectedWordCount: Int = 20
+    @State private var showingWordCountPicker: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
+            // Header with Back button
+            HStack {
+                Button(action: {
+                    viewModel.selectedTopic = nil
+                    viewModel.selectedFlashcard = nil
+                }) {
+                    Label("Quay lại", systemImage: "chevron.left")
+                }
+                .buttonStyle(.plain)
+                
+                Spacer()
+                
+                Text(topic.name)
+                    .font(.headline)
+                
+                Spacer()
+                
+                // Placeholder for symmetry
+                Label("Quay lại", systemImage: "chevron.left")
+                    .opacity(0)
+            }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
+            
+            Divider()
+            
             // Mode Toggle and Stats
             HStack {
                 // Mode switch
-                Picker("Chế độ", selection: $practiceMode) {
-                    Text("Danh sách").tag(false)
-                    Text("Luyện tập").tag(true)
+                Picker("Chế độ", selection: $selectedMode) {
+                    ForEach(ViewMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 200)
+                .frame(width: 400)
+                
+                // Word count selector (only show in practice mode)
+                if selectedMode == .practice {
+                    Menu {
+                        Button("20 từ") {
+                            selectedWordCount = 20
+                            resetPractice()
+                        }
+                        Button("40 từ") {
+                            selectedWordCount = 40
+                            resetPractice()
+                        }
+                        Button("60 từ") {
+                            selectedWordCount = 60
+                            resetPractice()
+                        }
+                        Button("Tất cả (\(topic.flashcards.count) từ)") {
+                            selectedWordCount = topic.flashcards.count
+                            resetPractice()
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "number.circle.fill")
+                            Text("\(min(selectedWordCount, topic.flashcards.count)) từ")
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundStyle(.blue)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
                 
                 Spacer()
                 
                 // Stats in practice mode
-                if practiceMode && totalAnswered > 0 {
+                if selectedMode == .practice && totalAnswered > 0 {
                     HStack(spacing: 16) {
                         Label("\(score)/\(totalAnswered)", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
@@ -44,14 +116,6 @@ struct FlashcardMainView: View {
                     }
                     .padding(.horizontal)
                 }
-                
-                // Reset button in practice mode
-                if practiceMode {
-                    Button(action: resetPractice) {
-                        Label("Làm lại", systemImage: "arrow.clockwise")
-                    }
-                    .buttonStyle(.bordered)
-                }
             }
             .padding()
             .background(Color(nsColor: .controlBackgroundColor))
@@ -59,15 +123,24 @@ struct FlashcardMainView: View {
             Divider()
             
             // Content based on mode
-            if practiceMode {
-                practiceView
-            } else {
+            switch selectedMode {
+            case .list:
                 listView
+            case .practice:
+                practiceView
+            case .reading:
+                readingView
             }
         }
-        .onChange(of: practiceMode) { _, newValue in
-            if newValue {
+        .onChange(of: selectedMode) { _, newValue in
+            if newValue == .practice {
                 startPractice()
+            }
+        }
+        .onChange(of: topic.id) { _, _ in
+            // Reset when topic changes
+            if selectedMode == .practice {
+                resetPractice()
             }
         }
     }
@@ -158,70 +231,142 @@ struct FlashcardMainView: View {
             }
         }
     }
-    
+
     private var practiceCompletedView: some View {
-        VStack(spacing: 30) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(.green)
-            
-            Text("Hoàn thành!")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            
-            VStack(spacing: 12) {
-                Text("Kết quả của bạn:")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
+        ScrollView(.vertical, showsIndicators: false) { // Dùng ScrollView để chống tràn
+            VStack(spacing: 24) { // Giảm spacing tổng thể
                 
-                HStack(spacing: 40) {
-                    VStack {
-                        Text("\(score)")
-                            .font(.system(size: 48, weight: .bold))
-                            .foregroundStyle(.green)
-                        Text("Đúng")
-                            .foregroundStyle(.secondary)
+                // --- HEADER ---
+                VStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(.green.opacity(0.1))
+                            .frame(width: 100, height: 100) // Thu nhỏ scale một chút
+                        
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 45))
+                            .foregroundStyle(.yellow)
+                            .symbolEffect(.bounce, options: .repeat(3))
                     }
+                    .padding(.top, 20)
                     
-                    VStack {
-                        Text("\(totalAnswered - score)")
-                            .font(.system(size: 48, weight: .bold))
-                            .foregroundStyle(.red)
-                        Text("Sai")
-                            .foregroundStyle(.secondary)
+                    Text("Tuyệt vời!")
+                        .font(.system(size: 28, weight: .black, design: .rounded))
+                    
+                    Text("Bạn đã hoàn thành bài luyện tập.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                
+                // --- BẢNG KẾT QUẢ DẠNG CARD ---
+                VStack(spacing: 20) {
+                    let percentage = totalAnswered > 0 ? Int((Double(score) / Double(totalAnswered)) * 100) : 0
+                    
+                    // Vòng tròn tỷ lệ %
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.1), lineWidth: 10)
+                        Circle()
+                            .trim(from: 0, to: Double(percentage) / 100)
+                            .stroke(percentage >= 70 ? Color.green : Color.orange, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeOut(duration: 1.2).delay(0.3), value: percentage)
+                        
+                        VStack {
+                            Text("\(percentage)%")
+                                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                            Text("Đúng")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    .frame(width: 90, height: 90)
                     
-                    VStack {
-                        let percentage = totalAnswered > 0 ? Int((Double(score) / Double(totalAnswered)) * 100) : 0
-                        Text("\(percentage)%")
-                            .font(.system(size: 48, weight: .bold))
-                            .foregroundStyle(percentage >= 70 ? .green : .orange)
-                        Text("Tỷ lệ")
-                            .foregroundStyle(.secondary)
+                    Divider()
+                    
+                    HStack(spacing: 0) {
+                        ResultStatView(title: "Đúng", value: "\(score)", color: .green, icon: "checkmark.circle.fill")
+                        ResultStatView(title: "Sai", value: "\(totalAnswered - score)", color: .red, icon: "xmark.circle.fill")
+                        ResultStatView(title: "Tổng", value: "\(totalAnswered)", color: .blue, icon: "list.bullet.circle.fill")
                     }
                 }
+                .padding(.vertical, 20)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(nsColor: .windowBackgroundColor))
+                        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+                )
+                .padding(.horizontal, 24)
+                
+                // --- NÚT ĐIỀU KHIỂN ---
+                VStack(spacing: 12) {
+                    Button(action: resetPractice) {
+                        HStack {
+                            Text("Tiếp tục học tập")
+                                .fontWeight(.bold)
+                            Image(systemName: "arrow.right")
+                        }
+                        .font(.headline)
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: 260)
+                        .background(RoundedRectangle(cornerRadius: 14).fill(.blue))
+                        .foregroundStyle(.white)
+                    }
+                    .buttonStyle(GrowingButton())
+                    
+                    Button("Về trang chủ") {
+                        // Thêm logic chuyển màn hình ở đây
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                }
+                .padding(.top, 10)
+                .padding(.bottom, 20)
             }
-            .padding()
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(12)
-            
-            Button(action: resetPractice) {
-                Label("Làm lại", systemImage: "arrow.clockwise")
-                    .font(.headline)
-                    .padding()
-                    .frame(maxWidth: 300)
-                    .background(Color.accentColor)
-                    .foregroundStyle(.white)
-                    .cornerRadius(12)
-            }
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
         }
-        .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+        }
     }
-    
+
+    struct ResultStatView: View {
+        let title: String
+        let value: String
+        let color: Color
+        let icon: String
+        
+        var body: some View {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    struct GrowingButton: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.95 : 1)
+                .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
+        }
+    }
+        
     private func startPractice() {
-        shuffledFlashcards = topic.flashcards.shuffled()
+        let totalAvailable = topic.flashcards.count
+        let countToUse = min(selectedWordCount, totalAvailable)
+        
+        shuffledFlashcards = Array(topic.flashcards.shuffled().prefix(countToUse))
         currentIndex = 0
         score = 0
         totalAnswered = 0
@@ -238,10 +383,396 @@ struct FlashcardMainView: View {
         }
         
         // Auto advance after 1.5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             withAnimation {
                 currentIndex += 1
             }
         }
     }
+    
+    // MARK: - Reading View
+    private var readingView: some View {
+        Group {
+            if topic.readings.isEmpty {
+                ContentUnavailableView(
+                    "Chưa có bài đọc",
+                    systemImage: "book.closed",
+                    description: Text("Chủ đề này chưa có bài đọc nào")
+                )
+            } else {
+                ReadingPassageListView(readings: topic.readings)
+            }
+        }
+    }
 }
+
+// MARK: - Reading Passage Views
+struct ReadingPassageListView: View {
+    let readings: [ReadingPassage]
+    @State private var selectedReading: ReadingPassage?
+    
+    var body: some View {
+        HSplitView {
+            // Reading list
+            List(readings, selection: $selectedReading) { reading in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        // Level badge
+                        Text(reading.level.rawValue)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(levelColor(for: reading.level).opacity(0.2))
+                            .foregroundStyle(levelColor(for: reading.level))
+                            .cornerRadius(6)
+                        
+                        Spacer()
+                        
+                        // Question count
+                        HStack(spacing: 4) {
+                            Image(systemName: "questionmark.circle.fill")
+                                .font(.caption)
+                            Text("\(reading.questions.count) câu hỏi")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                    
+                    Text(reading.title)
+                        .font(.headline)
+                        .lineLimit(2)
+                    
+                    Text(reading.content.prefix(100) + "...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                .padding(.vertical, 8)
+                .tag(reading)
+            }
+            .frame(minWidth: 250, idealWidth: 300, maxWidth: 400)
+            .listStyle(.sidebar)
+            
+            // Reading detail
+            if let reading = selectedReading {
+                ReadingPassageDetailView(reading: reading)
+            } else {
+                ContentUnavailableView(
+                    "Chọn một bài đọc",
+                    systemImage: "book.fill",
+                    description: Text("Chọn bài đọc từ danh sách bên trái")
+                )
+            }
+        }
+        .onAppear {
+            if selectedReading == nil && !readings.isEmpty {
+                selectedReading = readings.first
+            }
+        }
+    }
+    
+    private func levelColor(for level: ReadingLevel) -> Color {
+        switch level {
+        case .beginner:
+            return .green
+        case .elementary:
+            return .blue
+        case .intermediate:
+            return .orange
+        case .upperIntermediate:
+            return .purple
+        case .advanced:
+            return .red
+        }
+    }
+}
+
+struct ReadingPassageDetailView: View {
+    let reading: ReadingPassage
+    @State private var userAnswers: [UUID: String] = [:] // questionId -> selected answer
+    @State private var showResults: Bool = false
+    @State private var score: Int = 0
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Header
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text(reading.level.rawValue)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(levelColor(for: reading.level).opacity(0.2))
+                            .foregroundStyle(levelColor(for: reading.level))
+                            .cornerRadius(8)
+                        
+                        Spacer()
+                        
+                        if showResults {
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                Text("\(score)/\(reading.questions.count)")
+                                    .font(.headline)
+                            }
+                        }
+                    }
+                    
+                    Text(reading.title)
+                        .font(.title)
+                        .fontWeight(.bold)
+                }
+                
+                Divider()
+                
+                // Vocabulary help (if available)
+                if let vocabulary = reading.vocabularyHelp, !vocabulary.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "book.fill")
+                                .foregroundStyle(.blue)
+                            Text("Từ vựng hỗ trợ")
+                                .font(.headline)
+                        }
+                        
+                        ForEach(vocabulary) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(item.word)
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                        .foregroundStyle(.blue)
+                                    
+                                    Text("•")
+                                        .foregroundStyle(.secondary)
+                                    
+                                    Text(item.meaning)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                if let example = item.example {
+                                    Text("📝 \(example)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .italic()
+                                        .padding(.leading, 4)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    .padding()
+                    .background(Color.blue.opacity(0.05))
+                    .cornerRadius(12)
+                }
+                
+                // Reading content
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "doc.text.fill")
+                            .foregroundStyle(.green)
+                        Text("Bài đọc")
+                            .font(.headline)
+                    }
+                    
+                    Text(reading.content)
+                        .font(.body)
+                        .lineSpacing(6)
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.green.opacity(0.05))
+                        .cornerRadius(12)
+                }
+                
+                Divider()
+                
+                // Questions
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack {
+                        Image(systemName: "questionmark.circle.fill")
+                            .foregroundStyle(.orange)
+                        Text("Câu hỏi")
+                            .font(.headline)
+                    }
+                    
+                    ForEach(Array(reading.questions.enumerated()), id: \.element.id) { index, question in
+                        questionView(question: question, index: index + 1)
+                    }
+                }
+                
+                // Submit button
+                if !showResults {
+                    Button(action: checkAnswers) {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Nộp bài")
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(userAnswers.count == reading.questions.count ? Color.blue : Color.gray)
+                        .foregroundStyle(.white)
+                        .cornerRadius(12)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(userAnswers.count != reading.questions.count)
+                } else {
+                    Button(action: resetQuiz) {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Làm lại")
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.orange)
+                        .foregroundStyle(.white)
+                        .cornerRadius(12)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(24)
+        }
+    }
+    
+    @ViewBuilder
+    private func questionView(question: ReadingQuestion, index: Int) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Câu \(index): \(question.question)")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+            
+            ForEach(question.options, id: \.self) { option in
+                optionButton(option: option, question: question)
+            }
+            
+            // Show explanation if available and results are shown
+            if showResults, let explanation = question.explanation {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundStyle(.yellow)
+                    Text(explanation)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding()
+                .background(Color.yellow.opacity(0.1))
+                .cornerRadius(8)
+            }
+        }
+        .padding()
+        .background(Color.gray.opacity(0.05))
+        .cornerRadius(12)
+    }
+    
+    @ViewBuilder
+    private func optionButton(option: String, question: ReadingQuestion) -> some View {
+        let optionLetter = String(option.prefix(1))
+        let isSelected = userAnswers[question.id] == optionLetter
+        let isCorrect = question.correctAnswer == optionLetter
+        
+        Button(action: {
+            if !showResults {
+                userAnswers[question.id] = optionLetter
+            }
+        }) {
+            HStack {
+                Text(option)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                
+                Spacer()
+                
+                if showResults {
+                    if isCorrect {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    } else if isSelected && !isCorrect {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+            .padding()
+            .background(buttonBackground(isSelected: isSelected, isCorrect: isCorrect))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(buttonBorder(isSelected: isSelected, isCorrect: isCorrect), lineWidth: 2)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(showResults)
+    }
+    
+    private func buttonBackground(isSelected: Bool, isCorrect: Bool) -> Color {
+        if !showResults {
+            return isSelected ? Color.blue.opacity(0.1) : Color.clear
+        } else {
+            if isCorrect {
+                return Color.green.opacity(0.1)
+            } else if isSelected && !isCorrect {
+                return Color.red.opacity(0.1)
+            }
+            return Color.clear
+        }
+    }
+    
+    private func buttonBorder(isSelected: Bool, isCorrect: Bool) -> Color {
+        if !showResults {
+            return isSelected ? .blue : Color.gray.opacity(0.3)
+        } else {
+            if isCorrect {
+                return .green
+            } else if isSelected && !isCorrect {
+                return .red
+            }
+            return Color.gray.opacity(0.3)
+        }
+    }
+    
+    private func checkAnswers() {
+        var correctCount = 0
+        for question in reading.questions {
+            if userAnswers[question.id] == question.correctAnswer {
+                correctCount += 1
+            }
+        }
+        score = correctCount
+        withAnimation {
+            showResults = true
+        }
+    }
+    
+    private func resetQuiz() {
+        withAnimation {
+            userAnswers.removeAll()
+            showResults = false
+            score = 0
+        }
+    }
+    
+    private func levelColor(for level: ReadingLevel) -> Color {
+        switch level {
+        case .beginner:
+            return .green
+        case .elementary:
+            return .blue
+        case .intermediate:
+            return .orange
+        case .upperIntermediate:
+            return .purple
+        case .advanced:
+            return .red
+        }
+    }
+}
+
+
+

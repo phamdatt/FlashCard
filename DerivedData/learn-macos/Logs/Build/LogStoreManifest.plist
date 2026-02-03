@@ -5,6 +5,49 @@
 	<key>logFormatVersion</key>
 	<integer>12</integer>
 	<key>logs</key>
-	<dict/>
+	<dict>
+		<key>6E708E73-2153-4BA8-965F-8E873C9E58AA</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>6E708E73-2153-4BA8-965F-8E873C9E58AA.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>learn-macos project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>learn-macos</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project learn-macos with scheme learn-macos</string>
+			<key>timeStartedRecording</key>
+			<real>791803002.289361</real>
+			<key>timeStoppedRecording</key>
+			<real>791803016.914801</real>
+			<key>title</key>
+			<string>Building project learn-macos with scheme learn-macos</string>
+			<key>uniqueIdentifier</key>
+			<string>6E708E73-2153-4BA8-965F-8E873C9E58AA</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

@@ -1,0 +1,280 @@
+{
+  "source": "/Users/datpham/person-projects/learn-macos/learn-macos/FlashcardMainView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Quay lại",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Quay lại",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chế độ",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "20 từ",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "40 từ",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "60 từ",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tất cả (%lld từ)",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 84
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld từ",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chọn một flashcard để xem chi tiết",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 186
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chọn một flashcard",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 184
+        }
+      },
+      {
+        "comment": "",
+        "key": "💡 %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 169
+        }
+      },
+      {
+        "comment": "",
+        "key": "Câu %lld/%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 201
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tuyệt vời!",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 253
+        }
+      },
+      {
+        "comment": "",
+        "key": "Bạn đã hoàn thành bài luyện tập.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 256
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 276
+        }
+      },
+      {
+        "comment": "",
+        "key": "Đúng",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 278
+        }
+      },
+      {
+        "comment": "",
+        "key": "Về trang chủ",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 318
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tiếp tục học tập",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 306
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chủ đề này chưa có bài đọc nào",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 400
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chưa có bài đọc",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 398
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chọn bài đọc từ danh sách bên trái",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 464
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chọn một bài đọc",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 462
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld câu hỏi",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 518
+        }
+      },
+      {
+        "comment": "",
+        "key": "Từ vựng hỗ trợ",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 537
+        }
+      },
+      {
+        "comment": "",
+        "key": "📝 %@",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 558
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 549
+        }
+      },
+      {
+        "comment": "",
+        "key": "Bài đọc",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 578
+        }
+      },
+      {
+        "comment": "",
+        "key": "Câu hỏi",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 598
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nộp bài",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 612
+        }
+      },
+      {
+        "comment": "",
+        "key": "Làm lại",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 627
+        }
+      },
+      {
+        "comment": "",
+        "key": "Câu %lld: %@",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 646
+        }
+      }
+    ]
+  },
+  "version": 1
+}

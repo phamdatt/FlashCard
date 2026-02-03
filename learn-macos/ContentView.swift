@@ -7,18 +7,539 @@
 
 import SwiftUI
 
-struct ContentView: View {
+// MARK: - Views
+
+// Unified Sidebar View
+struct SidebarView: View {
+    @ObservedObject var viewModel: ContentViewModel
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        List(selection: $viewModel.selectedSubject) {
+            Section {
+                ForEach(viewModel.subjects) { subject in
+                    Label(subject.name, systemImage: subject.icon)
+                        .tag(subject)
+                }
+            }
         }
-        .padding()
+        .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
+        .navigationTitle("Menu")
+        .onAppear {
+            // Auto-select first subject if none selected
+            if viewModel.selectedSubject == nil, let firstSubject = viewModel.subjects.first {
+                viewModel.selectSubject(firstSubject)
+            }
+        }
+    }
+}
+
+// Topics List View (shows topics for selected subject)
+struct TopicsListView: View {
+    @ObservedObject var viewModel: ContentViewModel
+    let subject: Subject
+    @FocusState private var isSearchFocused: Bool
+    
+    var filteredTopics: [Topic] {
+        viewModel.filteredTopics(for: subject)
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Custom Search Bar
+            HStack(spacing: 12) {
+                // Search Icon
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .font(.system(size: 16, weight: .medium))
+                
+                // Search TextField
+                TextField("Tìm kiếm chủ đề...", text: $viewModel.searchText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14))
+                    .focused($isSearchFocused)
+                
+                // Clear Button
+                if !viewModel.searchText.isEmpty {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.searchText = ""
+                        }
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .font(.system(size: 16))
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(isSearchFocused ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: isSearchFocused ? 2 : 1)
+                    )
+            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .animation(.easeInOut(duration: 0.2), value: isSearchFocused)
+            
+            // Search Results Info
+            if !viewModel.searchText.isEmpty {
+                HStack {
+                    Text("\(filteredTopics.count) kết quả")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+            
+            // Topics List
+            if filteredTopics.isEmpty {
+                ContentUnavailableView {
+                    Label("Không tìm thấy kết quả", systemImage: "magnifyingglass")
+                } description: {
+                    Text("Thử tìm kiếm với từ khóa khác")
+                }
+            } else {
+                List(filteredTopics, selection: $viewModel.selectedTopic) { topic in
+                    HStack(spacing: 12) {
+                        // Topic Icon
+                        ZStack {
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.1))
+                                .frame(width: 40, height: 40)
+                            
+                            Image(systemName: "book.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(.gray)
+                        }
+                        
+                        // Topic Info
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(topic.name)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: "rectangle.stack.fill")
+                                    .font(.system(size: 10))
+                                Text("\(topic.flashcards.count) flashcards")
+                                    .font(.system(size: 12))
+                            }
+                            .foregroundStyle(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        // Chevron
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+                    .tag(topic)
+                }
+                .listStyle(.sidebar)
+            }
+        }
+        .navigationTitle(subject.name)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.searchText)
+    }
+}
+
+// Flashcard Detail View
+struct FlashcardDetailView: View {
+    let flashcard: Flashcard
+    let topic: Topic
+    let onAnswered: ((Bool) -> Void)?  // Callback for practice mode
+    
+    @State private var isFlipped = false
+    @State private var selectedAnswer: String? = nil
+    @State private var showResult = false
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 30) {
+                // Header
+                HStack {
+                    Image(systemName: "graduationcap.fill")
+                        .font(.title)
+                        .foregroundStyle(.secondary)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(topic.subjectName)
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                        Text(topic.name)
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    Spacer()
+                }
+                
+                Divider()
+                
+                if flashcard.isMultipleChoice {
+                    // Multiple Choice Question
+                    multipleChoiceView
+                } else {
+                    // Traditional Flashcard
+                    traditionalFlashcardView
+                }
+                
+                Spacer()
+            }
+            .padding()
+        }
+        .frame(minWidth: 500)
+    }
+    
+    // Traditional flip card view
+    private var traditionalFlashcardView: some View {
+        VStack(spacing: 20) {
+            // Card
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isFlipped ? Color.green.opacity(0.1) : Color.blue.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isFlipped ? Color.green : Color.blue, lineWidth: 2)
+                    )
+                
+                VStack(spacing: 16) {
+                    Text(isFlipped ? "Đáp án" : "Câu hỏi")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                    
+                    Text(isFlipped ? flashcard.answer : flashcard.question)
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                }
+                .padding()
+            }
+            .frame(minHeight: 250)
+            .padding()
+            
+            // Flip button
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    isFlipped.toggle()
+                }
+            }) {
+                Label(isFlipped ? "Xem câu hỏi" : "Xem đáp án", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.headline)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.accentColor)
+                    .foregroundStyle(.white)
+                    .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            
+            // Hint section
+            if let hint = flashcard.hint {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Gợi ý", systemImage: "lightbulb.fill")
+                        .font(.headline)
+                        .foregroundStyle(.orange)
+                    
+                    Text(hint)
+                        .font(.body)
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(8)
+                }
+            }
+        }
+    }
+    
+    // Multiple choice question view
+    private var multipleChoiceView: some View {
+        VStack(spacing: 25) {
+            // Question card
+            VStack(spacing: 16) {
+                Text("Câu hỏi")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                
+                Text(flashcard.question)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .multilineTextAlignment(.center)
+                    .padding()
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.blue.opacity(0.1))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.blue, lineWidth: 2)
+            )
+            .cornerRadius(16)
+            
+            // Hint section
+            if let hint = flashcard.hint, !showResult {
+                HStack(spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundStyle(.orange)
+                    Text(hint)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.orange.opacity(0.1))
+                .cornerRadius(8)
+            }
+            
+            // Options
+            VStack(spacing: 12) {
+                ForEach(flashcard.options ?? [], id: \.self) { option in
+                    multipleChoiceButton(option: option)
+                }
+            }
+            
+            // Result feedback
+            if showResult {
+                resultView
+            }
+            
+            // // Reset button
+            // if showResult {
+            //     Button(action: {
+            //         withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            //             selectedAnswer = nil
+            //             showResult = false
+            //         }
+            //     }) {
+            //         Label("Thử lại", systemImage: "arrow.clockwise")
+            //             .font(.headline)
+            //             .padding()
+            //             .frame(maxWidth: .infinity)
+            //             .background(Color.accentColor)
+            //             .foregroundStyle(.white)
+            //             .cornerRadius(12)
+            //     }
+            //     .buttonStyle(.plain)
+            //     .padding(.horizontal)
+            //     .transition(.scale.combined(with: .opacity))
+            //     .scaleEffect(1.0)
+            //     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showResult)
+            // }
+        }
+    }
+    
+    private func multipleChoiceButton(option: String) -> some View {
+        let optionLetter = String(option.prefix(1))
+        let isSelected = selectedAnswer == optionLetter
+        let isCorrect = flashcard.correctAnswer == optionLetter
+        
+        @State var isPressed = false
+        
+        var backgroundColor: Color {
+            if !showResult {
+                return isSelected ? Color.blue.opacity(0.15) : Color.gray.opacity(0.08)
+            } else {
+                if isCorrect {
+                    return Color.green.opacity(0.2)
+                } else if isSelected && !isCorrect {
+                    return Color.red.opacity(0.2)
+                } else {
+                    return Color.gray.opacity(0.08)
+                }
+            }
+        }
+        
+        var borderColor: Color {
+            if !showResult {
+                return isSelected ? .blue : Color.gray.opacity(0.5)
+            } else {
+                if isCorrect {
+                    return .green
+                } else if isSelected && !isCorrect {
+                    return .red
+                } else {
+                    return Color.gray.opacity(0.5)
+                }
+            }
+        }
+        
+        var shadowColor: Color {
+            if !showResult {
+                return isSelected ? Color.blue.opacity(0.4) : Color.gray.opacity(0.4)
+            } else {
+                if isCorrect {
+                    return Color.green.opacity(0.5)
+                } else if isSelected && !isCorrect {
+                    return Color.red.opacity(0.5)
+                } else {
+                    return Color.gray.opacity(0.4)
+                }
+            }
+        }
+        
+        return Button(action: {
+            if !showResult {
+                // Haptic feedback
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
+                    selectedAnswer = optionLetter
+                    showResult = true
+                    
+                    // Notify parent in practice mode
+                    let isCorrect = optionLetter == flashcard.correctAnswer
+                    onAnswered?(isCorrect)
+                }
+            }
+        }) {
+            HStack {
+                Text(option)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                
+                Spacer()
+                
+                if showResult {
+                    if isCorrect {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.green)
+                            .symbolEffect(.bounce, value: showResult)
+                    } else if isSelected && !isCorrect {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.red)
+                            .symbolEffect(.bounce, value: showResult)
+                    }
+                }
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 20)
+            .background(
+                ZStack {
+                    // Bottom shadow layer (depth effect)
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(shadowColor)
+                        .offset(y: isPressed ? 2 : 4)
+                    
+                    // Main button layer
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(backgroundColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .strokeBorder(borderColor, lineWidth: 3)
+                        )
+                }
+            )
+            .offset(y: isPressed ? 2 : 0)
+        }
+        .buttonStyle(DuolingoButtonStyle(isPressed: $isPressed, isDisabled: showResult))
+        .scaleEffect(showResult && (isCorrect || (isSelected && !isCorrect)) ? 1.0 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showResult)
+    }
+    
+    private var resultView: some View {
+        VStack(spacing: 12) {
+            let isCorrect = selectedAnswer == flashcard.correctAnswer
+            
+            HStack(spacing: 12) {
+                Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .font(.title)
+                    .foregroundStyle(isCorrect ? .green : .red)
+                    .symbolEffect(.bounce, value: showResult)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(isCorrect ? "Chính xác! 🎉" : "Chưa đúng")
+                        .font(.headline)
+                        .foregroundStyle(isCorrect ? .green : .red)
+                    
+                    Text(flashcard.answer)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+            }
+            .padding()
+            .background(isCorrect ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+            .cornerRadius(12)
+        }
+        .transition(.scale.combined(with: .opacity))
+    }
+}
+
+// Custom Duolingo-style Button Style
+struct DuolingoButtonStyle: ButtonStyle {
+    @Binding var isPressed: Bool
+    let isDisabled: Bool
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { _, newValue in
+                if !isDisabled {
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                        isPressed = newValue
+                    }
+                }
+            }
+    }
+}
+
+// MARK: - Main View
+struct ContentView: View {
+    @StateObject private var viewModel = ContentViewModel()
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
+    
+    var body: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            // Sidebar
+            SidebarView(viewModel: viewModel)
+        } content: {
+            // Middle column - Topics list
+            if let subject = viewModel.selectedSubject {
+                TopicsListView(viewModel: viewModel, subject: subject)
+            } else {
+                ContentUnavailableView(
+                    "Chọn môn học",
+                    systemImage: "book.fill",
+                    description: Text("Chọn một môn học từ sidebar")
+                )
+            }
+        } detail: {
+            // Detail column - Flashcards
+            if let topic = viewModel.selectedTopic {
+                FlashcardMainView(viewModel: viewModel, topic: topic)
+                    .id(topic.id)
+            } else {
+                ContentUnavailableView(
+                    "Chọn chủ đề",
+                    systemImage: "text.book.closed.fill",
+                    description: Text("Chọn một chủ đề để xem flashcards")
+                )
+            }
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .frame(width: 1000, height: 600)
 }

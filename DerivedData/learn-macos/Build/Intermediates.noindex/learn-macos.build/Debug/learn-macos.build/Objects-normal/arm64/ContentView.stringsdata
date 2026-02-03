@@ -1,0 +1,152 @@
+{
+  "source": "/Users/datpham/person-projects/learn-macos/learn-macos/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Menu",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tìm kiếm chủ đề...",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld kết quả",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Không tìm thấy kết quả",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Thử tìm kiếm với từ khóa khác",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld flashcards",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 133
+        }
+      },
+      {
+        "comment": "",
+        "key": "Đáp án",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Câu hỏi",
+        "location": {
+          "startingColumn": 52,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Xem câu hỏi",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 241
+        }
+      },
+      {
+        "comment": "",
+        "key": "Xem đáp án",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 241
+        }
+      },
+      {
+        "comment": "",
+        "key": "Gợi ý",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 255
+        }
+      },
+      {
+        "comment": "",
+        "key": "Câu hỏi",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 275
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chính xác! 🎉",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 470
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chưa đúng",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 470
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chọn một môn học từ sidebar",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 523
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chọn môn học",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 521
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chọn một chủ đề để xem flashcards",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 535
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chọn chủ đề",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 533
+        }
+      }
+    ]
+  },
+  "version": 1
+}
