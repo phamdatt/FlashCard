@@ -57,10 +57,9 @@ struct FlashcardMainView: View {
                 .foregroundStyle(.blue)
             }
             .padding()
-            .background(Color(nsColor: .controlBackgroundColor))
-            
+
             Divider()
-            
+
             // Mode Toggle and Stats
             HStack {
                 // Mode switch
@@ -124,10 +123,9 @@ struct FlashcardMainView: View {
                 }
             }
             .padding()
-            .background(Color(nsColor: .controlBackgroundColor))
-            
+
             Divider()
-            
+
             // Content based on mode
             switch selectedMode {
             case .list:
@@ -230,8 +228,7 @@ struct FlashcardMainView: View {
                     ProgressView(value: Double(currentIndex), total: Double(shuffledFlashcards.count))
                 }
                 .padding()
-                .background(Color(nsColor: .controlBackgroundColor))
-                
+
                 // Flashcard with auto-advance - use id to force view recreation
                 FlashcardDetailView(
                     flashcard: flashcard,
@@ -506,6 +503,7 @@ struct ReadingPassageListView: View {
 
 struct ReadingPassageDetailView: View {
     let reading: ReadingPassage
+    @Environment(\.colorScheme) private var colorScheme
     @State private var userAnswers: [UUID: String] = [:] // questionId -> selected answer
     @State private var showResults: Bool = false
     @State private var score: Int = 0
@@ -582,7 +580,16 @@ struct ReadingPassageDetailView: View {
                         }
                     }
                     .padding()
-                    .background(Color.blue.opacity(0.05))
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(colorScheme == .light
+                                ? Color(nsColor: .controlBackgroundColor)
+                                : Color.blue.opacity(0.05))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(colorScheme == .light ? Color.blue.opacity(0.15) : Color.clear, lineWidth: 1)
+                    )
                     .cornerRadius(12)
                 }
                 
@@ -600,7 +607,16 @@ struct ReadingPassageDetailView: View {
                         .lineSpacing(6)
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.green.opacity(0.05))
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(colorScheme == .light
+                                    ? Color(nsColor: .textBackgroundColor)
+                                    : Color.green.opacity(0.05))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(colorScheme == .light ? Color.green.opacity(0.2) : Color.clear, lineWidth: 1)
+                        )
                         .cornerRadius(12)
                 }
                 
@@ -682,7 +698,16 @@ struct ReadingPassageDetailView: View {
             }
         }
         .padding()
-        .background(Color.gray.opacity(0.05))
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(colorScheme == .light
+                    ? Color(nsColor: .controlBackgroundColor)
+                    : Color.gray.opacity(0.05))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(colorScheme == .light ? Color.gray.opacity(0.15) : Color.clear, lineWidth: 1)
+        )
         .cornerRadius(12)
     }
     
@@ -728,28 +753,33 @@ struct ReadingPassageDetailView: View {
     }
     
     private func buttonBackground(isSelected: Bool, isCorrect: Bool) -> Color {
+        let isLight = colorScheme == .light
         if !showResults {
-            return isSelected ? Color.blue.opacity(0.1) : Color.clear
+            if isSelected {
+                return Color.blue.opacity(isLight ? 0.08 : 0.1)
+            }
+            return isLight ? Color(nsColor: .controlBackgroundColor) : Color.clear
         } else {
             if isCorrect {
-                return Color.green.opacity(0.1)
+                return Color.green.opacity(isLight ? 0.08 : 0.1)
             } else if isSelected && !isCorrect {
-                return Color.red.opacity(0.1)
+                return Color.red.opacity(isLight ? 0.08 : 0.1)
             }
-            return Color.clear
+            return isLight ? Color(nsColor: .controlBackgroundColor) : Color.clear
         }
     }
-    
+
     private func buttonBorder(isSelected: Bool, isCorrect: Bool) -> Color {
+        let isLight = colorScheme == .light
         if !showResults {
-            return isSelected ? .blue : Color.gray.opacity(0.3)
+            return isSelected ? .blue : Color.gray.opacity(isLight ? 0.2 : 0.3)
         } else {
             if isCorrect {
                 return .green
             } else if isSelected && !isCorrect {
                 return .red
             }
-            return Color.gray.opacity(0.3)
+            return Color.gray.opacity(isLight ? 0.2 : 0.3)
         }
     }
     

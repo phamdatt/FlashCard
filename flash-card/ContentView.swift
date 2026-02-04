@@ -12,7 +12,8 @@ import SwiftUI
 // Unified Sidebar View
 struct SidebarView: View {
     @ObservedObject var viewModel: ContentViewModel
-    
+    @EnvironmentObject var appearanceManager: AppearanceManager
+
     var body: some View {
         List(selection: $viewModel.selectedSubject) {
             Section {
@@ -24,6 +25,39 @@ struct SidebarView: View {
         }
         .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
         .navigationTitle("Menu")
+        .safeAreaInset(edge: .bottom) {
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    appearanceManager.cycleMode()
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: appearanceManager.mode.icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.blue)
+                        .contentTransition(.symbolEffect(.replace))
+
+                    Text(appearanceManager.mode.rawValue)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
         .onAppear {
             // Auto-select first subject if none selected
             if viewModel.selectedSubject == nil, let firstSubject = viewModel.subjects.first {
@@ -261,7 +295,8 @@ struct FlashcardDetailView: View {
     let flashcard: Flashcard
     let topic: Topic
     let onAnswered: ((Bool) -> Void)?  // Callback for practice mode
-    
+
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isFlipped = false
     @State private var selectedAnswer: String? = nil
     @State private var showResult = false
@@ -310,10 +345,16 @@ struct FlashcardDetailView: View {
             // Card
             ZStack {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(isFlipped ? Color.green.opacity(0.1) : Color.blue.opacity(0.1))
+                    .fill(isFlipped
+                        ? Color.green.opacity(colorScheme == .light ? 0.06 : 0.1)
+                        : Color.blue.opacity(colorScheme == .light ? 0.06 : 0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(isFlipped ? Color.green : Color.blue, lineWidth: 2)
+                            .stroke(
+                                isFlipped
+                                    ? Color.green.opacity(colorScheme == .light ? 0.6 : 1)
+                                    : Color.blue.opacity(colorScheme == .light ? 0.6 : 1),
+                                lineWidth: 2)
                     )
                 
                 VStack(spacing: 16) {
@@ -386,10 +427,10 @@ struct FlashcardDetailView: View {
             }
             .padding()
             .frame(maxWidth: .infinity)
-            .background(Color.blue.opacity(0.1))
+            .background(Color.blue.opacity(colorScheme == .light ? 0.05 : 0.1))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.blue, lineWidth: 2)
+                    .stroke(Color.blue.opacity(colorScheme == .light ? 0.4 : 1), lineWidth: 2)
             )
             .cornerRadius(16)
             
@@ -452,45 +493,49 @@ struct FlashcardDetailView: View {
         
         @State var isPressed = false
         
+        let isLight = colorScheme == .light
+
         var backgroundColor: Color {
             if !showResult {
-                return isSelected ? Color.blue.opacity(0.15) : Color.gray.opacity(0.08)
+                if isSelected {
+                    return Color.blue.opacity(isLight ? 0.1 : 0.15)
+                }
+                return isLight ? Color(nsColor: .controlBackgroundColor) : Color.gray.opacity(0.08)
             } else {
                 if isCorrect {
-                    return Color.green.opacity(0.2)
+                    return Color.green.opacity(isLight ? 0.1 : 0.2)
                 } else if isSelected && !isCorrect {
-                    return Color.red.opacity(0.2)
-                } else {
-                    return Color.gray.opacity(0.08)
+                    return Color.red.opacity(isLight ? 0.1 : 0.2)
                 }
+                return isLight ? Color(nsColor: .controlBackgroundColor) : Color.gray.opacity(0.08)
             }
         }
-        
+
         var borderColor: Color {
             if !showResult {
-                return isSelected ? .blue : Color.gray.opacity(0.5)
+                return isSelected ? .blue : Color.gray.opacity(isLight ? 0.25 : 0.5)
             } else {
                 if isCorrect {
                     return .green
                 } else if isSelected && !isCorrect {
                     return .red
-                } else {
-                    return Color.gray.opacity(0.5)
                 }
+                return Color.gray.opacity(isLight ? 0.25 : 0.5)
             }
         }
-        
+
         var shadowColor: Color {
             if !showResult {
-                return isSelected ? Color.blue.opacity(0.4) : Color.gray.opacity(0.4)
+                return isSelected
+                    ? Color.blue.opacity(isLight ? 0.2 : 0.4)
+                    : Color.gray.opacity(isLight ? 0.15 : 0.4)
             } else {
                 if isCorrect {
-                    return Color.green.opacity(0.5)
+                    return Color.green.opacity(isLight ? 0.2 : 0.5)
                 } else if isSelected && !isCorrect {
-                    return Color.red.opacity(0.5)
-                } else {
-                    return Color.gray.opacity(0.4)
+                    return Color.red.opacity(isLight ? 0.2 : 0.5)
                 }
+                return Color.gray.opacity(isLight ? 0.15 : 0.4)
             }
         }
         
@@ -580,7 +625,9 @@ struct FlashcardDetailView: View {
                 Spacer()
             }
             .padding()
-            .background(isCorrect ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+            .background(isCorrect
+                ? Color.green.opacity(colorScheme == .light ? 0.08 : 0.1)
+                : Color.red.opacity(colorScheme == .light ? 0.08 : 0.1))
             .cornerRadius(12)
         }
         .transition(.scale.combined(with: .opacity))
