@@ -192,7 +192,7 @@ struct FlashcardMainView: View {
             .listStyle(.sidebar)
             
             if let flashcard = viewModel.selectedFlashcard {
-                FlashcardDetailView(flashcard: flashcard, topic: topic, onAnswered: nil)
+                FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", onAnswered: nil)
             } else {
                 ContentUnavailableView(
                     "Chọn một flashcard",
@@ -233,6 +233,7 @@ struct FlashcardMainView: View {
                 FlashcardDetailView(
                     flashcard: flashcard,
                     topic: topic,
+                    subjectName: viewModel.selectedSubject?.name ?? "",
                     onAnswered: { isCorrect in
                         handleAnswer(isCorrect: isCorrect)
                     }
@@ -504,7 +505,7 @@ struct ReadingPassageListView: View {
 struct ReadingPassageDetailView: View {
     let reading: ReadingPassage
     @Environment(\.colorScheme) private var colorScheme
-    @State private var userAnswers: [UUID: String] = [:] // questionId -> selected answer
+    @State private var userAnswers: [Int: String] = [:] // questionId -> selected answer
     @State private var showResults: Bool = false
     @State private var score: Int = 0
     

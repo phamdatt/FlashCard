@@ -64,6 +64,11 @@ struct SidebarView: View {
                 viewModel.selectSubject(firstSubject)
             }
         }
+        .onChange(of: viewModel.selectedSubject) { _, newSubject in
+            if let subject = newSubject {
+                viewModel.selectSubject(subject)
+            }
+        }
     }
 }
 
@@ -294,6 +299,7 @@ struct AddTopicSheet: View {
 struct FlashcardDetailView: View {
     let flashcard: Flashcard
     let topic: Topic
+    let subjectName: String
     let onAnswered: ((Bool) -> Void)?  // Callback for practice mode
 
     @Environment(\.colorScheme) private var colorScheme
@@ -311,7 +317,7 @@ struct FlashcardDetailView: View {
                         .foregroundStyle(.secondary)
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(topic.subjectName)
+                        Text(subjectName)
                             .font(.headline)
                             .foregroundStyle(.secondary)
                         Text(topic.name)

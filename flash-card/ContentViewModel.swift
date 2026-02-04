@@ -51,29 +51,20 @@ class ContentViewModel: ObservableObject {
             !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
 
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        
-        // Tự động tạo topicKey từ tên chủ đề (ví dụ: "Thể thao" -> "user_the_thao_17123456")
-        // Việc tạo key tự động giúp người dùng không phải nhập tay một mã kỹ thuật
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let safeName = trimmedName.lowercased()
-            .replacingOccurrences(of: " ", with: "_")
-            .addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "topic"
-        let generatedKey = "user_\(safeName)_\(timestamp)"
 
         let newTopic = Topic(
             name: trimmedName,
-            subjectName: subject.name,
-            topicKey: generatedKey, // Truyền key vừa tạo vào đây
+            subjectId: subject.id,
             flashcards: [],
             readings: []
         )
-        
+
         // Lưu vào SQLite
         DatabaseManager.shared.insertTopic(newTopic)
-        
+
         // Load lại dữ liệu để UI cập nhật
         loadLearningData()
-        
+
         // Reset form
         newTopicName = ""
         showAddTopicSheet = false
@@ -98,14 +89,14 @@ class ContentViewModel: ObservableObject {
             )
             
             // 1. Lưu xuống SQLite
-            DatabaseManager.shared.insertFlashcard(newFlashcard, topicKey: topic.topicKey)
-            
+            DatabaseManager.shared.insertFlashcard(newFlashcard, topicId: topic.id)
+
             // 2. Load lại toàn bộ (Hàm loadFlashcards trong DatabaseManager sẽ tự động gen Options mới)
             loadLearningData()
 
             // 3. Khôi phục trạng thái lựa chọn
-            if let updatedSubject = subjects.first(where: { $0.name == topic.subjectName }),
-            let updatedTopic = updatedSubject.topics.first(where: { $0.topicKey == topic.topicKey }) {
+            if let updatedSubject = subjects.first(where: { $0.id == topic.subjectId }),
+            let updatedTopic = updatedSubject.topics.first(where: { $0.id == topic.id }) {
                 self.selectedSubject = updatedSubject
                 self.selectedTopic = updatedTopic
                 self.selectedFlashcard = updatedTopic.flashcards.last // Chọn thẻ vừa tạo
@@ -119,19 +110,19 @@ class ContentViewModel: ObservableObject {
 
     func deleteTopic(_ topic: Topic) {
         // 1. Xóa trong SQLite
-        DatabaseManager.shared.deleteTopic(topicKey: topic.topicKey)
-        
+        DatabaseManager.shared.deleteTopic(id: topic.id)
+
         // 2. Sync UI
-        let currentSubjectName = selectedSubject?.name
+        let currentSubjectId = selectedSubject?.id
         loadLearningData()
-        
-        if selectedTopic?.topicKey == topic.topicKey {
+
+        if selectedTopic?.id == topic.id {
             selectedTopic = nil
             selectedFlashcard = nil
         }
-        
-        if let currentSubjectName = currentSubjectName {
-            selectedSubject = subjects.first(where: { $0.name == currentSubjectName })
+
+        if let currentSubjectId = currentSubjectId {
+            selectedSubject = subjects.first(where: { $0.id == currentSubjectId })
         }
     }
 
@@ -140,14 +131,14 @@ class ContentViewModel: ObservableObject {
         DatabaseManager.shared.deleteFlashcard(id: flashcard.id)
         
         // 2. Sync UI
-        let currentTopicKey = selectedTopic?.topicKey
-        let currentSubjectName = selectedSubject?.name
-        
+        let currentTopicId = selectedTopic?.id
+        let currentSubjectId = selectedSubject?.id
+
         loadLearningData()
-        
-        if let subName = currentSubjectName, let tKey = currentTopicKey {
-            selectedSubject = subjects.first(where: { $0.name == subName })
-            selectedTopic = selectedSubject?.topics.first(where: { $0.topicKey == tKey })
+
+        if let subId = currentSubjectId, let tId = currentTopicId {
+            selectedSubject = subjects.first(where: { $0.id == subId })
+            selectedTopic = selectedSubject?.topics.first(where: { $0.id == tId })
         }
         
         if selectedFlashcard?.id == flashcard.id {
@@ -158,9 +149,7 @@ class ContentViewModel: ObservableObject {
     // MARK: - Learning Data Management
 
     private func loadLearningData() {
-        let dbManager = DatabaseManager.shared
-        dbManager.seedAllData()
-        subjects = dbManager.loadAllSubjects()
+        subjects = DatabaseManager.shared.loadAllSubjects()
     }
 
     func selectSubject(_ subject: Subject) {
