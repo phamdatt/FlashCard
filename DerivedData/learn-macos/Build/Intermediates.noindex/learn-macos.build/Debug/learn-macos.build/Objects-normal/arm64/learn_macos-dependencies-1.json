@@ -393,6 +393,13 @@
     "moduleName" : "QuartzCore"
   },
   {
+    "clangModuleMapPath" : "\/Applications\/Xcode.app\/Contents\/Developer\/Platforms\/MacOSX.platform\/Developer\/SDKs\/MacOSX.sdk\/usr\/include\/SQLite3.modulemap",
+    "clangModulePath" : "\/Users\/datpham\/person-projects\/learn-macos\/DerivedData\/ModuleCache.noindex\/SQLite3-AFIR0DG25K9DGYJ51R683HNQD.pcm",
+    "isBridgingHeaderDependency" : false,
+    "isFramework" : false,
+    "moduleName" : "SQLite3"
+  },
+  {
     "clangModuleMapPath" : "\/Applications\/Xcode.app\/Contents\/Developer\/Platforms\/MacOSX.platform\/Developer\/SDKs\/MacOSX.sdk\/System\/Library\/Frameworks\/Security.framework\/Modules\/module.modulemap",
     "clangModulePath" : "\/Users\/datpham\/person-projects\/learn-macos\/DerivedData\/ModuleCache.noindex\/Security-7WX6CZ730N1K0JJQIIM6EY8LM.pcm",
     "isBridgingHeaderDependency" : false,

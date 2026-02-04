@@ -19,11 +19,90 @@ class ContentViewModel: ObservableObject {
     
     // Search
     @Published var searchText = ""
-    
+
+    // Add Topic sheet
+    @Published var showAddTopicSheet = false
+    @Published var newTopicName = ""
+
+    // Add Flashcard sheet
+    @Published var showAddFlashcardSheet = false
+    @Published var newFlashcardQuestion = ""
+    @Published var newFlashcardAnswer = ""
+    @Published var newFlashcardHint = ""
+
+    private let persistence = PersistenceController.shared
+
     init() {
         loadLearningData()
+        // Merge saved user-created data on top of hardcoded data
+        if let saved = persistence.loadSubjects() {
+            for savedSubject in saved {
+                if let idx = subjects.firstIndex(where: { $0.name == savedSubject.name }) {
+                    // Merge topics: keep hardcoded, add user-created ones
+                    let hardcodedTopicIDs = Set(subjects[idx].topics.map { $0.id })
+                    let userTopics = savedSubject.topics.filter { !hardcodedTopicIDs.contains($0.id) }
+                    subjects[idx].topics.append(contentsOf: userTopics)
+
+                    // Also restore user-added flashcards within hardcoded topics
+                    for savedTopic in savedSubject.topics {
+                        if let topicIdx = subjects[idx].topics.firstIndex(where: { $0.id == savedTopic.id }),
+                           hardcodedTopicIDs.contains(savedTopic.id) {
+                            let hardcodedFlashcardIDs = Set(subjects[idx].topics[topicIdx].flashcards.map { $0.id })
+                            let userFlashcards = savedTopic.flashcards.filter { !hardcodedFlashcardIDs.contains($0.id) }
+                            subjects[idx].topics[topicIdx].flashcards.append(contentsOf: userFlashcards)
+                        }
+                    }
+                }
+            }
+        }
+        // Regenerate options for all user-created flashcards based on current topic data
+        refreshAllFlashcardOptions()
     }
-    
+
+    /// Regenerate multiple choice options for flashcards in topics that have 4+ words.
+    /// Uses other answers in the same topic as wrong options.
+    private func refreshAllFlashcardOptions() {
+        for si in subjects.indices {
+            for ti in subjects[si].topics.indices {
+                let allAnswers = subjects[si].topics[ti].flashcards.map { $0.answer }
+                guard allAnswers.count >= 4 else { continue }
+
+                for fi in subjects[si].topics[ti].flashcards.indices {
+                    let card = subjects[si].topics[ti].flashcards[fi]
+                    // Only refresh user-created cards (ones that had placeholders or need update)
+                    guard card.options != nil else { continue }
+                    let hasPlaceholder = card.options?.contains(where: { $0.contains("...") || $0.contains("---") || $0.contains("???") }) ?? false
+                    guard hasPlaceholder else { continue }
+
+                    let wrongPool = allAnswers.filter { $0 != card.answer }.shuffled()
+                    let wrongAnswers = Array(wrongPool.prefix(3))
+
+                    var allChoices = wrongAnswers + [card.answer]
+                    allChoices.shuffle()
+                    let labels = ["A", "B", "C", "D"]
+                    var options: [String] = []
+                    var correctLabel = "A"
+                    for (i, ans) in allChoices.prefix(4).enumerated() {
+                        options.append("\(labels[i]). \(ans)")
+                        if ans == card.answer {
+                            correctLabel = labels[i]
+                        }
+                    }
+
+                    subjects[si].topics[ti].flashcards[fi] = Flashcard(
+                        id: card.id,
+                        question: card.question,
+                        answer: card.answer,
+                        hint: card.hint,
+                        options: options,
+                        correctAnswer: correctLabel,
+                        exerciseType: card.exerciseType
+                    )
+                }
+            }
+        }
+    }
+
     // Filter topics based on search text
     func filteredTopics(for subject: Subject) -> [Topic] {
         if searchText.isEmpty {
@@ -32,6 +111,159 @@ class ContentViewModel: ObservableObject {
         return subject.topics.filter { topic in
             topic.name.localizedCaseInsensitiveContains(searchText)
         }
+    }
+
+    // MARK: - CRUD Operations
+
+    func addTopic(name: String) {
+        guard let subjectIndex = subjects.firstIndex(where: { $0.id == selectedSubject?.id }),
+              !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+
+        let newTopic = Topic(
+            name: name.trimmingCharacters(in: .whitespaces),
+            subjectName: subjects[subjectIndex].name,
+            flashcards: [],
+            readings: []
+        )
+        subjects[subjectIndex].topics.append(newTopic)
+        selectedSubject = subjects[subjectIndex]
+        selectedTopic = newTopic
+        newTopicName = ""
+        showAddTopicSheet = false
+        saveData()
+    }
+
+    func addFlashcard(question: String, answer: String, hint: String) {
+        guard let subjectIndex = subjects.firstIndex(where: { $0.id == selectedSubject?.id }),
+              let topicIndex = subjects[subjectIndex].topics.firstIndex(where: { $0.id == selectedTopic?.id }),
+              !question.trimmingCharacters(in: .whitespaces).isEmpty,
+              !answer.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+
+        let trimmedQuestion = question.trimmingCharacters(in: .whitespaces)
+        let trimmedAnswer = answer.trimmingCharacters(in: .whitespaces)
+        let trimmedHint = hint.trimmingCharacters(in: .whitespaces)
+
+        // Build multiple choice options from other flashcards in the same topic
+        let existingAnswers = subjects[subjectIndex].topics[topicIndex].flashcards
+            .map { $0.answer }
+            .filter { $0 != trimmedAnswer }
+
+        let wrongAnswers: [String]
+        if existingAnswers.count >= 3 {
+            wrongAnswers = Array(existingAnswers.shuffled().prefix(3))
+        } else {
+            // Pad with placeholder wrong answers if not enough flashcards exist
+            var pool = existingAnswers
+            let placeholders = ["...", "---", "???"]
+            for p in placeholders where pool.count < 3 {
+                if !pool.contains(p) && p != trimmedAnswer {
+                    pool.append(p)
+                }
+            }
+            wrongAnswers = Array(pool.prefix(3))
+        }
+
+        // Shuffle correct + wrong, assign A/B/C/D
+        var allAnswers = wrongAnswers + [trimmedAnswer]
+        allAnswers.shuffle()
+        let labels = ["A", "B", "C", "D"]
+        var options: [String] = []
+        var correctLabel = "A"
+        for (i, ans) in allAnswers.prefix(4).enumerated() {
+            options.append("\(labels[i]). \(ans)")
+            if ans == trimmedAnswer {
+                correctLabel = labels[i]
+            }
+        }
+
+        let newFlashcard = Flashcard(
+            question: trimmedQuestion,
+            answer: trimmedAnswer,
+            hint: trimmedHint.isEmpty ? nil : trimmedHint,
+            options: options,
+            correctAnswer: correctLabel,
+            exerciseType: .englishToVietnamese
+        )
+        subjects[subjectIndex].topics[topicIndex].flashcards.append(newFlashcard)
+
+        // Refresh options for all cards in this topic (replace placeholders with real answers)
+        refreshOptionsForTopic(subjectIndex: subjectIndex, topicIndex: topicIndex)
+
+        selectedSubject = subjects[subjectIndex]
+        selectedTopic = subjects[subjectIndex].topics[topicIndex]
+        newFlashcardQuestion = ""
+        newFlashcardAnswer = ""
+        newFlashcardHint = ""
+        showAddFlashcardSheet = false
+        saveData()
+    }
+
+    /// Refresh options for all flashcards in a specific topic
+    private func refreshOptionsForTopic(subjectIndex si: Int, topicIndex ti: Int) {
+        let allAnswers = subjects[si].topics[ti].flashcards.map { $0.answer }
+        guard allAnswers.count >= 4 else { return }
+
+        for fi in subjects[si].topics[ti].flashcards.indices {
+            let card = subjects[si].topics[ti].flashcards[fi]
+            // Only refresh cards that have options (user-created multiple choice)
+            guard card.options != nil else { continue }
+
+            let wrongPool = allAnswers.filter { $0 != card.answer }.shuffled()
+            let wrongAnswers = Array(wrongPool.prefix(3))
+
+            var allChoices = wrongAnswers + [card.answer]
+            allChoices.shuffle()
+            let labels = ["A", "B", "C", "D"]
+            var options: [String] = []
+            var correctLabel = "A"
+            for (i, ans) in allChoices.prefix(4).enumerated() {
+                options.append("\(labels[i]). \(ans)")
+                if ans == card.answer {
+                    correctLabel = labels[i]
+                }
+            }
+
+            subjects[si].topics[ti].flashcards[fi] = Flashcard(
+                id: card.id,
+                question: card.question,
+                answer: card.answer,
+                hint: card.hint,
+                options: options,
+                correctAnswer: correctLabel,
+                exerciseType: card.exerciseType
+            )
+        }
+    }
+
+    func deleteTopic(_ topic: Topic) {
+        guard let subjectIndex = subjects.firstIndex(where: { $0.id == selectedSubject?.id }),
+              let topicIndex = subjects[subjectIndex].topics.firstIndex(where: { $0.id == topic.id }) else { return }
+
+        if selectedTopic?.id == topic.id {
+            selectedTopic = nil
+            selectedFlashcard = nil
+        }
+        subjects[subjectIndex].topics.remove(at: topicIndex)
+        selectedSubject = subjects[subjectIndex]
+        saveData()
+    }
+
+    func deleteFlashcard(_ flashcard: Flashcard) {
+        guard let subjectIndex = subjects.firstIndex(where: { $0.id == selectedSubject?.id }),
+              let topicIndex = subjects[subjectIndex].topics.firstIndex(where: { $0.id == selectedTopic?.id }),
+              let flashcardIndex = subjects[subjectIndex].topics[topicIndex].flashcards.firstIndex(where: { $0.id == flashcard.id }) else { return }
+
+        if selectedFlashcard?.id == flashcard.id {
+            selectedFlashcard = nil
+        }
+        subjects[subjectIndex].topics[topicIndex].flashcards.remove(at: flashcardIndex)
+        selectedSubject = subjects[subjectIndex]
+        selectedTopic = subjects[subjectIndex].topics[topicIndex]
+        saveData()
+    }
+
+    private func saveData() {
+        persistence.saveSubjects(subjects)
     }
 
     let beginnerHometown = [
@@ -181,6 +413,18 @@ class ContentViewModel: ObservableObject {
     // MARK: - Learning Data Management
     
     private func loadLearningData() {
+        // Import HSK3 CSV into SQLite (only on first launch)
+        let dbManager = DatabaseManager.shared
+        _ = dbManager.importCSV(filename: "hsk3", topicKey: "hsk3")
+
+        // Load HSK3 flashcards from SQLite
+        let hsk3Flashcards = dbManager.loadFlashcards(for: "hsk3")
+        let hsk2Topic = Topic(
+            name: "HSK2 (汉语水平考试二级)",
+            subjectName: "Tiếng Trung",
+            flashcards: hsk3Flashcards
+        )
+
         // 1. Tạo các mảng từ vựng (copy code từ trên vào)
         let beginner = beginnerHometown // Mảng 100 từ
         let intermediate = intermediateHometown // Mảng 100 từ
@@ -3538,34 +3782,6 @@ The psychological significance of hometowns ultimately reflects fundamental huma
         // MARK: - TIẾNG TRUNG (CHINESE) TOPICS
         // ============================================
         
-        // Numbers in Chinese
-        let chineseNumbersTopic = Topic(
-            name: "Numbers (数字 - Shùzì)",
-            subjectName: "Tiếng Trung",
-            flashcards: [
-                // Basic numbers 1-10
-                Flashcard(question: "这是什么数字？→ 一", answer: "yī (một)", hint: "Số đầu tiên", options: ["A. yī (một)", "B. èr (hai)", "C. sān (ba)", "D. sì (bốn)"], correctAnswer: "A", exerciseType: .englishToVietnamese),
-                Flashcard(question: "这是什么数字？→ 二", answer: "èr (hai)", hint: "Sau số một", options: ["A. yī (một)", "B. èr (hai)", "C. sān (ba)", "D. wǔ (năm)"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                Flashcard(question: "这是什么数字？→ 三", answer: "sān (ba)", hint: "Sau số hai", options: ["A. èr (hai)", "B. sān (ba)", "C. sì (bốn)", "D. wǔ (năm)"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                Flashcard(question: "这是什么数字？→ 四", answer: "sì (bốn)", hint: "Sau số ba", options: ["A. sān (ba)", "B. sì (bốn)", "C. wǔ (năm)", "D. liù (sáu)"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                Flashcard(question: "这是什么数字？→ 五", answer: "wǔ (năm)", hint: "Một nửa của mười", options: ["A. sì (bốn)", "B. wǔ (năm)", "C. liù (sáu)", "D. qī (bảy)"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                Flashcard(question: "这是什么数字？→ 六", answer: "liù (sáu)", hint: "Sau số năm", options: ["A. wǔ (năm)", "B. liù (sáu)", "C. qī (bảy)", "D. bā (tám)"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                Flashcard(question: "这是什么数字？→ 七", answer: "qī (bảy)", hint: "Số may mắn", options: ["A. liù (sáu)", "B. qī (bảy)", "C. bā (tám)", "D. jiǔ (chín)"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                Flashcard(question: "这是什么数字？→ 八", answer: "bā (tám)", hint: "Số may mắn Trung Quốc", options: ["A. qī (bảy)", "B. bā (tám)", "C. jiǔ (chín)", "D. shí (mười)"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                Flashcard(question: "这是什么数字？→ 九", answer: "jiǔ (chín)", hint: "Trước số mười", options: ["A. bā (tám)", "B. jiǔ (chín)", "C. shí (mười)", "D. qī (bảy)"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                Flashcard(question: "这是什么数字？→ 十", answer: "shí (mười)", hint: "Hai bàn tay", options: ["A. jiǔ (chín)", "B. shí (mười)", "C. bǎi (trăm)", "D. qiān (nghìn)"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                
-                // Reverse - Vietnamese to Chinese
-                Flashcard(question: "Số 'một' bằng tiếng Trung là gì?", answer: "一 (yī)", hint: "Số đầu tiên", options: ["A. 一 (yī)", "B. 二 (èr)", "C. 三 (sān)", "D. 四 (sì)"], correctAnswer: "A", exerciseType: .vietnameseToEnglish),
-                Flashcard(question: "Số 'năm' bằng tiếng Trung là gì?", answer: "五 (wǔ)", hint: "Một nửa của mười", options: ["A. 四 (sì)", "B. 五 (wǔ)", "C. 六 (liù)", "D. 七 (qī)"], correctAnswer: "B", exerciseType: .vietnameseToEnglish),
-                Flashcard(question: "Số 'mười' bằng tiếng Trung là gì?", answer: "十 (shí)", hint: "Hai bàn tay", options: ["A. 九 (jiǔ)", "B. 十 (shí)", "C. 百 (bǎi)", "D. 千 (qiān)"], correctAnswer: "B", exerciseType: .vietnameseToEnglish),
-                
-                // Fill in the blank
-                Flashcard(question: "我有___个苹果。(Tôi có năm quả táo)", answer: "五 (wǔ)", hint: "Số 5", options: ["A. 四 (sì)", "B. 五 (wǔ)", "C. 六 (liù)", "D. 七 (qī)"], correctAnswer: "B", exerciseType: .fillInTheBlank),
-                Flashcard(question: "一加九等于___。(Một cộng chín bằng mười)", answer: "十 (shí)", hint: "1 + 9 = ?", options: ["A. 八 (bā)", "B. 九 (jiǔ)", "C. 十 (shí)", "D. 十一 (shíyī)"], correctAnswer: "C", exerciseType: .fillInTheBlank)
-            ]
-        )
-        
         let chineseRadicalsTopic = Topic(
             name: "Radicals (部首 - Bùshǒu)",
             subjectName: "Tiếng Trung",
@@ -3650,29 +3866,6 @@ The psychological significance of hometowns ultimately reflects fundamental huma
                 Flashcard(question: "部首：马 (马)", answer: "Bộ Mã (Con ngựa)", hint: "Dùng trong chữ 骑 (Cưỡi), 验 (Nghiệm - thử ngựa). Liên quan đến loài ngựa hoặc tốc độ.", options: ["A. Thực", "B. Thủ", "C. Hương", "D. Mã"], correctAnswer: "D", exerciseType: .englishToVietnamese),
                 Flashcard(question: "部首：鱼 (鱼)", answer: "Bộ Ngư (Con cá)", hint: "Dùng trong chữ 鲜 (Tươi), 鲁 (Lỗ). Liên quan đến các loài thủy sản, cá.", options: ["A. Ngư", "B. Điểu", "C. Lộc", "D. Miễn"], correctAnswer: "A", exerciseType: .englishToVietnamese),
                 Flashcard(question: "部首：鸟 (鸟)", answer: "Bộ Điểu (Con chim)", hint: "Dùng trong chữ 鸡 (Gà), 鸭 (Vịt). Liên quan đến các loài chim và gia cầm.", options: ["A. Ngư", "B. Điểu", "C. Lộc", "D. Miễn"], correctAnswer: "B", exerciseType: .englishToVietnamese)
-            ]
-        )
-        
-        // Basic Greetings in Chinese
-        let chineseGreetingsTopic = Topic(
-            name: "Greetings (问候 - Wènhòu)",
-            subjectName: "Tiếng Trung",
-            flashcards: [
-                Flashcard(question: "'Xin chào' trong tiếng Trung là gì?", answer: "你好 (nǐ hǎo)", hint: "Hello", options: ["A. 你好 (nǐ hǎo)", "B. 再见 (zàijiàn)", "C. 谢谢 (xièxie)", "D. 对不起 (duìbuqǐ)"], correctAnswer: "A", exerciseType: .vietnameseToEnglish),
-                Flashcard(question: "'Tạm biệt' trong tiếng Trung là gì?", answer: "再见 (zàijiàn)", hint: "Goodbye", options: ["A. 你好 (nǐ hǎo)", "B. 再见 (zàijiàn)", "C. 早上好 (zǎoshang hǎo)", "D. 晚安 (wǎn'ān)"], correctAnswer: "B", exerciseType: .vietnameseToEnglish),
-                Flashcard(question: "'Cảm ơn' trong tiếng Trung là gì?", answer: "谢谢 (xièxie)", hint: "Thank you", options: ["A. 对不起 (duìbuqǐ)", "B. 不客气 (bù kèqi)", "C. 谢谢 (xièxie)", "D. 你好 (nǐ hǎo)"], correctAnswer: "C", exerciseType: .vietnameseToEnglish),
-                Flashcard(question: "'Xin lỗi' trong tiếng Trung là gì?", answer: "对不起 (duìbuqǐ)", hint: "Sorry", options: ["A. 谢谢 (xièxie)", "B. 对不起 (duìbuqǐ)", "C. 不客气 (bù kèqi)", "D. 再见 (zàijiàn)"], correctAnswer: "B", exerciseType: .vietnameseToEnglish),
-                Flashcard(question: "'Không sao/Không có gì' trong tiếng Trung là gì?", answer: "不客气 (bù kèqi)", hint: "You're welcome", options: ["A. 谢谢 (xièxie)", "B. 对不起 (duìbuqǐ)", "C. 不客气 (bù kèqi)", "D. 再见 (zàijiàn)"], correctAnswer: "C", exerciseType: .vietnameseToEnglish),
-                Flashcard(question: "'Chào buổi sáng' trong tiếng Trung là gì?", answer: "早上好 (zǎoshang hǎo)", hint: "Morning greeting", options: ["A. 你好 (nǐ hǎo)", "B. 早上好 (zǎoshang hǎo)", "C. 晚安 (wǎn'ān)", "D. 下午好 (xiàwǔ hǎo)"], correctAnswer: "B", exerciseType: .vietnameseToEnglish),
-                
-                // Reverse
-                Flashcard(question: "What is '你好 (nǐ hǎo)' in Vietnamese?", answer: "Xin chào", hint: "Hello", options: ["A. Xin chào", "B. Tạm biệt", "C. Cảm ơn", "D. Xin lỗi"], correctAnswer: "A", exerciseType: .englishToVietnamese),
-                Flashcard(question: "What is '谢谢 (xièxie)' in Vietnamese?", answer: "Cảm ơn", hint: "Thank you", options: ["A. Xin lỗi", "B. Không có gì", "C. Cảm ơn", "D. Xin chào"], correctAnswer: "C", exerciseType: .englishToVietnamese),
-                Flashcard(question: "What is '再见 (zàijiàn)' in Vietnamese?", answer: "Tạm biệt", hint: "Goodbye", options: ["A. Xin chào", "B. Tạm biệt", "C. Cảm ơn", "D. Chúc ngủ ngon"], correctAnswer: "B", exerciseType: .englishToVietnamese),
-                
-                // Fill in the blank
-                Flashcard(question: "When I meet someone, I say: ___", answer: "你好 (nǐ hǎo)", hint: "Hello", options: ["A. 你好", "B. 再见", "C. 谢谢", "D. 对不起"], correctAnswer: "A", exerciseType: .fillInTheBlank),
-                Flashcard(question: "When someone helps me, I say: ___", answer: "谢谢 (xièxie)", hint: "Thank you", options: ["A. 你好", "B. 再见", "C. 谢谢", "D. 对不起"], correctAnswer: "C", exerciseType: .fillInTheBlank)
             ]
         )
         
@@ -3935,11 +4128,10 @@ The psychological significance of hometowns ultimately reflects fundamental huma
                 name: "Tiếng Trung",
                 icon: "character.book.closed.fill",
                 topics: [
-                    chineseNumbersTopic,
-                    chineseGreetingsTopic,
                     chineseFamilyTopic,
                     chineseColorsTopic,
-                    chineseRadicalsTopic
+                    chineseRadicalsTopic,
+                    hsk2Topic
                 ]
             )
         ]

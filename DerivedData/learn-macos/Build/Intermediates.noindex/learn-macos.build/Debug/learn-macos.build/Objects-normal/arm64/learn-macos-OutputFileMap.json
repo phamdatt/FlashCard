@@ -36,6 +36,16 @@
     "swift-dependencies" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/ContentViewModel.swiftdeps",
     "swiftmodule" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/ContentViewModel~partial.swiftmodule"
   },
+  "/Users/datpham/person-projects/learn-macos/learn-macos/DatabaseManager.swift" : {
+    "const-values" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/DatabaseManager.swiftconstvalues",
+    "dependencies" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/DatabaseManager.d",
+    "diagnostics" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/DatabaseManager.dia",
+    "index-unit-output-path" : "/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/DatabaseManager.o",
+    "llvm-bc" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/DatabaseManager.bc",
+    "object" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/DatabaseManager.o",
+    "swift-dependencies" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/DatabaseManager.swiftdeps",
+    "swiftmodule" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/DatabaseManager~partial.swiftmodule"
+  },
   "/Users/datpham/person-projects/learn-macos/learn-macos/FlashcardMainView.swift" : {
     "const-values" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/FlashcardMainView.swiftconstvalues",
     "dependencies" : "/Users/datpham/person-projects/learn-macos/DerivedData/learn-macos/Build/Intermediates.noindex/learn-macos.build/Debug/learn-macos.build/Objects-normal/arm64/FlashcardMainView.d",

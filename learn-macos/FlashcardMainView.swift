@@ -45,10 +45,16 @@ struct FlashcardMainView: View {
                     .font(.headline)
                 
                 Spacer()
-                
-                // Placeholder for symmetry
-                Label("Quay lại", systemImage: "chevron.left")
-                    .opacity(0)
+
+                // Add flashcard button
+                Button(action: {
+                    viewModel.showAddFlashcardSheet = true
+                }) {
+                    Label("Thêm từ", systemImage: "plus.circle.fill")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.blue)
             }
             .padding()
             .background(Color(nsColor: .controlBackgroundColor))
@@ -143,6 +149,9 @@ struct FlashcardMainView: View {
                 resetPractice()
             }
         }
+        .sheet(isPresented: $viewModel.showAddFlashcardSheet) {
+            AddFlashcardSheet(viewModel: viewModel)
+        }
     }
     
     // List mode view
@@ -173,6 +182,13 @@ struct FlashcardMainView: View {
                 }
                 .tag(flashcard)
                 .padding(.vertical, 4)
+                .contextMenu {
+                    Button(role: .destructive, action: {
+                        viewModel.deleteFlashcard(flashcard)
+                    }) {
+                        Label("Xoá từ vựng", systemImage: "trash")
+                    }
+                }
             }
             .frame(minWidth: 250, idealWidth: 300, maxWidth: 400)
             .listStyle(.sidebar)
@@ -774,5 +790,112 @@ struct ReadingPassageDetailView: View {
     }
 }
 
+// MARK: - Add Flashcard Sheet
+struct AddFlashcardSheet: View {
+    @ObservedObject var viewModel: ContentViewModel
+    @FocusState private var focusedField: Field?
 
+    enum Field {
+        case question, answer, hint
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // Header
+            HStack {
+                Text("Thêm từ vựng mới")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Spacer()
+                Button(action: {
+                    clearAndClose()
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Topic info
+            if let topic = viewModel.selectedTopic {
+                HStack(spacing: 8) {
+                    Image(systemName: "book.fill")
+                        .foregroundStyle(.blue)
+                    Text(topic.name)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+
+            Divider()
+
+            // Input fields
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Từ gốc")
+                        .font(.headline)
+                    TextField("Ví dụ: Apple", text: $viewModel.newFlashcardQuestion)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .question)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Nghĩa")
+                        .font(.headline)
+                    TextField("Ví dụ: Quả táo", text: $viewModel.newFlashcardAnswer)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .answer)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Gợi ý")
+                        .font(.headline)
+                    TextField("Ví dụ: A common red fruit (không bắt buộc)", text: $viewModel.newFlashcardHint)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .hint)
+                }
+            }
+
+            Spacer()
+
+            // Action buttons
+            HStack {
+                Button("Huỷ") {
+                    clearAndClose()
+                }
+                .keyboardShortcut(.escape)
+
+                Spacer()
+
+                Button(action: {
+                    viewModel.addFlashcard(
+                        question: viewModel.newFlashcardQuestion,
+                        answer: viewModel.newFlashcardAnswer,
+                        hint: viewModel.newFlashcardHint
+                    )
+                }) {
+                    Text("Thêm từ vựng")
+                        .fontWeight(.semibold)
+                }
+                .keyboardShortcut(.return)
+                .disabled(
+                    viewModel.newFlashcardQuestion.trimmingCharacters(in: .whitespaces).isEmpty ||
+                    viewModel.newFlashcardAnswer.trimmingCharacters(in: .whitespaces).isEmpty
+                )
+            }
+        }
+        .padding(24)
+        .frame(width: 450, height: 400)
+        .onAppear { focusedField = .question }
+    }
+
+    private func clearAndClose() {
+        viewModel.newFlashcardQuestion = ""
+        viewModel.newFlashcardAnswer = ""
+        viewModel.newFlashcardHint = ""
+        viewModel.showAddFlashcardSheet = false
+    }
+}
 

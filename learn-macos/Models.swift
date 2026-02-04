@@ -28,8 +28,8 @@ struct Topic: Identifiable, Hashable, Codable {
     let id: UUID
     let name: String
     let subjectName: String // To know which subject this belongs to
-    let flashcards: [Flashcard]
-    let readings: [ReadingPassage] // Add reading passages
+    var flashcards: [Flashcard]
+    var readings: [ReadingPassage] // Add reading passages
 
     init(id: UUID = UUID(), name: String, subjectName: String, flashcards: [Flashcard], readings: [ReadingPassage] = []) {
         self.id = id

@@ -28,10 +28,18 @@
       },
       {
         "comment": "",
+        "key": "Thêm chủ đề",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
         "key": "Không tìm thấy kết quả",
         "location": {
           "startingColumn": 27,
-          "startingLine": 106
+          "startingLine": 121
         }
       },
       {
@@ -39,7 +47,7 @@
         "key": "Thử tìm kiếm với từ khóa khác",
         "location": {
           "startingColumn": 26,
-          "startingLine": 108
+          "startingLine": 123
         }
       },
       {
@@ -47,7 +55,55 @@
         "key": "%lld flashcards",
         "location": {
           "startingColumn": 38,
-          "startingLine": 133
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "Xoá chủ đề",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 168
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tạo chủ đề mới",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tên chủ đề",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 223
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ví dụ: Sports (Thể thao)",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 225
+        }
+      },
+      {
+        "comment": "",
+        "key": "Huỷ",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 235
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tạo chủ đề",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 246
         }
       },
       {
@@ -55,7 +111,7 @@
         "key": "Đáp án",
         "location": {
           "startingColumn": 38,
-          "startingLine": 219
+          "startingLine": 320
         }
       },
       {
@@ -63,7 +119,7 @@
         "key": "Câu hỏi",
         "location": {
           "startingColumn": 52,
-          "startingLine": 219
+          "startingLine": 320
         }
       },
       {
@@ -71,7 +127,7 @@
         "key": "Xem câu hỏi",
         "location": {
           "startingColumn": 35,
-          "startingLine": 241
+          "startingLine": 342
         }
       },
       {
@@ -79,7 +135,7 @@
         "key": "Xem đáp án",
         "location": {
           "startingColumn": 54,
-          "startingLine": 241
+          "startingLine": 342
         }
       },
       {
@@ -87,7 +143,7 @@
         "key": "Gợi ý",
         "location": {
           "startingColumn": 27,
-          "startingLine": 255
+          "startingLine": 356
         }
       },
       {
@@ -95,7 +151,7 @@
         "key": "Câu hỏi",
         "location": {
           "startingColumn": 22,
-          "startingLine": 275
+          "startingLine": 376
         }
       },
       {
@@ -103,7 +159,7 @@
         "key": "Chính xác! 🎉",
         "location": {
           "startingColumn": 38,
-          "startingLine": 470
+          "startingLine": 571
         }
       },
       {
@@ -111,7 +167,7 @@
         "key": "Chưa đúng",
         "location": {
           "startingColumn": 60,
-          "startingLine": 470
+          "startingLine": 571
         }
       },
       {
@@ -119,7 +175,7 @@
         "key": "Chọn một môn học từ sidebar",
         "location": {
           "startingColumn": 39,
-          "startingLine": 523
+          "startingLine": 624
         }
       },
       {
@@ -127,7 +183,7 @@
         "key": "Chọn môn học",
         "location": {
           "startingColumn": 21,
-          "startingLine": 521
+          "startingLine": 622
         }
       },
       {
@@ -135,7 +191,7 @@
         "key": "Chọn một chủ đề để xem flashcards",
         "location": {
           "startingColumn": 39,
-          "startingLine": 535
+          "startingLine": 636
         }
       },
       {
@@ -143,7 +199,7 @@
         "key": "Chọn chủ đề",
         "location": {
           "startingColumn": 21,
-          "startingLine": 533
+          "startingLine": 634
         }
       }
     ]

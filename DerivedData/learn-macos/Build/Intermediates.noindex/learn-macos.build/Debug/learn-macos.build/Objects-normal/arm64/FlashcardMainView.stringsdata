@@ -6,16 +6,16 @@
         "comment": "",
         "key": "Quay lại",
         "location": {
-          "startingColumn": 23,
-          "startingLine": 50
+          "startingColumn": 27,
+          "startingLine": 38
         }
       },
       {
         "comment": "",
-        "key": "Quay lại",
+        "key": "Thêm từ",
         "location": {
           "startingColumn": 27,
-          "startingLine": 38
+          "startingLine": 53
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Chế độ",
         "location": {
           "startingColumn": 24,
-          "startingLine": 61
+          "startingLine": 67
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "20 từ",
         "location": {
           "startingColumn": 32,
-          "startingLine": 72
+          "startingLine": 78
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "40 từ",
         "location": {
           "startingColumn": 32,
-          "startingLine": 76
+          "startingLine": 82
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "60 từ",
         "location": {
           "startingColumn": 32,
-          "startingLine": 80
+          "startingLine": 86
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "Tất cả (%lld từ)",
         "location": {
           "startingColumn": 32,
-          "startingLine": 84
+          "startingLine": 90
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "%lld từ",
         "location": {
           "startingColumn": 34,
-          "startingLine": 91
+          "startingLine": 97
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "%lld%%",
         "location": {
           "startingColumn": 30,
-          "startingLine": 113
+          "startingLine": 119
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "%lld/%lld",
         "location": {
           "startingColumn": 31,
-          "startingLine": 109
+          "startingLine": 115
         }
       },
       {
@@ -87,7 +87,7 @@
         "key": "Chọn một flashcard để xem chi tiết",
         "location": {
           "startingColumn": 39,
-          "startingLine": 186
+          "startingLine": 202
         }
       },
       {
@@ -95,7 +95,7 @@
         "key": "Chọn một flashcard",
         "location": {
           "startingColumn": 21,
-          "startingLine": 184
+          "startingLine": 200
         }
       },
       {
@@ -103,7 +103,15 @@
         "key": "💡 %@",
         "location": {
           "startingColumn": 30,
-          "startingLine": 169
+          "startingLine": 178
+        }
+      },
+      {
+        "comment": "",
+        "key": "Xoá từ vựng",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 189
         }
       },
       {
@@ -111,7 +119,7 @@
         "key": "Câu %lld/%lld",
         "location": {
           "startingColumn": 30,
-          "startingLine": 201
+          "startingLine": 217
         }
       },
       {
@@ -119,7 +127,7 @@
         "key": "Tuyệt vời!",
         "location": {
           "startingColumn": 26,
-          "startingLine": 253
+          "startingLine": 269
         }
       },
       {
@@ -127,7 +135,7 @@
         "key": "Bạn đã hoàn thành bài luyện tập.",
         "location": {
           "startingColumn": 26,
-          "startingLine": 256
+          "startingLine": 272
         }
       },
       {
@@ -135,7 +143,7 @@
         "key": "%lld%%",
         "location": {
           "startingColumn": 34,
-          "startingLine": 276
+          "startingLine": 292
         }
       },
       {
@@ -143,7 +151,7 @@
         "key": "Đúng",
         "location": {
           "startingColumn": 34,
-          "startingLine": 278
+          "startingLine": 294
         }
       },
       {
@@ -151,7 +159,7 @@
         "key": "Về trang chủ",
         "location": {
           "startingColumn": 28,
-          "startingLine": 318
+          "startingLine": 334
         }
       },
       {
@@ -159,7 +167,7 @@
         "key": "Tiếp tục học tập",
         "location": {
           "startingColumn": 34,
-          "startingLine": 306
+          "startingLine": 322
         }
       },
       {
@@ -167,7 +175,7 @@
         "key": "Chủ đề này chưa có bài đọc nào",
         "location": {
           "startingColumn": 39,
-          "startingLine": 400
+          "startingLine": 416
         }
       },
       {
@@ -175,7 +183,7 @@
         "key": "Chưa có bài đọc",
         "location": {
           "startingColumn": 21,
-          "startingLine": 398
+          "startingLine": 414
         }
       },
       {
@@ -183,7 +191,7 @@
         "key": "Chọn bài đọc từ danh sách bên trái",
         "location": {
           "startingColumn": 39,
-          "startingLine": 464
+          "startingLine": 480
         }
       },
       {
@@ -191,7 +199,7 @@
         "key": "Chọn một bài đọc",
         "location": {
           "startingColumn": 21,
-          "startingLine": 462
+          "startingLine": 478
         }
       },
       {
@@ -199,7 +207,7 @@
         "key": "%lld câu hỏi",
         "location": {
           "startingColumn": 34,
-          "startingLine": 436
+          "startingLine": 452
         }
       },
       {
@@ -207,7 +215,7 @@
         "key": "%lld/%lld",
         "location": {
           "startingColumn": 38,
-          "startingLine": 518
+          "startingLine": 534
         }
       },
       {
@@ -215,7 +223,7 @@
         "key": "Từ vựng hỗ trợ",
         "location": {
           "startingColumn": 34,
-          "startingLine": 537
+          "startingLine": 553
         }
       },
       {
@@ -223,7 +231,7 @@
         "key": "📝 %@",
         "location": {
           "startingColumn": 42,
-          "startingLine": 558
+          "startingLine": 574
         }
       },
       {
@@ -231,7 +239,7 @@
         "key": "•",
         "location": {
           "startingColumn": 42,
-          "startingLine": 549
+          "startingLine": 565
         }
       },
       {
@@ -239,7 +247,7 @@
         "key": "Bài đọc",
         "location": {
           "startingColumn": 30,
-          "startingLine": 578
+          "startingLine": 594
         }
       },
       {
@@ -247,7 +255,7 @@
         "key": "Câu hỏi",
         "location": {
           "startingColumn": 30,
-          "startingLine": 598
+          "startingLine": 614
         }
       },
       {
@@ -255,7 +263,7 @@
         "key": "Nộp bài",
         "location": {
           "startingColumn": 34,
-          "startingLine": 612
+          "startingLine": 628
         }
       },
       {
@@ -263,7 +271,7 @@
         "key": "Làm lại",
         "location": {
           "startingColumn": 34,
-          "startingLine": 627
+          "startingLine": 643
         }
       },
       {
@@ -271,7 +279,79 @@
         "key": "Câu %lld: %@",
         "location": {
           "startingColumn": 18,
-          "startingLine": 646
+          "startingLine": 662
+        }
+      },
+      {
+        "comment": "",
+        "key": "Thêm từ vựng mới",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 806
+        }
+      },
+      {
+        "comment": "",
+        "key": "Từ gốc",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 837
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ví dụ: Apple",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 839
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nghĩa",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 845
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ví dụ: Quả táo",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 847
+        }
+      },
+      {
+        "comment": "",
+        "key": "Gợi ý",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 853
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ví dụ: A common red fruit (không bắt buộc)",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 855
+        }
+      },
+      {
+        "comment": "",
+        "key": "Huỷ",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 865
+        }
+      },
+      {
+        "comment": "",
+        "key": "Thêm từ vựng",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 879
         }
       }
     ]

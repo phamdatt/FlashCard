@@ -100,6 +100,21 @@ struct TopicsListView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
             
+            // Add Topic Button
+            HStack {
+                Spacer()
+                Button(action: {
+                    viewModel.showAddTopicSheet = true
+                }) {
+                    Label("Thêm chủ đề", systemImage: "plus.circle.fill")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.blue)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+
             // Topics List
             if filteredTopics.isEmpty {
                 ContentUnavailableView {
@@ -115,18 +130,18 @@ struct TopicsListView: View {
                             Circle()
                                 .fill(Color.accentColor.opacity(0.1))
                                 .frame(width: 40, height: 40)
-                            
+
                             Image(systemName: "book.fill")
                                 .font(.system(size: 16))
                                 .foregroundStyle(.gray)
                         }
-                        
+
                         // Topic Info
                         VStack(alignment: .leading, spacing: 4) {
                             Text(topic.name)
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.primary)
-                            
+
                             HStack(spacing: 6) {
                                 Image(systemName: "rectangle.stack.fill")
                                     .font(.system(size: 10))
@@ -135,9 +150,9 @@ struct TopicsListView: View {
                             }
                             .foregroundStyle(.secondary)
                         }
-                        
+
                         Spacer()
-                        
+
                         // Chevron
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
@@ -146,12 +161,98 @@ struct TopicsListView: View {
                     .padding(.vertical, 8)
                     .contentShape(Rectangle())
                     .tag(topic)
+                    .contextMenu {
+                        Button(role: .destructive, action: {
+                            viewModel.deleteTopic(topic)
+                        }) {
+                            Label("Xoá chủ đề", systemImage: "trash")
+                        }
+                    }
                 }
                 .listStyle(.sidebar)
             }
         }
         .navigationTitle(subject.name)
         .animation(.easeInOut(duration: 0.3), value: viewModel.searchText)
+        .sheet(isPresented: $viewModel.showAddTopicSheet) {
+            AddTopicSheet(viewModel: viewModel)
+        }
+    }
+}
+
+// MARK: - Add Topic Sheet
+struct AddTopicSheet: View {
+    @ObservedObject var viewModel: ContentViewModel
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // Header
+            HStack {
+                Text("Tạo chủ đề mới")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Spacer()
+                Button(action: {
+                    viewModel.newTopicName = ""
+                    viewModel.showAddTopicSheet = false
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Subject info
+            if let subject = viewModel.selectedSubject {
+                HStack(spacing: 8) {
+                    Image(systemName: subject.icon)
+                        .foregroundStyle(.blue)
+                    Text(subject.name)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+
+            Divider()
+
+            // Topic name input
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Tên chủ đề")
+                    .font(.headline)
+                TextField("Ví dụ: Sports (Thể thao)", text: $viewModel.newTopicName)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.body)
+                    .focused($isFocused)
+            }
+
+            Spacer()
+
+            // Action buttons
+            HStack {
+                Button("Huỷ") {
+                    viewModel.newTopicName = ""
+                    viewModel.showAddTopicSheet = false
+                }
+                .keyboardShortcut(.escape)
+
+                Spacer()
+
+                Button(action: {
+                    viewModel.addTopic(name: viewModel.newTopicName)
+                }) {
+                    Text("Tạo chủ đề")
+                        .fontWeight(.semibold)
+                }
+                .keyboardShortcut(.return)
+                .disabled(viewModel.newTopicName.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 400, height: 280)
+        .onAppear { isFocused = true }
     }
 }
 
