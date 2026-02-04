@@ -1,87 +1,87 @@
 # FlashCard
 
-Ung dung macOS ho tro hoc tu vung da ngon ngu (Anh-Viet, Trung) voi nhieu che do luyen tap khac nhau.
+A native macOS application for multi-language vocabulary learning (English-Vietnamese, Chinese) with multiple practice modes.
 
-## Tinh nang chinh
+## Features
 
-- **Flashcard truyen thong** - Lat the voi hieu ung animation, hien thi cau hoi/tra loi/goi y
-- **Trac nghiem** - 4 lua chon voi phan hoi tuc thi, theo doi diem so va ti le dung
-- **Doc hieu** - Bai doc theo cap do (Beginner -> Advanced) kem cau hoi va tu vung ho tro
-- **Quan ly noi dung** - Them/xoa chu de, flashcard tuy chinh
-- **Tim kiem** - Loc chu de nhanh theo tu khoa
+- **Traditional Flashcards** - Flip cards with spring animation, showing question/answer/hint
+- **Multiple Choice Quiz** - 4 options with instant feedback, score tracking and accuracy rate
+- **Reading Comprehension** - Leveled passages (Beginner -> Advanced) with questions and vocabulary support
+- **Content Management** - Add/delete custom topics and flashcards
+- **Search** - Filter topics quickly by keyword
 
-## Cong nghe
+## Tech Stack
 
-| Thanh phan | Cong nghe |
+| Component | Technology |
 |---|---|
 | Framework | SwiftUI |
-| Ngon ngu | Swift |
-| Co so du lieu | SQLite3 |
-| Kien truc | MVVM |
+| Language | Swift |
+| Database | SQLite3 |
+| Architecture | MVVM |
 | State Management | Combine |
 
-## Cau truc du an
+## Project Structure
 
 ```
 flash-card/
-├── flash_cardApp.swift          # Entry point
+├── flash_cardApp.swift          # App entry point
 ├── Models.swift                 # Data models (Subject, Topic, Flashcard, ReadingPassage...)
-├── ContentView.swift            # UI chinh - NavigationSplitView 3 cot
-├── ContentViewModel.swift       # ViewModel - xu ly logic va state
-├── FlashcardMainView.swift      # Giao dien hoc flashcard (List/Practice/Reading)
-├── DatabaseManager.swift        # Quan ly SQLite, seed du lieu tu CSV
+├── ContentView.swift            # Main UI - 3-column NavigationSplitView
+├── ContentViewModel.swift       # ViewModel - business logic & state
+├── FlashcardMainView.swift      # Flashcard learning interface (List/Practice/Reading)
+├── DatabaseManager.swift        # SQLite management, CSV data seeding
 ├── Data/
-│   └── flashcards.sqlite        # Co so du lieu SQLite
-├── Assets.xcassets/             # Icon va tai nguyen
+│   └── flashcards.sqlite        # SQLite database
+├── Assets.xcassets/             # Icons and resources
 └── LearnMacOS.xcdatamodel       # Core Data schema (legacy)
 ```
 
-## Mo hinh du lieu
+## Data Model
 
 ```
-Subject (Chu de lon)
-  └── Topic (Chu de con)
-        ├── Flashcard (The hoc)
-        │     └── Exercise Types: Dich Anh→Viet, Viet→Anh, Dien tu, Chon tu dung, Ghep nghia
-        └── ReadingPassage (Bai doc hieu)
-              ├── ReadingQuestion (Cau hoi trac nghiem)
-              └── VocabularyItem (Tu vung ho tro)
+Subject (Main category)
+  └── Topic (Sub-category)
+        ├── Flashcard
+        │     └── Exercise Types: EN→VI, VI→EN, Fill in the blank, Choose correct word, Match meaning
+        └── ReadingPassage
+              ├── ReadingQuestion (Multiple choice)
+              └── VocabularyItem (Supporting vocabulary)
 ```
 
-## Giao dien
+## Interface
 
-Ung dung su dung **NavigationSplitView** 3 cot:
+The app uses a **3-column NavigationSplitView**:
 
-1. **Sidebar** - Danh sach chu de lon (Vocabulary, IELTS, Chinese...)
-2. **Cot giua** - Danh sach topic voi thanh tim kiem
-3. **Chi tiet** - 3 che do hien thi:
-   - **List** - Xem danh sach flashcard va chi tiet
-   - **Practice** - Luyen tap co tinh gio, chon so luong tu (20/40/60/All)
-   - **Reading** - Doc hieu theo cap do
+1. **Sidebar** - Subject list (Vocabulary, IELTS, Chinese...)
+2. **Middle column** - Topic list with search bar
+3. **Detail** - 3 display modes:
+   - **List** - Browse flashcards and view details
+   - **Practice** - Timed quiz with configurable word count (20/40/60/All)
+   - **Reading** - Leveled reading comprehension
 
-## Du lieu co san
+## Built-in Data
 
-- Tu vung co ban: gia dinh, mua, mau sac, ngay, do an, trai cay, dong vat, co the, quan ao, thoi tiet...
-- Ngay le: Christmas, Tet
-- IELTS: moi truong, cong nghe, suc khoe, giao duc, xa hoi, tinh cach
+- Basic vocabulary: family, seasons, colors, days, food, fruits, animals, body, clothes, weather...
+- Holidays: Christmas, Tet (Vietnamese New Year)
+- IELTS: environment, technology, health, education, society, personality
 - IT vocabulary
-- Tieng Trung: gia dinh, mau sac, bo thu, HSK3
+- Chinese: family, colors, radicals, HSK3
 
-## Yeu cau he thong
+## Requirements
 
 - macOS
 - Xcode
 
-## Cai dat & Chay
+## Getting Started
 
 ```bash
-# Clone repository
+# Clone the repository
 git clone <repository-url>
 
-# Mo project bang Xcode
+# Open project in Xcode
 open flash-card.xcodeproj
 
-# Build va chay (Cmd + R)
+# Build and run (Cmd + R)
 ```
 
-Du lieu se duoc tu dong seed vao SQLite khi chay lan dau tien.
+The database is automatically seeded with built-in data on first launch.
