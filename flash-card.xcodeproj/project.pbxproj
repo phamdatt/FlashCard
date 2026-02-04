@@ -12,37 +12,37 @@
 			containerPortal = BB4CCCD52F2B2A85004CAEE1 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = BB4CCCDC2F2B2A85004CAEE1;
-			remoteInfo = "learn-macos";
+			remoteInfo = "flash-card";
 		};
 		BB4CCCF52F2B2A86004CAEE1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = BB4CCCD52F2B2A85004CAEE1 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = BB4CCCDC2F2B2A85004CAEE1;
-			remoteInfo = "learn-macos";
+			remoteInfo = "flash-card";
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		BB4CCCDD2F2B2A85004CAEE1 /* learn-macos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "learn-macos.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		BB4CCCEA2F2B2A86004CAEE1 /* learn-macosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "learn-macosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		BB4CCCF42F2B2A86004CAEE1 /* learn-macosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "learn-macosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB4CCCDD2F2B2A85004CAEE1 /* flash-card.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flash-card.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB4CCCEA2F2B2A86004CAEE1 /* flash-cardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "flash-cardTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB4CCCF42F2B2A86004CAEE1 /* flash-cardUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "flash-cardUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		BB4CCCDF2F2B2A85004CAEE1 /* learn-macos */ = {
+		BB4CCCDF2F2B2A85004CAEE1 /* flash-card */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "learn-macos";
+			path = "flash-card";
 			sourceTree = "<group>";
 		};
-		BB4CCCED2F2B2A86004CAEE1 /* learn-macosTests */ = {
+		BB4CCCED2F2B2A86004CAEE1 /* flash-cardTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "learn-macosTests";
+			path = "flash-cardTests";
 			sourceTree = "<group>";
 		};
-		BB4CCCF72F2B2A86004CAEE1 /* learn-macosUITests */ = {
+		BB4CCCF72F2B2A86004CAEE1 /* flash-cardUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "learn-macosUITests";
+			path = "flash-cardUITests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,9 +75,9 @@
 		BB4CCCD42F2B2A85004CAEE1 = {
 			isa = PBXGroup;
 			children = (
-				BB4CCCDF2F2B2A85004CAEE1 /* learn-macos */,
-				BB4CCCED2F2B2A86004CAEE1 /* learn-macosTests */,
-				BB4CCCF72F2B2A86004CAEE1 /* learn-macosUITests */,
+				BB4CCCDF2F2B2A85004CAEE1 /* flash-card */,
+				BB4CCCED2F2B2A86004CAEE1 /* flash-cardTests */,
+				BB4CCCF72F2B2A86004CAEE1 /* flash-cardUITests */,
 				BB4CCCDE2F2B2A85004CAEE1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -85,9 +85,9 @@
 		BB4CCCDE2F2B2A85004CAEE1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				BB4CCCDD2F2B2A85004CAEE1 /* learn-macos.app */,
-				BB4CCCEA2F2B2A86004CAEE1 /* learn-macosTests.xctest */,
-				BB4CCCF42F2B2A86004CAEE1 /* learn-macosUITests.xctest */,
+				BB4CCCDD2F2B2A85004CAEE1 /* flash-card.app */,
+				BB4CCCEA2F2B2A86004CAEE1 /* flash-cardTests.xctest */,
+				BB4CCCF42F2B2A86004CAEE1 /* flash-cardUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		BB4CCCDC2F2B2A85004CAEE1 /* learn-macos */ = {
+		BB4CCCDC2F2B2A85004CAEE1 /* flash-card */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = BB4CCCFE2F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "learn-macos" */;
+			buildConfigurationList = BB4CCCFE2F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "flash-card" */;
 			buildPhases = (
 				BB4CCCD92F2B2A85004CAEE1 /* Sources */,
 				BB4CCCDA2F2B2A85004CAEE1 /* Frameworks */,
@@ -108,18 +108,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				BB4CCCDF2F2B2A85004CAEE1 /* learn-macos */,
+				BB4CCCDF2F2B2A85004CAEE1 /* flash-card */,
 			);
-			name = "learn-macos";
+			name = "flash-card";
 			packageProductDependencies = (
 			);
-			productName = "learn-macos";
-			productReference = BB4CCCDD2F2B2A85004CAEE1 /* learn-macos.app */;
+			productName = "flash-card";
+			productReference = BB4CCCDD2F2B2A85004CAEE1 /* flash-card.app */;
 			productType = "com.apple.product-type.application";
 		};
-		BB4CCCE92F2B2A86004CAEE1 /* learn-macosTests */ = {
+		BB4CCCE92F2B2A86004CAEE1 /* flash-cardTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = BB4CCD012F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "learn-macosTests" */;
+			buildConfigurationList = BB4CCD012F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "flash-cardTests" */;
 			buildPhases = (
 				BB4CCCE62F2B2A86004CAEE1 /* Sources */,
 				BB4CCCE72F2B2A86004CAEE1 /* Frameworks */,
@@ -131,18 +131,18 @@
 				BB4CCCEC2F2B2A86004CAEE1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				BB4CCCED2F2B2A86004CAEE1 /* learn-macosTests */,
+				BB4CCCED2F2B2A86004CAEE1 /* flash-cardTests */,
 			);
-			name = "learn-macosTests";
+			name = "flash-cardTests";
 			packageProductDependencies = (
 			);
-			productName = "learn-macosTests";
-			productReference = BB4CCCEA2F2B2A86004CAEE1 /* learn-macosTests.xctest */;
+			productName = "flash-cardTests";
+			productReference = BB4CCCEA2F2B2A86004CAEE1 /* flash-cardTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		BB4CCCF32F2B2A86004CAEE1 /* learn-macosUITests */ = {
+		BB4CCCF32F2B2A86004CAEE1 /* flash-cardUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = BB4CCD042F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "learn-macosUITests" */;
+			buildConfigurationList = BB4CCD042F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "flash-cardUITests" */;
 			buildPhases = (
 				BB4CCCF02F2B2A86004CAEE1 /* Sources */,
 				BB4CCCF12F2B2A86004CAEE1 /* Frameworks */,
@@ -154,13 +154,13 @@
 				BB4CCCF62F2B2A86004CAEE1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				BB4CCCF72F2B2A86004CAEE1 /* learn-macosUITests */,
+				BB4CCCF72F2B2A86004CAEE1 /* flash-cardUITests */,
 			);
-			name = "learn-macosUITests";
+			name = "flash-cardUITests";
 			packageProductDependencies = (
 			);
-			productName = "learn-macosUITests";
-			productReference = BB4CCCF42F2B2A86004CAEE1 /* learn-macosUITests.xctest */;
+			productName = "flash-cardUITests";
+			productReference = BB4CCCF42F2B2A86004CAEE1 /* flash-cardUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -186,7 +186,7 @@
 					};
 				};
 			};
-			buildConfigurationList = BB4CCCD82F2B2A85004CAEE1 /* Build configuration list for PBXProject "learn-macos" */;
+			buildConfigurationList = BB4CCCD82F2B2A85004CAEE1 /* Build configuration list for PBXProject "flash-card" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -200,9 +200,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				BB4CCCDC2F2B2A85004CAEE1 /* learn-macos */,
-				BB4CCCE92F2B2A86004CAEE1 /* learn-macosTests */,
-				BB4CCCF32F2B2A86004CAEE1 /* learn-macosUITests */,
+				BB4CCCDC2F2B2A85004CAEE1 /* flash-card */,
+				BB4CCCE92F2B2A86004CAEE1 /* flash-cardTests */,
+				BB4CCCF32F2B2A86004CAEE1 /* flash-cardUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		BB4CCCEC2F2B2A86004CAEE1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = BB4CCCDC2F2B2A85004CAEE1 /* learn-macos */;
+			target = BB4CCCDC2F2B2A85004CAEE1 /* flash-card */;
 			targetProxy = BB4CCCEB2F2B2A86004CAEE1 /* PBXContainerItemProxy */;
 		};
 		BB4CCCF62F2B2A86004CAEE1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = BB4CCCDC2F2B2A85004CAEE1 /* learn-macos */;
+			target = BB4CCCDC2F2B2A85004CAEE1 /* flash-card */;
 			targetProxy = BB4CCCF52F2B2A86004CAEE1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -411,7 +411,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = "-lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.learn-macos";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.flash-card";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -445,7 +445,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = "-lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.learn-macos";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.flash-card";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -467,14 +467,14 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.learn-macosTests";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.flash-cardTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/learn-macos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/learn-macos";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/flash-card.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/flash-card";
 			};
 			name = Debug;
 		};
@@ -488,14 +488,14 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.learn-macosTests";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.flash-cardTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/learn-macos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/learn-macos";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/flash-card.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/flash-card";
 			};
 			name = Release;
 		};
@@ -507,14 +507,14 @@
 				DEVELOPMENT_TEAM = D3RM7NYTU5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.learn-macosUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.flash-cardUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = "learn-macos";
+				TEST_TARGET_NAME = "flash-card";
 			};
 			name = Debug;
 		};
@@ -526,21 +526,21 @@
 				DEVELOPMENT_TEAM = D3RM7NYTU5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.learn-macosUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.dawpham.flash-cardUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = "learn-macos";
+				TEST_TARGET_NAME = "flash-card";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		BB4CCCD82F2B2A85004CAEE1 /* Build configuration list for PBXProject "learn-macos" */ = {
+		BB4CCCD82F2B2A85004CAEE1 /* Build configuration list for PBXProject "flash-card" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BB4CCCFC2F2B2A86004CAEE1 /* Debug */,
@@ -549,7 +549,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		BB4CCCFE2F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "learn-macos" */ = {
+		BB4CCCFE2F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "flash-card" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BB4CCCFF2F2B2A86004CAEE1 /* Debug */,
@@ -558,7 +558,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		BB4CCD012F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "learn-macosTests" */ = {
+		BB4CCD012F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "flash-cardTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BB4CCD022F2B2A86004CAEE1 /* Debug */,
@@ -567,7 +567,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		BB4CCD042F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "learn-macosUITests" */ = {
+		BB4CCD042F2B2A86004CAEE1 /* Build configuration list for PBXNativeTarget "flash-cardUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BB4CCD052F2B2A86004CAEE1 /* Debug */,

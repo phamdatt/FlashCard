@@ -1,13 +1,13 @@
 //
-//  learn_macosUITestsLaunchTests.swift
-//  learn-macosUITests
+//  flash_cardUITestsLaunchTests.swift
+//  flash-cardUITests
 //
 //  Created by Dat Pham on 29/1/26.
 //
 
 import XCTest
 
-final class learn_macosUITestsLaunchTests: XCTestCase {
+final class flash_cardUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

@@ -1,14 +1,14 @@
 //
-//  learn_macosTests.swift
-//  learn-macosTests
+//  flash_cardTests.swift
+//  flash-cardTests
 //
 //  Created by Dat Pham on 29/1/26.
 //
 
 import Testing
-@testable import learn_macos
+@testable import flash_card
 
-struct learn_macosTests {
+struct flash_cardTests {
 
     @Test func example() async throws {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.

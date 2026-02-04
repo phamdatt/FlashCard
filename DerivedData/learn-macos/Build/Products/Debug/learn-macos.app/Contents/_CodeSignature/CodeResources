@@ -16,9 +16,9 @@
 		<data>
 		VeTD5C/mxsOGjX7QcA6nlQMxTyU=
 		</data>
-		<key>Resources/hsk3.csv</key>
+		<key>Resources/flashcards.sqlite</key>
 		<data>
-		uljd/H1AgGQ8QWzU160ScLzee80=
+		19aoi4ZO89uMYPP8nXpxjXm1wjQ=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -36,7 +36,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			r9sPVrw0M7+Y1dzmysNrOStwBTM=
+			XM+gJtIlM3af6nuoetkW+3KOLIw=
 			</data>
 			<key>requirement</key>
 			<string>identifier "learn-macos.debug" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: dat.pham@moso.com (6Q76S8YL5L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -62,11 +62,11 @@
 			jiLo/WawCBN2MOuMunc/VYPY4ReEj/nI+h0PM34Ju98=
 			</data>
 		</dict>
-		<key>Resources/hsk3.csv</key>
+		<key>Resources/flashcards.sqlite</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			0YUNNstgZik+NiNvi8W8bCklmoLVPVduYogXNsAQdnE=
+			xJojWlCu9+2pjf6PuslbRbCFirUQrfl7csaSLrXNig4=
 			</data>
 		</dict>
 	</dict>

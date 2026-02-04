@@ -7,9 +7,6 @@
 
 import Foundation
 
-// MARK: - Models
-
-// Models for Learning section
 struct Subject: Identifiable, Hashable, Codable {
     let id: UUID
     let name: String
@@ -26,15 +23,23 @@ struct Subject: Identifiable, Hashable, Codable {
 
 struct Topic: Identifiable, Hashable, Codable {
     let id: UUID
-    let name: String
-    let subjectName: String // To know which subject this belongs to
+    var name: String
+    var subjectName: String 
+    var topicKey: String
     var flashcards: [Flashcard]
-    var readings: [ReadingPassage] // Add reading passages
+    var readings: [ReadingPassage]
 
-    init(id: UUID = UUID(), name: String, subjectName: String, flashcards: [Flashcard], readings: [ReadingPassage] = []) {
+    init(id: UUID = UUID(), 
+         name: String, 
+         subjectName: String, 
+         topicKey: String,
+         flashcards: [Flashcard], 
+         readings: [ReadingPassage] = []) {
+        
         self.id = id
         self.name = name
         self.subjectName = subjectName
+        self.topicKey = topicKey
         self.flashcards = flashcards
         self.readings = readings
     }
@@ -46,11 +51,9 @@ struct Flashcard: Identifiable, Hashable, Codable {
     let answer: String
     let hint: String?
 
-    // For multiple choice questions
     let options: [String]?
     let correctAnswer: String?
 
-    // Exercise type
     let exerciseType: ExerciseType
 
     var isMultipleChoice: Bool {
