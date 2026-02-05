@@ -73,7 +73,7 @@ struct FlashcardMainView: View {
                 Spacer()
                 
                 Text(topic.name)
-                    .font(.headline)
+                    .font(.app(.headline))
                 
                 Spacer()
 
@@ -137,7 +137,7 @@ struct FlashcardMainView: View {
                                     Image(systemName: "number.circle.fill")
                                     Text("\(min(selectedWordCount, practicePoolCount)) từ")
                                     Image(systemName: "chevron.down")
-                                        .font(.caption)
+                                        .font(.app(.caption))
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
@@ -149,7 +149,7 @@ struct FlashcardMainView: View {
 
                             if topic.flashcards.count > 60 {
                                 Text("Nên 20–30 từ/phiên")
-                                    .font(.caption2)
+                                    .font(.app(.caption2))
                                     .foregroundStyle(.secondary)
                             }
 
@@ -158,7 +158,7 @@ struct FlashcardMainView: View {
                                     Image(systemName: "checkmark.circle.fill")
                                         .foregroundStyle(.secondary)
                                     Text("\(score)/\(totalAnswered) (\(practiceScorePercentage)%)")
-                                        .font(.subheadline)
+                                        .font(.app(.subheadline))
                                         .foregroundStyle(practiceScorePercentage >= 70 ? .green : .orange)
                                 }
                             }
@@ -230,7 +230,7 @@ struct FlashcardMainView: View {
 
                         if let hint = flashcard.hint, !hint.isEmpty {
                             Text("💡 \(hint)")
-                                .font(.footnote)
+                                .font(.app(.footnote))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                                 .padding(.trailing, 32) // Space for icons
@@ -390,12 +390,12 @@ struct FlashcardMainView: View {
                 VStack(spacing: 8) {
                     HStack {
                         Text("Câu \(currentIndex + 1)/\(shuffledFlashcards.count)")
-                            .font(.headline)
+                            .font(.app(.headline))
 
                         Spacer()
 
                         Text(flashcard.exerciseType.rawValue)
-                            .font(.subheadline)
+                            .font(.app(.subheadline))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -550,14 +550,14 @@ struct AddFlashcardSheet: View {
             // Header
             HStack {
                 Text("Thêm từ vựng mới")
-                    .font(.title2)
+                    .font(.app(.title2))
                     .fontWeight(.bold)
                 Spacer()
                 Button(action: {
                     clearAndClose()
                 }) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
+                        .font(.app(.title2))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -569,7 +569,7 @@ struct AddFlashcardSheet: View {
                     Image(systemName: "book.fill")
                         .foregroundStyle(.secondary)
                     Text(topic.name)
-                        .font(.subheadline)
+                        .font(.app(.subheadline))
                         .foregroundStyle(.secondary)
                     Spacer()
                 }
@@ -581,7 +581,7 @@ struct AddFlashcardSheet: View {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Từ gốc")
-                        .font(.headline)
+                        .font(.app(.headline))
                     TextField("Ví dụ: Apple", text: $viewModel.newFlashcardQuestion)
                         .textFieldStyle(.roundedBorder)
                         .focused($focusedField, equals: .question)
@@ -589,7 +589,7 @@ struct AddFlashcardSheet: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Nghĩa")
-                        .font(.headline)
+                        .font(.app(.headline))
                     TextField("Ví dụ: Quả táo", text: $viewModel.newFlashcardAnswer)
                         .textFieldStyle(.roundedBorder)
                         .focused($focusedField, equals: .answer)
@@ -597,7 +597,7 @@ struct AddFlashcardSheet: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Gợi ý")
-                        .font(.headline)
+                        .font(.app(.headline))
                     TextField("Ví dụ: A common red fruit (không bắt buộc)", text: $viewModel.newFlashcardHint)
                         .textFieldStyle(.roundedBorder)
                         .focused($focusedField, equals: .hint)

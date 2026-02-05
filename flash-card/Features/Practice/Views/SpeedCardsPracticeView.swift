@@ -55,7 +55,7 @@ struct SpeedCardsPracticeView: View {
             VStack(spacing: 8) {
                 HStack {
                     Text("Thẻ \(currentIndex + 1)/\(flashcards.count)")
-                        .font(.headline)
+                        .font(.app(.headline))
 
                     Spacer()
 
@@ -110,23 +110,23 @@ struct SpeedCardsPracticeView: View {
 
                         VStack(spacing: 16) {
                             Image(systemName: isFlipped ? "lightbulb.fill" : "questionmark.circle.fill")
-                                .font(.largeTitle)
+                                .font(.app(.largeTitle))
                                 .foregroundStyle(isFlipped ? .yellow : .secondary)
 
                             Text(isFlipped ? "Đáp án" : "Câu hỏi")
-                                .font(.caption)
+                                .font(.app(.caption))
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
 
                             SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.question, flashcards: flashcards)
-                                .font(.title2)
+                                .font(.app(.title2))
                                 .fontWeight(.bold)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
 
                             if !isFlipped, let hint = flashcard.hint {
                                 SmartCopyDefineText(text: hint, flashcards: flashcards)
-                                    .font(.subheadline)
+                                    .font(.app(.subheadline))
                                     .foregroundStyle(.secondary)
                                     .italic()
                                     .padding(.horizontal)
@@ -146,7 +146,7 @@ struct SpeedCardsPracticeView: View {
                     // Tap to flip hint
                     if !isFlipped {
                         Text("Nhấn vào thẻ để xem đáp án")
-                            .font(.caption)
+                            .font(.app(.caption))
                             .foregroundStyle(.secondary)
                     }
 
@@ -157,9 +157,9 @@ struct SpeedCardsPracticeView: View {
                             Button(action: { markCard(known: false) }) {
                                 HStack(spacing: 8) {
                                     Image(systemName: "xmark.circle.fill")
-                                        .font(.title2)
+                                        .font(.app(.title2))
                                     Text("Chưa biết")
-                                        .font(.title3)
+                                        .font(.app(.title3))
                                         .fontWeight(.bold)
                                 }
                                 .frame(maxWidth: .infinity)
@@ -180,9 +180,9 @@ struct SpeedCardsPracticeView: View {
                             Button(action: { markCard(known: true) }) {
                                 HStack(spacing: 8) {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.title2)
+                                        .font(.app(.title2))
                                     Text("Biết rồi")
-                                        .font(.title3)
+                                        .font(.app(.title3))
                                         .fontWeight(.bold)
                                 }
                                 .frame(maxWidth: .infinity)

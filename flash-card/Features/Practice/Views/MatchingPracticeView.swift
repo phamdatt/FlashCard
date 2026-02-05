@@ -50,13 +50,13 @@ struct MatchingPracticeView: View {
             VStack(spacing: 8) {
                 HStack {
                     Text("Nhóm \(batchIndex + 1)/\(totalBatches)")
-                        .font(.headline)
+                        .font(.app(.headline))
                     Spacer()
                     HStack(spacing: 8) {
 Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.secondary)
                         Text("\(matchedPairs.count)/\(currentBatch.count)")
-                            .font(.subheadline)
+                            .font(.app(.subheadline))
                     }
                 }
                 ProgressView(value: Double(batchIndex * batchSize + matchedPairs.count),
@@ -71,7 +71,7 @@ Image(systemName: "checkmark.circle.fill")
                 Image(systemName: "hand.tap.fill")
                     .foregroundStyle(.blue)
                 Text("Chọn câu hỏi bên trái, rồi chọn đáp án đúng bên phải")
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal)
@@ -83,7 +83,7 @@ Image(systemName: "checkmark.circle.fill")
                     // Questions column (left)
                     VStack(spacing: 12) {
                         Text("Câu hỏi")
-                            .font(.headline)
+                            .font(.app(.headline))
                             .foregroundStyle(.blue)
                             .frame(maxWidth: .infinity)
 
@@ -96,7 +96,7 @@ Image(systemName: "checkmark.circle.fill")
                     // Answers column (right)
                     VStack(spacing: 12) {
                         Text("Đáp án")
-                            .font(.headline)
+                            .font(.app(.headline))
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
 

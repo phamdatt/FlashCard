@@ -65,7 +65,7 @@ struct PracticeCompletedView: View {
                         )
 
                     Text("Bạn đã hoàn thành bài luyện tập.")
-                        .font(.title3)
+                        .font(.app(.title3))
                         .foregroundStyle(.secondary)
                 }
 
@@ -138,7 +138,7 @@ struct PracticeCompletedView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.orange)
                             Text("Cần ôn lại (\(unknownCards.count) thẻ)")
-                                .font(.headline)
+                                .font(.app(.headline))
                         }
                         .padding(.horizontal, 24)
 
@@ -146,10 +146,10 @@ struct PracticeCompletedView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(card.question)
-                                        .font(.subheadline)
+                                        .font(.app(.subheadline))
                                         .fontWeight(.semibold)
                                     Text(card.answer)
-                                        .font(.subheadline)
+                                        .font(.app(.subheadline))
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
@@ -176,7 +176,7 @@ struct PracticeCompletedView: View {
                             Image(systemName: "arrow.right")
                                 .fontWeight(.semibold)
                         }
-                        .font(.title3)
+                        .font(.app(.title3))
                         .padding(.vertical, 16)
                         .padding(.horizontal, 32)
                         .frame(maxWidth: 280)

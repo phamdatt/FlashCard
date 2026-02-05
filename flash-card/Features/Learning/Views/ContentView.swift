@@ -83,14 +83,11 @@ struct SidebarView: View {
     private var bottomSection: some View {
         VStack(spacing: 8) {
             VStack(spacing: 8) {
-                // Streak indicator + mascot animated
+                // Streak indicator
                 HStack(spacing: 10) {
-                    StreakMascotView(
-                        currentStreak: viewModel.streakInfo.currentStreak,
-                        didPracticeToday: viewModel.streakInfo.didPracticeToday,
-                        isLight: colorScheme == .light
-                    )
-                    .frame(minWidth: 48 * fontSizeManager.fontSizeMultiplier, minHeight: 58 * fontSizeManager.fontSizeMultiplier)
+                    Image(systemName: "flame.fill")
+                        .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .orange : .secondary)
+                        .scaledFont(22)
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
@@ -252,7 +249,7 @@ struct TopicsListView: View {
         if !viewModel.searchText.isEmpty {
             HStack {
                 Text("\(filteredTopics.count) kết quả")
-                    .font(.caption)
+                    .font(.app(.caption))
                     .foregroundStyle(.secondary)
                 Spacer()
             }
@@ -400,7 +397,7 @@ struct AddTopicSheet: View {
             // Header
             HStack {
                 Text("Tạo chủ đề mới")
-                    .font(.title2)
+                    .font(.app(.title2))
                     .fontWeight(.bold)
                 Spacer()
                 Button(action: {
@@ -408,7 +405,7 @@ struct AddTopicSheet: View {
                     viewModel.showAddTopicSheet = false
                 }) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
+                        .font(.app(.title2))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -420,7 +417,7 @@ struct AddTopicSheet: View {
 Image(systemName: subject.icon)
                     .foregroundStyle(.secondary)
                     Text(subject.name)
-                        .font(.subheadline)
+                        .font(.app(.subheadline))
                         .foregroundStyle(.secondary)
                     Spacer()
                 }
@@ -431,10 +428,10 @@ Image(systemName: subject.icon)
             // Topic name input
             VStack(alignment: .leading, spacing: 8) {
                 Text("Tên chủ đề")
-                    .font(.headline)
+                    .font(.app(.headline))
                 TextField("Ví dụ: Sports (Thể thao)", text: $viewModel.newTopicName)
                     .textFieldStyle(.roundedBorder)
-                    .font(.body)
+                    .font(.app(.body))
                     .focused($isFocused)
             }
 
@@ -848,15 +845,15 @@ struct FlashcardDetailView: View {
                 // Header
                 HStack {
                     Image(systemName: "graduationcap.fill")
-                        .font(.title)
+                        .font(.app(.title))
                         .foregroundStyle(.secondary)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(subjectName)
-                            .font(.headline)
+                            .font(.app(.headline))
                             .foregroundStyle(.secondary)
                         Text(topic.name)
-                            .font(.title2)
+                            .font(.app(.title2))
                             .fontWeight(.semibold)
                     }
                     
@@ -903,7 +900,7 @@ struct FlashcardDetailView: View {
                 
                 VStack(spacing: 16) {
                     Text(isFlipped ? "Đáp án" : "Câu hỏi")
-                        .font(.body)
+                        .font(.app(.body))
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
 
@@ -926,7 +923,7 @@ struct FlashcardDetailView: View {
                 }
             }) {
                 Label(isFlipped ? "Xem câu hỏi" : "Xem đáp án", systemImage: "arrow.triangle.2.circlepath")
-                    .font(.headline)
+                    .font(.app(.headline))
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(Color.green)
@@ -940,11 +937,11 @@ struct FlashcardDetailView: View {
             if let hint = flashcard.hint {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Gợi ý", systemImage: "lightbulb.fill")
-                        .font(.headline)
+                        .font(.app(.headline))
                         .foregroundStyle(.orange)
                     
                     SmartCopyDefineText(text: hint, flashcards: topic.flashcards)
-                        .font(.body)
+                        .font(.app(.body))
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color.orange.opacity(0.1))
@@ -960,7 +957,7 @@ struct FlashcardDetailView: View {
             // Question card
             VStack(spacing: 16) {
                 Text("Câu hỏi")
-                    .font(.body)
+                    .font(.app(.body))
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
 
@@ -986,7 +983,7 @@ struct FlashcardDetailView: View {
                     Image(systemName: "lightbulb.fill")
                         .foregroundStyle(.orange)
                     SmartCopyDefineText(text: hint, flashcards: topic.flashcards)
-                        .font(.subheadline)
+                        .font(.app(.subheadline))
                         .foregroundStyle(.secondary)
                 }
                 .padding()
@@ -1083,7 +1080,7 @@ struct FlashcardDetailView: View {
         }) {
             HStack {
                 Text(option)
-                    .font(.body)
+                    .font(.app(.body))
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
@@ -1093,13 +1090,13 @@ struct FlashcardDetailView: View {
                 if showResult {
                     if isCorrect {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.title3)
+                            .font(.app(.title3))
                             .foregroundStyle(.green)
                             .symbolEffect(.bounce.up, value: showResult)
                             .shadow(color: .green.opacity(0.5), radius: 4)
                     } else if isSelected && !isCorrect {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.title3)
+                            .font(.app(.title3))
                             .foregroundStyle(.red)
                             .symbolEffect(.bounce.down, value: showResult)
                             .shadow(color: .red.opacity(0.5), radius: 4)
@@ -1147,14 +1144,14 @@ struct FlashcardDetailView: View {
             
             HStack(spacing: 16) {
                 Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .font(.system(size: 36))
+                    .font(.system(size: 36, design: .rounded))
                     .foregroundStyle(isCorrect ? .green : .red)
                     .symbolEffect(.bounce.up, value: showResult)
                     .scaleEffect(showResult ? 1.15 : 1.0)
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(isCorrect ? "Chính xác! 🎉" : "Chưa đúng")
-                        .font(.title3)
+                        .font(.app(.title3))
                         .fontWeight(.bold)
                         .foregroundStyle(isCorrect ? .green : .red)
                     

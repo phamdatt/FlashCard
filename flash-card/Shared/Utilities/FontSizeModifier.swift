@@ -78,6 +78,17 @@ extension EnvironmentValues {
     }
 }
 
+// MARK: - App font design (single place to change for whole app)
+/// Use .rounded for a modern, friendly look. Alternatives: .default, .serif, .monospaced
+private let appFontDesign: Font.Design = .rounded
+
+/// Use for semantic text styles so the whole app uses the same font design (e.g. .font(.app(.headline)))
+extension Font {
+    static func app(_ style: Font.TextStyle) -> Font {
+        .system(style, design: appFontDesign)
+    }
+}
+
 // MARK: - Scaled font modifier (breakpoint-based)
 struct ScaledFont: ViewModifier {
     @Environment(\.fontSizeMultiplier) var fontSizeMultiplier
@@ -86,7 +97,7 @@ struct ScaledFont: ViewModifier {
     func body(content: Content) -> some View {
         let scale = TailwindScale.scaleFactor(for: fontSizeMultiplier)
         content
-            .font(.system(size: baseSize * scale))
+            .font(.system(size: baseSize * scale, design: appFontDesign))
     }
 }
 
@@ -125,12 +136,12 @@ extension Font {
     static func scaled(_ style: Font.TextStyle, multiplier: CGFloat = 1.0) -> Font {
         let base = TailwindTypeScale.size(for: style)
         let scale = TailwindScale.scaleFactor(for: multiplier)
-        return .system(size: base * scale)
+        return .system(size: base * scale, design: appFontDesign)
     }
 
     /// Font for a Tailwind semantic size, with optional breakpoint scale
     static func tailwind(_ size: TailwindSize, multiplier: CGFloat = 1.0) -> Font {
         let scale = TailwindScale.scaleFactor(for: multiplier)
-        return .system(size: size.pointSize * scale)
+        return .system(size: size.pointSize * scale, design: appFontDesign)
     }
 }
