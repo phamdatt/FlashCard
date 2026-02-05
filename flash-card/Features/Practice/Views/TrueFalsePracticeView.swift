@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct TrueFalsePracticeView: View {
     let flashcards: [Flashcard]
@@ -40,209 +41,329 @@ struct TrueFalsePracticeView: View {
 
     private var cardView: some View {
         let flashcard = flashcards[currentIndex]
+        let progress = Double(currentIndex) / Double(max(flashcards.count, 1))
 
         return VStack(spacing: 0) {
-            // Progress
-            VStack(spacing: 8) {
+            // Clean Header
+            VStack(spacing: 0) {
                 HStack {
-                    Text("Câu \(currentIndex + 1)/\(flashcards.count)")
-                        .font(.headline)
+                    Text("Câu \(currentIndex + 1) / \(flashcards.count)")
+                        .scaledFont(16)
+                        .fontWeight(.semibold)
+                    
                     Spacer()
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("\(score)/\(totalAnswered)")
-                            .font(.subheadline)
+                    
+                    if totalAnswered > 0 {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .scaledFont(14)
+                                .foregroundStyle(.secondary)
+                            Text("\(score)/\(totalAnswered)")
+                                .scaledFont(14)
+                                .fontWeight(.medium)
+                        }
                     }
                 }
-                ProgressView(value: Double(currentIndex), total: Double(flashcards.count))
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
+                
+                // Progress bar
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: 4)
+                        
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.green, .teal],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: geometry.size.width * progress, height: 4)
+                            .animation(.easeOut(duration: 0.3), value: progress)
+                    }
+                }
+                .frame(height: 4)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
             }
-            .padding()
-
-            Divider()
+            .background(Color(nsColor: .controlBackgroundColor))
 
             ScrollView {
-                VStack(spacing: 28) {
-                    Spacer(minLength: 20)
-
-                    // Question
-                    VStack(spacing: 12) {
-                        Text("Câu hỏi")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-
-                        SmartCopyDefineText(text: flashcard.question, flashcards: flashcards)
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    .padding(24)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.blue.opacity(colorScheme == .light ? 0.05 : 0.1))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.blue.opacity(colorScheme == .light ? 0.3 : 0.6), lineWidth: 2)
-                    )
-                    .padding(.horizontal, 24)
-
-                    // Arrow
-                    Image(systemName: "arrow.down")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-
-                    // Displayed answer (may be correct or wrong)
-                    VStack(spacing: 12) {
-                        Text("Đáp án")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-
-                        SmartCopyDefineText(text: displayedAnswer, flashcards: flashcards)
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    .padding(24)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(answerCardBackground)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(answerCardBorder, lineWidth: 2)
-                    )
-                    .padding(.horizontal, 24)
-
-                    // True/False buttons
-                    if !showResult {
-                        HStack(spacing: 20) {
-                            // TRUE button
-                            Button(action: { answerTapped(true) }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.title2)
-                                    Text("Đúng")
-                                        .font(.title3)
-                                        .fontWeight(.bold)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 18)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.green.opacity(colorScheme == .light ? 0.1 : 0.15))
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.green, lineWidth: 2)
-                                )
-                                .foregroundStyle(.green)
-                            }
-                            .buttonStyle(ScaleButtonStyle())
-
-                            // FALSE button
-                            Button(action: { answerTapped(false) }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.title2)
-                                    Text("Sai")
-                                        .font(.title3)
-                                        .fontWeight(.bold)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 18)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.red.opacity(colorScheme == .light ? 0.1 : 0.15))
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.red, lineWidth: 2)
-                                )
-                                .foregroundStyle(.red)
-                            }
-                            .buttonStyle(ScaleButtonStyle())
+                VStack(spacing: 0) {
+                    Spacer(minLength: 60)
+                    
+                    // Question Card - Premium Design
+                    VStack(spacing: 16) {
+                        HStack {
+                            Image(systemName: "questionmark.circle.fill")
+                                .scaledFont(20)
+                                .foregroundStyle(.secondary)
+                            Text("Câu hỏi")
+                                .scaledFont(14)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                                .tracking(0.5)
                         }
-                        .padding(.horizontal, 24)
+                        
+                        SmartCopyDefineText(text: flashcard.question, flashcards: flashcards)
+                            .scaledFont(28)
+                            .fontWeight(.semibold)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(6)
+                            .frame(maxWidth: 600)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 32)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color.appBorder(isLight: colorScheme == .light), lineWidth: 1.5)
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+                    .padding(.horizontal, 32)
+                    
+                    // Arrow with animation
+                    Image(systemName: "arrow.down")
+                        .scaledFont(24)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 20)
+                        .symbolEffect(.pulse, options: .repeat(2))
+                    
+                    // Answer Card - Premium Design
+                    VStack(spacing: 16) {
+                        HStack {
+                            Image(systemName: "text.bubble.fill")
+                                .scaledFont(20)
+                                .foregroundStyle(answerCardIconColor)
+                            Text("Đáp án")
+                                .scaledFont(14)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                                .tracking(0.5)
+                        }
+                        
+                        SmartCopyDefineText(text: displayedAnswer, flashcards: flashcards)
+                            .scaledFont(28)
+                            .fontWeight(.semibold)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(6)
+                            .frame(maxWidth: 600)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 32)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(answerCardBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(answerCardBorder, lineWidth: 2.5)
+                            )
+                    )
+                    .shadow(color: answerCardShadowColor, radius: 10, x: 0, y: 4)
+                    .padding(.horizontal, 32)
+                    
+                    // True/False Buttons - Premium Design
+                    if !showResult {
+                        VStack(spacing: 16) {
+                            Text("Đánh giá")
+                                .scaledFont(13)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                                .tracking(0.5)
+                                .padding(.top, 32)
+                            
+                            HStack(spacing: 16) {
+                                // TRUE button
+                                trueFalseButton(
+                                    isTrue: true,
+                                    icon: "checkmark.circle.fill",
+                                    label: "Đúng",
+                                    color: .green,
+                                    action: { answerTapped(true) }
+                                )
+                                
+                                // FALSE button
+                                trueFalseButton(
+                                    isTrue: false,
+                                    icon: "xmark.circle.fill",
+                                    label: "Sai",
+                                    color: .red,
+                                    action: { answerTapped(false) }
+                                )
+                            }
+                            .padding(.horizontal, 32)
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
 
                     // Result feedback
                     if showResult {
                         resultFeedback(flashcard: flashcard)
+                            .padding(.horizontal, 32)
+                            .padding(.top, 24)
                             .transition(.scale.combined(with: .opacity))
                     }
 
-                    Spacer(minLength: 20)
+                    Spacer(minLength: 60)
                 }
             }
+            .background(Color(nsColor: .windowBackgroundColor))
         }
         .onAppear { setupQuestion() }
+    }
+    
+    // MARK: - True/False Button - Modern Design
+    @ViewBuilder
+    private func trueFalseButton(
+        isTrue: Bool,
+        icon: String,
+        label: String,
+        color: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .scaledFont(24)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(color)
+                    .frame(width: 40, height: 40)
+                
+                Text(label)
+                    .scaledFont(18)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.primary)
+                
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(color.opacity(0.3), lineWidth: 2)
+                    )
+            )
+        }
+        .buttonStyle(ModernPressButtonStyle(color: color))
+    }
+    
+    // MARK: - Modern Press Button Style
+    struct ModernPressButtonStyle: ButtonStyle {
+        let color: Color
+        @State private var isPressed = false
+        
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(isPressed ? 0.97 : 1.0)
+                .offset(y: isPressed ? 3 : 0)
+                .shadow(
+                    color: isPressed ? color.opacity(0.15) : color.opacity(0.25),
+                    radius: isPressed ? 4 : 8,
+                    x: 0,
+                    y: isPressed ? 2 : 4
+                )
+                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isPressed)
+                .onChange(of: configuration.isPressed) { _, newValue in
+                    isPressed = newValue
+                }
+        }
     }
 
     private var answerCardBackground: Color {
         let isLight = colorScheme == .light
         if !showResult {
-            return Color.orange.opacity(isLight ? 0.05 : 0.1)
+            return Color.orange.opacity(isLight ? 0.05 : 0.08)
         }
         if currentIsTrue {
-            return Color.green.opacity(isLight ? 0.08 : 0.12)
+            return Color.green.opacity(isLight ? 0.1 : 0.12)
         }
-        return Color.red.opacity(isLight ? 0.08 : 0.12)
+        return Color.orange.opacity(isLight ? 0.1 : 0.12)
     }
 
     private var answerCardBorder: Color {
         if !showResult {
-            return Color.orange.opacity(colorScheme == .light ? 0.3 : 0.6)
+            return Color.orange.opacity(0.3)
         }
-        return currentIsTrue ? .green : .red
+        return currentIsTrue ? .green : .orange
+    }
+    
+    private var answerCardIconColor: Color {
+        if !showResult {
+            return .orange
+        }
+        return currentIsTrue ? .green : .orange
+    }
+    
+    private var answerCardShadowColor: Color {
+        if !showResult {
+            return .orange.opacity(0.1)
+        }
+        return currentIsTrue ? .green.opacity(0.1) : .orange.opacity(0.1)
     }
 
     private func resultFeedback(flashcard: Flashcard) -> some View {
         let userCorrect = (userAnsweredTrue == currentIsTrue)
 
-        return VStack(spacing: 12) {
+        return VStack(spacing: 16) {
             HStack(spacing: 16) {
-                Image(systemName: userCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundStyle(userCorrect ? .green : .red)
-                    .symbolEffect(.bounce.up, value: showResult)
-                    .scaleEffect(showResult ? 1.1 : 1.0)
-
-                VStack(alignment: .leading, spacing: 6) {
+                ZStack {
+                    Circle()
+                        .fill(userCorrect ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                        .frame(width: 64, height: 64)
+                    
+                    Image(systemName: userCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .scaledFont(32)
+                        .foregroundStyle(userCorrect ? .green : .orange)
+                        .symbolEffect(.bounce.up, value: showResult)
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
                     Text(userCorrect ? "Chính xác! 🎉" : "Chưa đúng")
-                        .font(.title3)
+                        .scaledFont(20)
                         .fontWeight(.bold)
-                        .foregroundStyle(userCorrect ? .green : .red)
+                        .foregroundStyle(userCorrect ? .green : .orange)
 
                     if !currentIsTrue {
-                        SmartCopyDefineText(text: "Đáp án đúng: \(flashcard.answer)", flashcards: flashcards)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Đáp án đúng:")
+                                .scaledFont(13)
+                                .foregroundStyle(.secondary)
+                            SmartCopyDefineText(text: flashcard.answer, flashcards: flashcards)
+                                .scaledFont(16)
+                                .foregroundStyle(.primary)
+                        }
                     }
                 }
-
+                
                 Spacer()
             }
-            .padding(16)
+            .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(userCorrect
-                          ? Color.green.opacity(colorScheme == .light ? 0.12 : 0.15)
-                          : Color.red.opacity(colorScheme == .light ? 0.12 : 0.15))
+                          ? Color.green.opacity(colorScheme == .light ? 0.1 : 0.12)
+                          : Color.orange.opacity(colorScheme == .light ? 0.1 : 0.12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(userCorrect ? Color.green.opacity(0.3) : Color.red.opacity(0.3), lineWidth: 2)
+                            .stroke(userCorrect ? Color.green.opacity(0.3) : Color.orange.opacity(0.3), lineWidth: 2)
                     )
             )
         }
-        .padding(.horizontal, 24)
-        .transition(.scale.combined(with: .opacity))
     }
 
     private var completedView: some View {

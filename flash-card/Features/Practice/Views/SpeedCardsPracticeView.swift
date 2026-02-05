@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct SpeedCardsPracticeView: View {
     let flashcards: [Flashcard]
@@ -97,22 +98,20 @@ struct SpeedCardsPracticeView: View {
                     // Card with flip
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(isFlipped
-                                  ? Color.green.opacity(colorScheme == .light ? 0.06 : 0.1)
-                                  : Color.blue.opacity(colorScheme == .light ? 0.06 : 0.1))
+                            .fill(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20)
                                     .stroke(
                                         isFlipped
                                         ? Color.green.opacity(colorScheme == .light ? 0.5 : 0.8)
-                                        : Color.blue.opacity(colorScheme == .light ? 0.5 : 0.8),
+                                        : Color.appBorder(isLight: colorScheme == .light),
                                         lineWidth: 2)
                             )
 
                         VStack(spacing: 16) {
                             Image(systemName: isFlipped ? "lightbulb.fill" : "questionmark.circle.fill")
                                 .font(.largeTitle)
-                                .foregroundStyle(isFlipped ? .yellow : .blue.opacity(0.6))
+                                .foregroundStyle(isFlipped ? .yellow : .secondary)
 
                             Text(isFlipped ? "Đáp án" : "Câu hỏi")
                                 .font(.caption)
@@ -196,7 +195,7 @@ struct SpeedCardsPracticeView: View {
                                     RoundedRectangle(cornerRadius: 16)
                                         .stroke(Color.green, lineWidth: 2)
                                 )
-                                .foregroundStyle(.green)
+                                .foregroundStyle(.secondary)
                             }
                             .buttonStyle(ScaleButtonStyle())
                         }

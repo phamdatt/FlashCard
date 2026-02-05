@@ -1,0 +1,39 @@
+/* Vietnamese Localization */
+
+/* Common */
+"common.cancel" = "Hủy";
+"common.confirm" = "Xác nhận";
+"common.next" = "Tiếp theo";
+"common.back" = "Quay lại";
+"common.done" = "Hoàn thành";
+"common.continue" = "Tiếp tục";
+
+/* Review */
+"review.title" = "Ôn tập";
+"review.mistakes.title" = "Ôn lại từ đã sai";
+"review.no_cards" = "Không có từ cần ôn";
+"review.all_reviewed" = "Tất cả các từ đã được ôn đầy đủ!";
+"review.tap_to_show" = "Nhấn để xem đáp án";
+"review.wrong" = "Sai";
+"review.hard" = "Khó";
+"review.correct" = "Đúng";
+"review.completed" = "Hoàn thành ôn tập!";
+"review.reviewed_count" = "Đã ôn %d từ";
+"review.accuracy" = "Độ chính xác";
+"review.review_more" = "Ôn tiếp";
+"review.review_again" = "Ôn lại";
+"review.no_mistakes" = "Không có từ đã sai";
+"review.no_mistakes_in_period" = "Bạn chưa có từ nào sai trong %d ngày qua!";
+"review.days" = "%d ngày";
+
+/* Statistics */
+"statistics.title" = "Thống kê học tập";
+"statistics.total_cards" = "Tổng từ";
+"statistics.learned_cards" = "Đã học";
+"statistics.mastered_cards" = "Đã thuộc";
+"statistics.due_cards" = "Cần ôn";
+
+/* Practice */
+"practice.title" = "Luyện tập";
+"practice.speaking" = "Luyện nói";
+"practice.fill_in_blank" = "Điền từ";

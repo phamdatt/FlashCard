@@ -1,0 +1,39 @@
+/* English Localization */
+
+/* Common */
+"common.cancel" = "Cancel";
+"common.confirm" = "Confirm";
+"common.next" = "Next";
+"common.back" = "Back";
+"common.done" = "Done";
+"common.continue" = "Continue";
+
+/* Review */
+"review.title" = "Review";
+"review.mistakes.title" = "Review Mistakes";
+"review.no_cards" = "No cards to review";
+"review.all_reviewed" = "All cards have been reviewed!";
+"review.tap_to_show" = "Tap to show answer";
+"review.wrong" = "Wrong";
+"review.hard" = "Hard";
+"review.correct" = "Correct";
+"review.completed" = "Review completed!";
+"review.reviewed_count" = "Reviewed %d cards";
+"review.accuracy" = "Accuracy";
+"review.review_more" = "Review more";
+"review.review_again" = "Review again";
+"review.no_mistakes" = "No mistakes";
+"review.no_mistakes_in_period" = "You have no mistakes in the last %d days!";
+"review.days" = "%d days";
+
+/* Statistics */
+"statistics.title" = "Learning Statistics";
+"statistics.total_cards" = "Total Cards";
+"statistics.learned_cards" = "Learned";
+"statistics.mastered_cards" = "Mastered";
+"statistics.due_cards" = "Due";
+
+/* Practice */
+"practice.title" = "Practice";
+"practice.speaking" = "Speaking";
+"practice.fill_in_blank" = "Fill in the Blank";

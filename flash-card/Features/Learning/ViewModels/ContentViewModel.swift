@@ -45,38 +45,46 @@ class ContentViewModel: ObservableObject {
     }
     
     func switchToLearningMode() {
+        // Keep selectedSubject when switching back to learning mode
         showReviewMode = false
         showReviewMistakes = false
         showStatistics = false
+        // Don't clear selectedSubject - keep it active
     }
     
     func switchToReviewMode() {
         // Batch updates to avoid multiple view updates
+        // Keep selectedSubject active, only clear selectedTopic
         withAnimation(.easeInOut(duration: 0.25)) {
             showReviewMode = true
             showReviewMistakes = false
             showStatistics = false
             selectedTopic = nil
+            // Don't clear selectedSubject - keep it active
         }
     }
     
     func switchToReviewMistakes() {
         // Batch updates to avoid multiple view updates
+        // Keep selectedSubject active, only clear selectedTopic
         withAnimation(.easeInOut(duration: 0.25)) {
             showReviewMode = false
             showReviewMistakes = true
             showStatistics = false
             selectedTopic = nil
+            // Don't clear selectedSubject - keep it active
         }
     }
     
     func switchToStatistics() {
         // Batch updates to avoid multiple view updates
+        // Keep selectedSubject active, only clear selectedTopic
         withAnimation(.easeInOut(duration: 0.25)) {
             showReviewMode = false
             showReviewMistakes = false
             showStatistics = true
             selectedTopic = nil
+            // Don't clear selectedSubject - keep it active
         }
     }
 

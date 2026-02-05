@@ -53,8 +53,8 @@ struct MatchingPracticeView: View {
                         .font(.headline)
                     Spacer()
                     HStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.secondary)
                         Text("\(matchedPairs.count)/\(currentBatch.count)")
                             .font(.subheadline)
                     }
@@ -97,7 +97,7 @@ struct MatchingPracticeView: View {
                     VStack(spacing: 12) {
                         Text("Đáp án")
                             .font(.headline)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
 
                         ForEach(shuffledAnswers, id: \.self) { answer in

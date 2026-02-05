@@ -12,6 +12,7 @@ struct FlashcardMainView: View {
     @ObservedObject var viewModel: ContentViewModel
     let topic: Topic
     @EnvironmentObject var fontSizeManager: FontSizeManager
+    @Environment(\.colorScheme) private var colorScheme
     
     // Mode selection
     enum ViewMode: String, CaseIterable {
@@ -25,6 +26,8 @@ struct FlashcardMainView: View {
         case matching = "Nối cặp"
         case trueFalse = "Đúng/Sai"
         case speedCards = "Thẻ nhớ nhanh"
+        case speaking = "Luyện nói"
+        case fillInTheBlank = "Điền từ"
 
         var icon: String {
             switch self {
@@ -32,6 +35,8 @@ struct FlashcardMainView: View {
             case .matching: return "arrow.left.arrow.right"
             case .trueFalse: return "checkmark.circle"
             case .speedCards: return "bolt.fill"
+            case .speaking: return "mic.fill"
+            case .fillInTheBlank: return "pencil.and.list.clipboard"
             }
         }
     }
@@ -45,6 +50,13 @@ struct FlashcardMainView: View {
     @State private var selectedWordCount: Int = 20
     @State private var showingWordCountPicker: Bool = false
     @State private var practiceRecorded: Bool = false
+    /// Nguồn từ: tất cả hay chỉ từ chưa thuộc (phù hợp topic nhiều từ)
+    @State private var practiceSource: PracticeSource = .all
+
+    enum PracticeSource: String, CaseIterable {
+        case all = "Tất cả"
+        case notLearned = "Chưa thuộc"
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -74,7 +86,7 @@ struct FlashcardMainView: View {
                         .fontWeight(.medium)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.blue)
+                .foregroundStyle(.secondary)
             }
             .padding()
 
@@ -91,55 +103,64 @@ struct FlashcardMainView: View {
                 .labelsHidden()
 
                 if selectedMode == .practice {
-                    HStack(spacing: 8) {
-                        Picker("Kiểu", selection: $selectedPracticeType) {
-                            ForEach(PracticeType.allCases, id: \.self) { type in
-                                Text(type.rawValue).tag(type)
+                    VStack(spacing: 10) {
+                        HStack(spacing: 8) {
+                            Picker("Kiểu", selection: $selectedPracticeType) {
+                                ForEach(PracticeType.allCases, id: \.self) { type in
+                                    Text(type.rawValue).tag(type)
+                                }
                             }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
                         }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
 
-                        Menu {
-                            Button("20 từ") {
-                                selectedWordCount = 20
-                                resetPractice()
+                        HStack(spacing: 8) {
+                            Picker("Nguồn", selection: $practiceSource) {
+                                ForEach(PracticeSource.allCases, id: \.self) { src in
+                                    Text(src.rawValue).tag(src)
+                                }
                             }
-                            Button("40 từ") {
-                                selectedWordCount = 40
-                                resetPractice()
-                            }
-                            Button("60 từ") {
-                                selectedWordCount = 60
-                                resetPractice()
-                            }
-                            Button("Tất cả (\(topic.flashcards.count) từ)") {
-                                selectedWordCount = topic.flashcards.count
-                                resetPractice()
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "number.circle.fill")
-                                Text("\(min(selectedWordCount, topic.flashcards.count)) từ")
-                                Image(systemName: "chevron.down")
-                                    .font(.caption)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.blue.opacity(0.1))
-                            .foregroundStyle(.blue)
-                            .cornerRadius(8)
-                        }
-                        .buttonStyle(.plain)
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .frame(maxWidth: 120)
+                            .onChange(of: practiceSource) { _, _ in resetPractice() }
 
-                        if totalAnswered > 0 {
-                            HStack(spacing: 6) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
-                                let percentage = Int((Double(score) / Double(totalAnswered)) * 100)
-                                Text("\(score)/\(totalAnswered) (\(percentage)%)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(percentage >= 70 ? .green : .orange)
+                            Menu {
+                                ForEach(practiceSessionSizes, id: \.self) { count in
+                                    Button(sessionSizeLabel(count) + (count >= topic.flashcards.count ? " (\(topic.flashcards.count))" : "")) {
+                                        selectedWordCount = count
+                                        resetPractice()
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "number.circle.fill")
+                                    Text("\(min(selectedWordCount, practicePoolCount)) từ")
+                                    Image(systemName: "chevron.down")
+                                        .font(.caption)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.gray.opacity(colorScheme == .light ? 0.1 : 0.15))
+                                .foregroundStyle(.secondary)
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(.plain)
+
+                            if topic.flashcards.count > 60 {
+                                Text("Nên 20–30 từ/phiên")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            if totalAnswered > 0 {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                    Text("\(score)/\(totalAnswered) (\(practiceScorePercentage)%)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(practiceScorePercentage >= 70 ? .green : .orange)
+                                }
                             }
                         }
                     }
@@ -180,32 +201,62 @@ struct FlashcardMainView: View {
     private var listView: some View {
         HSplitView {
             List(topic.flashcards, selection: $viewModel.selectedFlashcard) { flashcard in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(flashcard.exerciseType.rawValue)
-                            .scaledFont(12)
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.2))
-                            .cornerRadius(4)
+                ZStack(alignment: .topTrailing) {
+                    // Main content
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Text(flashcard.exerciseType.rawValue)
+                                .scaledFont(11)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.gray.opacity(colorScheme == .light ? 0.12 : 0.18))
+                                .cornerRadius(4)
+                                .lineLimit(1)
+                            
+                            Spacer()
+                        }
                         
-                        Spacer()
-                    }
-                    
-                    Text(flashcard.question)
-                        .scaledFont(14)
-                        .fontWeight(.medium)
-                        .lineLimit(2)
+                        Text(flashcard.question)
+                            .scaledFont(14)
+                            .fontWeight(.medium)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.trailing, 32) // Space for icons
 
-                    if let hint = flashcard.hint {
-                        Text("💡 \(hint)")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                        if let hint = flashcard.hint, !hint.isEmpty {
+                            Text("💡 \(hint)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .padding(.trailing, 32) // Space for icons
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Status Icons - absolute positioned
+                    HStack(spacing: 4) {
+                        if isFlashcardLearned(flashcard) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .scaledFont(12)
+                                .foregroundStyle(.secondary)
+                                .help("Đã học")
+                        }
+                        
+                        if needsImprovement(flashcard) {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                                .scaledFont(12)
+                                .foregroundStyle(.teal)
+                                .help("Cần ôn lại")
+                        }
+                    }
+                    .padding(.top, 2)
+                    .padding(.trailing, 4)
                 }
                 .tag(flashcard)
                 .padding(.vertical, 4)
+                .padding(.horizontal, 4)
                 .contextMenu {
                     Button(role: .destructive, action: {
                         viewModel.deleteFlashcard(flashcard)
@@ -216,6 +267,7 @@ struct FlashcardMainView: View {
             }
             .frame(minWidth: 250, idealWidth: 300, maxWidth: 400)
             .listStyle(.plain)
+            .tint(.green)
             
             if let flashcard = viewModel.selectedFlashcard {
                 FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", onAnswered: nil)
@@ -227,6 +279,21 @@ struct FlashcardMainView: View {
                 )
             }
         }
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func isFlashcardLearned(_ flashcard: Flashcard) -> Bool {
+        if let progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id) {
+            return progress.totalReviews > 0
+        }
+        return false
+    }
+    
+    private func needsImprovement(_ flashcard: Flashcard) -> Bool {
+        // Check if flashcard has mistakes in the last 30 days
+        let mistakeIds = DatabaseManager.shared.getMistakeFlashcards(days: 30)
+        return mistakeIds.contains(flashcard.id)
     }
     
     // Practice mode view
@@ -274,6 +341,32 @@ struct FlashcardMainView: View {
                         resetPractice()
                     }
                 )
+            case .speaking:
+                SpeakingPracticeView(
+                    flashcards: shuffledFlashcards,
+                    topicId: topic.id,
+                    onComplete: { correctCount, total in
+                        score = correctCount
+                        totalAnswered = total
+                    },
+                    onReset: {
+                        recordPracticeIfNeeded()
+                        resetPractice()
+                    }
+                )
+            case .fillInTheBlank:
+                FillInTheBlankView(
+                    flashcards: shuffledFlashcards,
+                    topicId: topic.id,
+                    onComplete: { correctCount, total in
+                        score = correctCount
+                        totalAnswered = total
+                    },
+                    onReset: {
+                        recordPracticeIfNeeded()
+                        resetPractice()
+                    }
+                )
             }
         }
     }
@@ -294,9 +387,10 @@ struct FlashcardMainView: View {
 
                         Text(flashcard.exerciseType.rawValue)
                             .font(.subheadline)
+                            .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.2))
+                            .background(Color.green.opacity(colorScheme == .light ? 0.14 : 0.2))
                             .cornerRadius(6)
                     }
 
@@ -331,11 +425,49 @@ struct FlashcardMainView: View {
         )
     }
         
-    private func startPractice() {
-        let totalAvailable = topic.flashcards.count
-        let countToUse = min(selectedWordCount, totalAvailable)
+    /// Phần trăm đúng trong phiên luyện (0–100)
+    private var practiceScorePercentage: Int {
+        totalAnswered > 0 ? Int((Double(score) / Double(totalAnswered)) * 100) : 0
+    }
 
-        shuffledFlashcards = Array(topic.flashcards.shuffled().prefix(countToUse))
+    /// Số từ có thể ôn theo nguồn đã chọn (tất cả hoặc chưa thuộc)
+    private var practicePoolCount: Int {
+        practicePool().count
+    }
+
+    /// Các mức số từ gợi ý theo kích thước topic (phù hợp topic nhiều từ)
+    private var practiceSessionSizes: [Int] {
+        let total = topic.flashcards.count
+        let candidates: [Int]
+        if total <= 30 { candidates = [10, 20, total] }
+        else if total <= 80 { candidates = [15, 20, 25, 30, 50, total] }
+        else { candidates = [15, 20, 25, 30, 50, 100, total] }
+        return Array(Set(candidates)).sorted()
+    }
+
+    private func sessionSizeLabel(_ count: Int) -> String {
+        if count >= topic.flashcards.count { return "Tất cả" }
+        return "\(count) từ"
+    }
+
+    /// Pool từ theo nguồn: tất cả hoặc chỉ từ chưa thuộc (totalReviews == 0)
+    private func practicePool() -> [Flashcard] {
+        switch practiceSource {
+        case .all:
+            return topic.flashcards
+        case .notLearned:
+            let notLearned = topic.flashcards.filter { card in
+                (DatabaseManager.shared.getFlashcardProgress(flashcardId: card.id)?.totalReviews ?? 0) == 0
+            }
+            return notLearned.isEmpty ? topic.flashcards : notLearned
+        }
+    }
+
+    private func startPractice() {
+        let pool = practicePool()
+        let countToUse = min(selectedWordCount, pool.count)
+
+        shuffledFlashcards = Array(pool.shuffled().prefix(countToUse))
         currentIndex = 0
         score = 0
         totalAnswered = 0
@@ -523,7 +655,7 @@ struct ReadingPassageDetailView: View {
                         if showResults {
                             HStack(spacing: 8) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(.secondary)
                                 Text("\(score)/\(reading.questions.count)")
                                     .font(.headline)
                             }
@@ -542,7 +674,7 @@ struct ReadingPassageDetailView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Image(systemName: "book.fill")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.secondary)
                             Text("Từ vựng hỗ trợ")
                                 .font(.headline)
                         }
@@ -553,7 +685,7 @@ struct ReadingPassageDetailView: View {
                                     Text(item.word)
                                         .font(.subheadline)
                                         .fontWeight(.bold)
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.primary)
                                     
                                     Text("•")
                                         .foregroundStyle(.secondary)
@@ -579,11 +711,11 @@ struct ReadingPassageDetailView: View {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(colorScheme == .light
                                 ? Color(nsColor: .controlBackgroundColor)
-                                : Color.blue.opacity(0.05))
+                                : Color.green.opacity(0.05))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(colorScheme == .light ? Color.blue.opacity(0.15) : Color.clear, lineWidth: 1)
+                            .stroke(colorScheme == .light ? Color.green.opacity(0.15) : Color.clear, lineWidth: 1)
                     )
                     .cornerRadius(12)
                 }
@@ -592,7 +724,7 @@ struct ReadingPassageDetailView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Image(systemName: "doc.text.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(.secondary)
                         Text("Bài đọc")
                             .font(.headline)
                     }
@@ -639,7 +771,7 @@ struct ReadingPassageDetailView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(userAnswers.count == reading.questions.count ? Color.blue : Color.gray)
+                        .background(userAnswers.count == reading.questions.count ? Color.green : Color.gray)
                         .foregroundStyle(.white)
                         .cornerRadius(12)
                     }
@@ -749,7 +881,7 @@ struct ReadingPassageDetailView: View {
         let isLight = colorScheme == .light
         if !showResults {
             if isSelected {
-                return Color.blue.opacity(isLight ? 0.08 : 0.1)
+                return Color.green.opacity(isLight ? 0.08 : 0.1)
             }
             return isLight ? Color(nsColor: .controlBackgroundColor) : Color.clear
         } else {
@@ -765,7 +897,7 @@ struct ReadingPassageDetailView: View {
     private func buttonBorder(isSelected: Bool, isCorrect: Bool) -> Color {
         let isLight = colorScheme == .light
         if !showResults {
-            return isSelected ? .blue : Color.gray.opacity(isLight ? 0.2 : 0.3)
+            return isSelected ? .green : Color.gray.opacity(isLight ? 0.2 : 0.3)
         } else {
             if isCorrect {
                 return .green
@@ -844,7 +976,7 @@ struct AddFlashcardSheet: View {
             if let topic = viewModel.selectedTopic {
                 HStack(spacing: 8) {
                     Image(systemName: "book.fill")
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(.secondary)
                     Text(topic.name)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -954,7 +1086,7 @@ struct TappableReadingContent: View {
                                 .padding(.horizontal, 2)
                                 .background(
                                     RoundedRectangle(cornerRadius: 4)
-                                        .fill(isSelected ? Color.blue.opacity(0.2) : Color.clear)
+                                        .fill(isSelected ? Color.green.opacity(0.2) : Color.clear)
                                 )
                                 .onTapGesture {
                                 }
@@ -998,7 +1130,7 @@ struct WordDefinitionPopover: View {
 
             Text(result.meaning)
                 .font(.body)
-                .foregroundStyle(.blue)
+                .foregroundStyle(.primary)
 
             if let hint = result.hint, !hint.isEmpty {
                 Divider()

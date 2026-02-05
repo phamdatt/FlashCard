@@ -24,6 +24,7 @@ struct SidebarView: View {
         }
         .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
         .navigationTitle("Menu")
+        .tint(.green)
         .safeAreaInset(edge: .bottom) {
             bottomSection
         }
@@ -35,11 +36,8 @@ struct SidebarView: View {
         Section("Học tập") {
             ForEach(viewModel.subjects) { subject in
                 Button(action: {
-                    // Use transaction to batch updates
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        viewModel.selectSubject(subject)
-                        viewModel.switchToLearningMode()
-                    }
+                    viewModel.selectSubject(subject)
+                    viewModel.switchToLearningMode()
                 }) {
                     Label(subject.name, systemImage: subject.icon)
                         .scaledFont(14)
@@ -118,7 +116,7 @@ struct SidebarView: View {
 
                     if viewModel.streakInfo.didPracticeToday {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .green : .secondary)
                             .scaledFont(16)
                             .frame(minWidth: 16 * fontSizeManager.fontSizeMultiplier)
                     } else {
@@ -148,9 +146,9 @@ struct SidebarView: View {
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: appearanceManager.mode.icon)
-                            .scaledFont(22)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.blue)
+.scaledFont(22)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
                             .contentTransition(.symbolEffect(.replace))
                             .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
 
@@ -179,9 +177,32 @@ struct SidebarView: View {
                 }
                 .buttonStyle(.plain)
             }
+            
+            // Language picker
+            HStack(spacing: 8) {
+                Image(systemName: "globe")
+                    .scaledFont(14)
+                    .foregroundStyle(.secondary)
+                Picker("", selection: Binding(
+                    get: { LocalizationManager.shared.currentLanguage },
+                    set: { LocalizationManager.shared.setLanguage($0) }
+                )) {
+                    ForEach(LocalizationManager.Language.allCases, id: \.self) { language in
+                        Text(language.displayName).tag(language)
+                    }
+                }
+                .pickerStyle(.menu)
+                .scaledFont(12)
+            }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .onAppear {
             // Auto-select first subject if none selected
             if viewModel.selectedSubject == nil, let firstSubject = viewModel.subjects.first {
@@ -201,184 +222,174 @@ struct TopicsListView: View {
     @ObservedObject var viewModel: ContentViewModel
     let subject: Subject
     @FocusState private var isSearchFocused: Bool
-    @State private var lastSelectedTopicId: Int? = nil
+    @Environment(\.colorScheme) private var colorScheme
     
     var filteredTopics: [Topic] {
         viewModel.filteredTopics(for: subject)
     }
     
-    var body: some View {
-        VStack(spacing: 0) {
-            // Custom Search Bar
-            HStack(spacing: 12) {
-                // Search Icon
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                    .scaledFont(16)
-                    .fontWeight(.medium)
-                
-                // Search TextField
-                TextField("Tìm kiếm chủ đề...", text: $viewModel.searchText)
-                    .textFieldStyle(.plain)
-                    .scaledFont(15)
-                    .focused($isSearchFocused)
-                
-                // Clear Button
-                if !viewModel.searchText.isEmpty {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            viewModel.searchText = ""
-                        }
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                            .scaledFont(16)
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .scaledFont(16)
+                .fontWeight(.medium)
+            TextField("Tìm kiếm chủ đề...", text: $viewModel.searchText)
+                .textFieldStyle(.plain)
+                .scaledFont(15)
+                .focused($isSearchFocused)
+            if !viewModel.searchText.isEmpty {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.searchText = ""
                     }
-                    .buttonStyle(.plain)
-                    .transition(.scale.combined(with: .opacity))
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .scaledFont(16)
                 }
+                .buttonStyle(.plain)
+                .transition(.scale.combined(with: .opacity))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+.background(
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color(nsColor: .controlBackgroundColor))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
-                            .stroke(isSearchFocused ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: isSearchFocused ? 2 : 1)
+                            .stroke(isSearchFocused ? Color.green : Color(nsColor: .separatorColor).opacity(0.8), lineWidth: isSearchFocused ? 2 : 1)
                     )
             )
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .animation(.easeInOut(duration: 0.2), value: isSearchFocused)
-            
-            // Search Results Info
-            if !viewModel.searchText.isEmpty {
-                HStack {
-                    Text("\(filteredTopics.count) kết quả")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-
-            // Topics List
-            if filteredTopics.isEmpty {
-                ContentUnavailableView {
-                    Label("Không tìm thấy kết quả", systemImage: "magnifyingglass")
-                } description: {
-                    Text("Thử tìm kiếm với từ khóa khác")
-                }
-            } else {
-                List(filteredTopics, selection: $viewModel.selectedTopic) { topic in
-                    HStack(spacing: 12) {
-                        // Topic Icon
-                        Image(systemName: "book.fill")
-                            .scaledFont(18)
-                            .foregroundColor(.accentColor)
-                            .frame(width: 32)
-
-                        // Topic Info
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(topic.name)
-                                .scaledFont(14)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
-
-                            HStack(spacing: 6) {
-                                Image(systemName: "rectangle.stack.fill")
-                                    .scaledFont(12)
-                                Text("\(topic.flashcards.count) flashcards")
-                                    .scaledFont(14)
-                            }
-                            .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        // Chevron
-                        Image(systemName: "chevron.right")
-                            .scaledFont(12)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
-                    .tag(topic)
-                    .contextMenu {
-                        Button(role: .destructive, action: {
-                            viewModel.deleteTopic(topic)
-                        }) {
-                            Label("Xoá chủ đề", systemImage: "trash")
-                        }
-                    }
-                }
-                .listStyle(.plain)
-                .onChange(of: viewModel.selectedTopic) { oldValue, newValue in
-                    // Lưu lại ID của topic được chọn
-                    if let newTopic = newValue {
-                        lastSelectedTopicId = newTopic.id
-                    }
-                    
-                    // Nếu click vào vùng trống làm selectedTopic thành nil, restore lại topic trước đó
-                    if newValue == nil && lastSelectedTopicId != nil && !filteredTopics.isEmpty {
-                        // Chỉ restore nếu topic cũ vẫn còn trong danh sách
-                        if let topic = filteredTopics.first(where: { $0.id == lastSelectedTopicId }) {
-                            DispatchQueue.main.async {
-                                viewModel.selectedTopic = topic
-                            }
-                        } else {
-                            // Nếu topic cũ không còn trong danh sách (có thể do filter), chọn topic đầu tiên
-                            if let firstTopic = filteredTopics.first {
-                                DispatchQueue.main.async {
-                                    viewModel.selectedTopic = firstTopic
-                                }
-                            }
-                        }
-                    }
-                }
-                .onAppear {
-                    // Lưu lại topic hiện tại khi view xuất hiện
-                    if let currentTopic = viewModel.selectedTopic {
-                        lastSelectedTopicId = currentTopic.id
-                    }
-                }
-            }
-        }
-        .safeAreaInset(edge: .bottom) {
-            // Add Topic Button - Sticky at bottom
+    }
+    
+    @ViewBuilder
+    private var searchResultsInfo: some View {
+        if !viewModel.searchText.isEmpty {
             HStack {
+                Text("\(filteredTopics.count) kết quả")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Spacer()
-                Button(action: {
-                    viewModel.showAddTopicSheet = true
-                }) {
-                    Label("Thêm chủ đề", systemImage: "plus.circle.fill")
-                        .scaledFont(13)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.blue)
-                }
-                .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                // Gradient fade để tạo hiệu ứng mượt
-                LinearGradient(
-                    colors: [Color(nsColor: .windowBackgroundColor).opacity(0), Color(nsColor: .windowBackgroundColor)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 60)
-                .allowsHitTesting(false)
+            .padding(.bottom, 8)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+    
+    @ViewBuilder
+    private var topicsListContent: some View {
+        if filteredTopics.isEmpty {
+            ContentUnavailableView {
+                Label("Không tìm thấy kết quả", systemImage: "magnifyingglass")
+            } description: {
+                Text("Thử tìm kiếm với từ khóa khác")
+            }
+        } else {
+            List(filteredTopics, selection: $viewModel.selectedTopic) { topic in
+                TopicRowView(topic: topic, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light) {
+                    viewModel.deleteTopic(topic)
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .tint(.green)
+        }
+    }
+    
+    private var addTopicBottomBar: some View {
+        HStack {
+            Spacer()
+            Button(action: {
+                viewModel.showAddTopicSheet = true
+            }) {
+Label("Thêm chủ đề", systemImage: "plus.circle.fill")
+                        .scaledFont(13)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            LinearGradient(
+                colors: [Color(nsColor: .windowBackgroundColor).opacity(0), Color(nsColor: .windowBackgroundColor)],
+                startPoint: .top,
+                endPoint: .bottom
             )
+            .frame(height: 60)
+            .allowsHitTesting(false)
+        )
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            searchBar
+            searchResultsInfo
+            topicsListContent
+        }
+        .safeAreaInset(edge: .bottom) {
+            addTopicBottomBar
         }
         .navigationTitle(subject.name)
-        .animation(.easeInOut(duration: 0.3), value: viewModel.searchText)
+        .animation(.easeInOut(duration: 0.2), value: viewModel.searchText)
         .sheet(isPresented: $viewModel.showAddTopicSheet) {
             AddTopicSheet(viewModel: viewModel)
+        }
+    }
+}
+
+// Topic row – content only; selection background is handled by listRowBackground
+private struct TopicRowView: View {
+    let topic: Topic
+    let isSelected: Bool
+    let isLight: Bool
+    let onDelete: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(isSelected ? Color.gray.opacity(isLight ? 0.2 : 0.25) : Color.gray.opacity(isLight ? 0.1 : 0.15))
+                    .frame(width: 40, height: 40)
+                Image(systemName: "book.fill")
+                    .scaledFont(18)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 40)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(topic.name)
+                    .scaledFont(15)
+                    .fontWeight(isSelected ? .semibold : .medium)
+                    .foregroundStyle(.primary)
+                HStack(spacing: 6) {
+                    Image(systemName: "rectangle.stack.fill")
+                        .scaledFont(11)
+                    Text("\(topic.flashcards.count) flashcards")
+                        .scaledFont(13)
+                }
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .scaledFont(11)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .tag(topic)
+        .contextMenu {
+            Button(role: .destructive, action: onDelete) {
+                Label("Xoá chủ đề", systemImage: "trash")
+            }
         }
     }
 }
@@ -410,8 +421,8 @@ struct AddTopicSheet: View {
             // Subject info
             if let subject = viewModel.selectedSubject {
                 HStack(spacing: 8) {
-                    Image(systemName: subject.icon)
-                        .foregroundStyle(.blue)
+Image(systemName: subject.icon)
+                    .foregroundStyle(.secondary)
                     Text(subject.name)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -512,20 +523,15 @@ struct FlashcardDetailView: View {
     
     // Traditional flip card view
     private var traditionalFlashcardView: some View {
-        VStack(spacing: 20) {
+        let isLight = colorScheme == .light
+        return VStack(spacing: 20) {
             // Card
             ZStack {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(isFlipped
-                        ? Color.green.opacity(colorScheme == .light ? 0.06 : 0.1)
-                        : Color.blue.opacity(colorScheme == .light ? 0.06 : 0.1))
+                    .fill(isLight ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(
-                                isFlipped
-                                    ? Color.green.opacity(colorScheme == .light ? 0.6 : 1)
-                                    : Color.blue.opacity(colorScheme == .light ? 0.6 : 1),
-                                lineWidth: 2)
+                            .stroke(Color.green.opacity(isLight ? 0.5 : 0.7), lineWidth: 2)
                     )
                 
                 VStack(spacing: 16) {
@@ -556,7 +562,7 @@ struct FlashcardDetailView: View {
                     .font(.headline)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.accentColor)
+                    .background(Color.green)
                     .foregroundStyle(.white)
                     .cornerRadius(12)
             }
@@ -600,10 +606,10 @@ struct FlashcardDetailView: View {
             }
             .padding()
             .frame(maxWidth: .infinity)
-            .background(Color.blue.opacity(colorScheme == .light ? 0.05 : 0.1))
+            .background(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.blue.opacity(colorScheme == .light ? 0.4 : 1), lineWidth: 2)
+                    .stroke(Color.appBorder(isLight: colorScheme == .light), lineWidth: 1.5)
             )
             .cornerRadius(16)
             
@@ -649,44 +655,44 @@ struct FlashcardDetailView: View {
         var backgroundColor: Color {
             if !showResult {
                 if isSelected {
-                    return Color.blue.opacity(isLight ? 0.1 : 0.15)
+                    return Color.green.opacity(isLight ? 0.1 : 0.15)
                 }
-                return isLight ? Color(nsColor: .controlBackgroundColor) : Color.gray.opacity(0.08)
+                return Color(nsColor: .controlBackgroundColor)
             } else {
                 if isCorrect {
                     return Color.green.opacity(isLight ? 0.18 : 0.2)
                 } else if isSelected && !isCorrect {
                     return Color.red.opacity(isLight ? 0.18 : 0.2)
                 }
-                return isLight ? Color(nsColor: .controlBackgroundColor) : Color.gray.opacity(0.08)
+                return Color(nsColor: .controlBackgroundColor)
             }
         }
 
         var borderColor: Color {
             if !showResult {
-                return isSelected ? .blue : Color.gray.opacity(isLight ? 0.25 : 0.5)
+                return isSelected ? .green : Color.appBorder(isLight: isLight)
             } else {
                 if isCorrect {
                     return .green
                 } else if isSelected && !isCorrect {
                     return .red
                 }
-                return Color.gray.opacity(isLight ? 0.25 : 0.5)
+                return Color.appBorder(isLight: isLight)
             }
         }
 
         var shadowColor: Color {
             if !showResult {
                 return isSelected
-                    ? Color.blue.opacity(isLight ? 0.2 : 0.4)
-                    : Color.gray.opacity(isLight ? 0.15 : 0.4)
+                    ? Color.green.opacity(isLight ? 0.2 : 0.4)
+                    : Color.appBorder(isLight: isLight).opacity(0.8)
             } else {
                 if isCorrect {
                     return Color.green.opacity(isLight ? 0.35 : 0.5)
                 } else if isSelected && !isCorrect {
                     return Color.red.opacity(isLight ? 0.35 : 0.5)
                 }
-                return Color.gray.opacity(isLight ? 0.15 : 0.4)
+                return Color.appBorder(isLight: isLight).opacity(0.6)
             }
         }
         
@@ -831,6 +837,7 @@ struct ContentView: View {
     @StateObject private var viewModel = ContentViewModel()
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @EnvironmentObject var fontSizeManager: FontSizeManager
+    @EnvironmentObject var localization: LocalizationManager
     
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -840,12 +847,20 @@ struct ContentView: View {
         } detail: {
             detailColumn
         }
+        .id(localization.currentLanguage)
         .applyFontSizeScaling(multiplier: fontSizeManager.fontSizeMultiplier)
         .onChange(of: viewModel.isInSpecialMode) { oldValue, newValue in
             // Only update if actually changed to avoid unnecessary animations
             if oldValue != newValue {
-                updateColumnVisibility(animated: true)
+                // Delay slightly to prevent jerky animations
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    updateColumnVisibility(animated: true)
+                }
             }
+        }
+        .onChange(of: columnVisibility) { oldValue, newValue in
+            // Don't auto-switch when user toggles columns in special mode
+            // Let user manually control column visibility
         }
     }
     
@@ -918,5 +933,8 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environmentObject(AppearanceManager())
+        .environmentObject(FontSizeManager())
+        .environmentObject(LocalizationManager.shared)
         .frame(width: 1000, height: 600)
 }

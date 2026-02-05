@@ -1,87 +1,136 @@
 # FlashCard
 
-A native macOS application for multi-language vocabulary learning (English-Vietnamese, Chinese) with multiple practice modes.
+Native macOS app học từ vựng đa ngôn ngữ (Anh–Việt, Trung) với nhiều chế độ luyện tập.
 
-## Features
+## Tính năng
 
-- **Traditional Flashcards** - Flip cards with spring animation, showing question/answer/hint
-- **Multiple Choice Quiz** - 4 options with instant feedback, score tracking and accuracy rate
-- **Reading Comprehension** - Leveled passages (Beginner -> Advanced) with questions and vocabulary support
-- **Content Management** - Add/delete custom topics and flashcards
-- **Search** - Filter topics quickly by keyword
+- **Flashcard** – Lật thẻ, hiển thị câu hỏi / đáp án / gợi ý
+- **Trắc nghiệm** – 4 đáp án, phản hồi tức thì, điểm và tỷ lệ đúng
+- **Đọc hiểu** – Bài đọc theo cấp độ (Beginner → Advanced), câu hỏi và từ vựng hỗ trợ
+- **Quản lý nội dung** – Thêm / xóa chủ đề và flashcard tùy chỉnh
+- **Tìm kiếm** – Lọc chủ đề theo từ khóa
+- **Ôn tập SRS** – Spaced repetition, ôn theo lịch
+- **Ôn lại từ sai** – Ôn tập từ đã sai theo chủ đề
+- **Thống kê** – Tổng quan học tập, streak, độ chính xác
+- **Đa ngôn ngữ UI** – Tiếng Việt, English, 中文 (đổi ngay không cần tắt app)
 
 ## Tech Stack
 
-| Component | Technology |
-|---|---|
-| Framework | SwiftUI |
-| Language | Swift |
-| Database | SQLite3 |
-| Architecture | MVVM |
-| State Management | Combine |
+| Thành phần   | Công nghệ   |
+|-------------|-------------|
+| Framework   | SwiftUI     |
+| Ngôn ngữ    | Swift       |
+| Database    | SQLite3     |
+| Kiến trúc   | MVVM        |
+| State       | Combine     |
 
-## Project Structure
+## Cấu trúc project
 
 ```
 flash-card/
-├── flash_cardApp.swift          # App entry point
-├── Models.swift                 # Data models (Subject, Topic, Flashcard, ReadingPassage...)
-├── ContentView.swift            # Main UI - 3-column NavigationSplitView
-├── ContentViewModel.swift       # ViewModel - business logic & state
-├── FlashcardMainView.swift      # Flashcard learning interface (List/Practice/Reading)
-├── DatabaseManager.swift        # SQLite management, CSV data seeding
-├── Data/
-│   └── flashcards.sqlite        # SQLite database
-├── Assets.xcassets/             # Icons and resources
-└── LearnMacOS.xcdatamodel       # Core Data schema (legacy)
+├── flash-card.xcodeproj/
+├── flash-card/
+│   ├── flash_cardApp.swift              # Entry point, AppearanceManager, font size
+│   ├── Data/
+│   │   └── flashcards.sqlite            # Database seed (subjects, topics, vocabularies)
+│   ├── Features/
+│   │   ├── Learning/
+│   │   │   ├── Models/
+│   │   │   │   └── LearningModels.swift
+│   │   │   ├── ViewModels/
+│   │   │   │   └── ContentViewModel.swift
+│   │   │   └── Views/
+│   │   │       ├── ContentView.swift    # 3 cột: Sidebar, Topics, Detail
+│   │   │       └── FlashcardMainView.swift
+│   │   ├── Practice/
+│   │   │   └── Views/
+│   │   │       ├── MatchingPracticeView.swift
+│   │   │       ├── PracticeCompletedView.swift
+│   │   │       ├── SpeedCardsPracticeView.swift
+│   │   │       └── TrueFalsePracticeView.swift
+│   │   ├── FillInTheBlank/
+│   │   │   └── Views/
+│   │   │       └── FillInTheBlankView.swift
+│   │   ├── Reading/
+│   │   │   └── Models/
+│   │   │       └── ReadingModels.swift
+│   │   ├── Speaking/
+│   │   │   └── Views/
+│   │   │       └── SpeakingPracticeView.swift
+│   │   ├── SRS/
+│   │   │   ├── Models/
+│   │   │   │   └── SRSModels.swift
+│   │   │   └── Views/
+│   │   │       ├── ReviewModeView.swift
+│   │   │       └── ReviewMistakesView.swift
+│   │   └── Statistics/
+│   │       ├── Models/
+│   │       │   └── StatisticsModels.swift
+│   │       └── Views/
+│   │           └── StatisticsDashboardView.swift
+│   ├── Shared/
+│   │   ├── Components/
+│   │   │   ├── ScaleButtonStyle.swift
+│   │   │   └── SmartCopyDefineView.swift
+│   │   ├── Models/
+│   │   │   └── SharedModels.swift
+│   │   ├── Resources/
+│   │   │   ├── en.lproj/
+│   │   │   ├── vi.lproj/
+│   │   │   └── zh.lproj/
+│   │   │       └── Localizable.strings
+│   │   └── Utilities/
+│   │       ├── DatabaseManager.swift
+│   │       ├── FontSizeApplier.swift
+│   │       ├── FontSizeManager.swift
+│   │       ├── FontSizeModifier.swift
+│   │       ├── LocalizationManager.swift
+│   │       ├── SoundManager.swift
+│   │       └── ThemeColors.swift
+│   ├── Assets.xcassets/
+│   └── LearnMacOS.xcdatamodeld/         # (legacy Core Data, không dùng chính)
+├── flash-cardTests/
+├── flash-cardUITests/
+└── README.md
 ```
 
-## Data Model
+## Data model
 
 ```
-Subject (Main category)
-  └── Topic (Sub-category)
-        ├── Flashcard
-        │     └── Exercise Types: EN→VI, VI→EN, Fill in the blank, Choose correct word, Match meaning
-        └── ReadingPassage
-              ├── ReadingQuestion (Multiple choice)
-              └── VocabularyItem (Supporting vocabulary)
+Subject (môn học)
+  └── Topic (chủ đề)
+        ├── Flashcard (vocabularies)
+        │     └── exercise_type: Anh→Việt, Việt→Anh, Trung→Việt, ...
+        └── ReadingPassage (bài đọc)
+              ├── ReadingQuestion
+              └── VocabularyItem (từ vựng hỗ trợ)
 ```
 
-## Interface
+SRS: `flashcard_progress`, `mistake_records` (DatabaseManager).
 
-The app uses a **3-column NavigationSplitView**:
+## Giao diện
 
-1. **Sidebar** - Subject list (Vocabulary, IELTS, Chinese...)
-2. **Middle column** - Topic list with search bar
-3. **Detail** - 3 display modes:
-   - **List** - Browse flashcards and view details
-   - **Practice** - Timed quiz with configurable word count (20/40/60/All)
-   - **Reading** - Leveled reading comprehension
+- **Cột 1 (Sidebar)** – Môn học, Ôn tập SRS, Ôn từ sai, Thống kê; dưới có streak, theme, ngôn ngữ.
+- **Cột 2** – Danh sách chủ đề + tìm kiếm.
+- **Cột 3** – Chi tiết: List / Practice / Reading theo chủ đề, hoặc màn Review/Statistics.
 
-## Built-in Data
+## Dữ liệu mặc định
 
-- Basic vocabulary: family, seasons, colors, days, food, fruits, animals, body, clothes, weather...
-- Holidays: Christmas, Tet (Vietnamese New Year)
-- IELTS: environment, technology, health, education, society, personality
-- IT vocabulary
-- Chinese: family, colors, radicals, HSK3
+- Tiếng Anh: family, seasons, colors, food, IELTS topics, IT, …
+- Tiếng Trung: Family, Colors, HSK1, Radicals, HSK2, HSK3.1
 
-## Requirements
+## Yêu cầu
 
 - macOS
 - Xcode
 
-## Getting Started
+## Chạy project
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-
-# Open project in Xcode
+git clone <repo-url>
+cd flash-card
 open flash-card.xcodeproj
-
-# Build and run (Cmd + R)
+# Cmd + R để build và chạy
 ```
 
-The database is automatically seeded with built-in data on first launch.
+Database được copy từ bundle vào Application Support khi lần đầu chạy (hoặc khi tăng `currentSeedVersion`).
