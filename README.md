@@ -75,16 +75,11 @@ flash-card/
 │   │   ├── Models/
 │   │   │   └── SharedModels.swift
 │   │   ├── Resources/
-│   │   │   ├── en.lproj/
-│   │   │   ├── vi.lproj/
-│   │   │   └── zh.lproj/
-│   │   │       └── Localizable.strings
 │   │   └── Utilities/
 │   │       ├── DatabaseManager.swift
 │   │       ├── FontSizeApplier.swift
 │   │       ├── FontSizeManager.swift
 │   │       ├── FontSizeModifier.swift
-│   │       ├── LocalizationManager.swift
 │   │       ├── SoundManager.swift
 │   │       └── ThemeColors.swift
 │   ├── Assets.xcassets/

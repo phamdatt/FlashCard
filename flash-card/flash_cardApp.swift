@@ -87,7 +87,6 @@ struct flash_cardApp: App {
             ContentView()
                 .environmentObject(appearanceManager)
                 .environmentObject(fontSizeManager)
-                .environmentObject(LocalizationManager.shared)
                 .applyGlobalFontSize(fontSizeManager: fontSizeManager)
         }
         .commands {

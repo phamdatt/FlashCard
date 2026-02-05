@@ -30,6 +30,11 @@ class ContentViewModel: ObservableObject {
     @Published var newFlashcardAnswer = ""
     @Published var newFlashcardHint = ""
 
+    // Add Reading passage sheet (subject Bài đọc)
+    @Published var showAddReadingSheet = false
+    @Published var newReadingTitle = ""
+    @Published var newReadingContent = ""
+
     // Streak
     @Published var streakInfo = StreakInfo(currentStreak: 0, longestStreak: 0, didPracticeToday: false)
     
@@ -182,17 +187,50 @@ class ContentViewModel: ObservableObject {
 
     func deleteTopic(_ topic: Topic) {
         DatabaseManager.shared.deleteTopic(id: topic.id)
-
         let currentSubjectId = selectedSubject?.id
-        loadLearningData()
-
-        if selectedTopic?.id == topic.id {
+        let wasSelected = (selectedTopic?.id == topic.id)
+        if wasSelected {
             selectedTopic = nil
             selectedFlashcard = nil
         }
-
+        loadLearningData()
         if let currentSubjectId = currentSubjectId {
             selectedSubject = subjects.first(where: { $0.id == currentSubjectId })
+            if !wasSelected, let prevTopicId = selectedTopic?.id {
+                selectedTopic = selectedSubject?.topics.first(where: { $0.id == prevTopicId })
+            }
+        }
+    }
+
+    func addReadingPassage(topicId: Int, title: String, content: String) {
+        guard !title.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+
+        let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
+        let trimmedContent = content.trimmingCharacters(in: .whitespaces)
+
+        DatabaseManager.shared.insertReadingPassage(topicId: topicId, title: trimmedTitle, content: trimmedContent)
+        loadLearningData()
+
+        let currentSubjectId = selectedSubject?.id
+        if let subject = subjects.first(where: { $0.id == currentSubjectId }),
+           let topic = subject.topics.first(where: { $0.id == topicId }) {
+            selectedSubject = subject
+            selectedTopic = topic
+        }
+
+        newReadingTitle = ""
+        newReadingContent = ""
+        showAddReadingSheet = false
+    }
+
+    func deleteReadingPassage(_ passage: ReadingPassage) {
+        let currentTopicId = selectedTopic?.id
+        let currentSubjectId = selectedSubject?.id
+        DatabaseManager.shared.deleteReadingPassage(id: passage.id)
+        loadLearningData()
+        if let subId = currentSubjectId, let tId = currentTopicId {
+            selectedSubject = subjects.first(where: { $0.id == subId })
+            selectedTopic = selectedSubject?.topics.first(where: { $0.id == tId })
         }
     }
 
@@ -211,6 +249,33 @@ class ContentViewModel: ObservableObject {
         
         if selectedFlashcard?.id == flashcard.id {
             selectedFlashcard = selectedTopic?.flashcards.first
+        }
+    }
+
+    func updateFlashcard(id: Int, question: String, answer: String, hint: String?) {
+        guard let topic = selectedTopic,
+              !question.trimmingCharacters(in: .whitespaces).isEmpty,
+              !answer.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+
+        let currentTopicId = topic.id
+        let currentSubjectId = selectedSubject?.id
+        let currentFlashcardId = selectedFlashcard?.id
+
+        let trimmedQuestion = question.trimmingCharacters(in: .whitespaces)
+        let trimmedAnswer = answer.trimmingCharacters(in: .whitespaces)
+        let trimmedHint = hint?.trimmingCharacters(in: .whitespaces)
+        let hintOrNil = (trimmedHint?.isEmpty ?? true) ? nil : trimmedHint
+
+        DatabaseManager.shared.updateFlashcard(id: id, question: trimmedQuestion, answer: trimmedAnswer, hint: hintOrNil)
+        loadLearningData()
+
+        if let subId = currentSubjectId, let sub = subjects.first(where: { $0.id == subId }),
+           let top = sub.topics.first(where: { $0.id == currentTopicId }) {
+            selectedSubject = sub
+            selectedTopic = top
+            if let fcId = currentFlashcardId {
+                selectedFlashcard = top.flashcards.first(where: { $0.id == fcId })
+            }
         }
     }
 

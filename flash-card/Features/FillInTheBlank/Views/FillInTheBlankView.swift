@@ -61,7 +61,7 @@ struct FillInTheBlankView: View {
 Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.secondary)
                             Text("\(score)/\(totalAnswered)")
-                                .scaledFont(16)
+                                .scaledFont(14)
                         }
                     }
                 }
@@ -75,7 +75,7 @@ Image(systemName: "checkmark.circle.fill")
             // Question with blank
             VStack(spacing: 20) {
                 Text("Điền từ vào chỗ trống:")
-                    .scaledFont(16)
+                    .scaledFont(14)
                     .foregroundStyle(.secondary)
 
                 // Display question with blank
@@ -139,7 +139,7 @@ Image(systemName: "checkmark.circle.fill")
                                     .scaledFont(12)
                                     .foregroundStyle(.secondary)
                                 Text(flashcard.answer)
-                                    .scaledFont(16)
+                                    .scaledFont(14)
                                     .foregroundStyle(.blue)
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .leading)

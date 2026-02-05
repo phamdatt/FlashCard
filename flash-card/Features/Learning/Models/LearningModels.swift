@@ -30,18 +30,28 @@ struct Topic: Identifiable, Hashable, Codable {
     var flashcards: [Flashcard]
     var readings: [ReadingPassage]
 
-    init(
-         id: Int = 0,
-         name: String,
-         subjectId: Int,
-         flashcards: [Flashcard],
-         readings: [ReadingPassage] = []) {
-
+    init(id: Int = 0, name: String, subjectId: Int, flashcards: [Flashcard], readings: [ReadingPassage] = []) {
         self.id = id
         self.name = name
         self.subjectId = subjectId
         self.flashcards = flashcards
         self.readings = readings
+    }
+}
+
+struct ReadingPassage: Identifiable, Hashable, Codable {
+    let id: Int
+    let topicId: Int
+    let title: String
+    let content: String
+    let createdAt: String
+
+    init(id: Int, topicId: Int, title: String, content: String, createdAt: String) {
+        self.id = id
+        self.topicId = topicId
+        self.title = title
+        self.content = content
+        self.createdAt = createdAt
     }
 }
 

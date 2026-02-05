@@ -69,12 +69,12 @@ struct ReviewModeView: View {
                 .symbolEffect(.pulse)
             
             VStack(spacing: 8) {
-                Text("review.no_cards".localized)
+                Text("Không có từ cần ôn")
                     .scaledFont(24)
                     .fontWeight(.semibold)
                 
-                Text("review.all_reviewed".localized)
-                    .scaledFont(16)
+                Text("Tất cả các từ đã được ôn đầy đủ!")
+                    .scaledFont(14)
                     .foregroundStyle(.secondary)
             }
         }
@@ -91,7 +91,7 @@ struct ReviewModeView: View {
             // Clean Header
             VStack(spacing: 0) {
                 HStack {
-                    Text("review.title".localized)
+                    Text("Ôn tập")
                         .scaledFont(20)
                         .fontWeight(.semibold)
                     
@@ -202,7 +202,7 @@ struct ReviewModeView: View {
                                 qualityButton(
                                     quality: 0.0,
                                     icon: "xmark",
-                                    label: "review.wrong".localized,
+                                    label: "Sai",
                                     color: .red,
                                     action: { submitQuality(0.0) }
                                 )
@@ -210,7 +210,7 @@ struct ReviewModeView: View {
                                 qualityButton(
                                     quality: 0.5,
                                     icon: "minus",
-                                    label: "review.hard".localized,
+                                    label: "Khó",
                                     color: .orange,
                                     action: { submitQuality(0.5) }
                                 )
@@ -218,7 +218,7 @@ struct ReviewModeView: View {
                                 qualityButton(
                                     quality: 1.0,
                                     icon: "checkmark",
-                                    label: "review.correct".localized,
+                                    label: "Đúng",
                                     color: .green,
                                     action: { submitQuality(1.0) }
                                 )
@@ -297,12 +297,12 @@ struct ReviewModeView: View {
             
             // Title
             VStack(spacing: 8) {
-                Text("review.completed".localized)
+                Text("Hoàn thành ôn tập!")
                     .scaledFont(28)
                     .fontWeight(.semibold)
                 
-                Text(String(format: "review.reviewed_count".localized, completedCount))
-                    .scaledFont(16)
+                Text(String(format: "Đã ôn %d từ", completedCount))
+                    .scaledFont(14)
                     .foregroundStyle(.secondary)
             }
             
@@ -314,7 +314,7 @@ struct ReviewModeView: View {
                         .fontWeight(.bold)
                         .foregroundStyle(accuracy >= 70 ? .green : .orange)
                     
-                    Text("review.accuracy".localized)
+                    Text("Độ chính xác")
                         .scaledFont(14)
                         .foregroundStyle(.secondary)
                 }
@@ -329,8 +329,8 @@ struct ReviewModeView: View {
                 completedCount = 0
                 correctCount = 0
             }) {
-                Text("review.review_more".localized)
-                    .scaledFont(16)
+                Text("Ôn tiếp")
+                    .scaledFont(14)
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
                     .frame(width: 200)

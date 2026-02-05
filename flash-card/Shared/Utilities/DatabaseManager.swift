@@ -12,7 +12,7 @@ class DatabaseManager {
     static let shared = DatabaseManager()
 
     private var db: OpaquePointer?
-    private let currentSeedVersion = 4
+    private let currentSeedVersion = 13
 
     private init() {
         copyDatabaseIfNeeded()
@@ -146,9 +146,43 @@ class DatabaseManager {
             sqlite3_exec(db, "PRAGMA foreign_keys = ON", nil, nil, nil)
             createPracticeSessionsTable()
             createSRSTables()
+            dropOldReadingTablesIfNeeded()
+            createReadingPassagesTable()
+            ensureReadingSubjectExists()
         }
     }
-    
+
+    /// Một lần: xóa bảng cũ reading_questions và reading_passages, sau đó dùng lại bảng reading_passages mới (FK topic_id).
+    private func dropOldReadingTablesIfNeeded() {
+        let key = "reading_tables_migrated_v2"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        sqlite3_exec(db, "DROP TABLE IF EXISTS reading_questions", nil, nil, nil)
+        sqlite3_exec(db, "DROP TABLE IF EXISTS reading_passages", nil, nil, nil)
+        UserDefaults.standard.set(true, forKey: key)
+    }
+
+    /// Bảng bài đọc (detail) – foreign key tới topic_id.
+    private func createReadingPassagesTable() {
+        let sql = """
+            CREATE TABLE IF NOT EXISTS reading_passages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now','localtime')),
+                sort_order INTEGER DEFAULT 0,
+                FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
+            )
+        """
+        sqlite3_exec(db, sql, nil, nil, nil)
+        sqlite3_exec(db, "CREATE INDEX IF NOT EXISTS idx_reading_passages_topic ON reading_passages(topic_id)", nil, nil, nil)
+    }
+
+    private func ensureReadingSubjectExists() {
+        let sql = "INSERT OR IGNORE INTO subjects (name, icon, sort_order) VALUES ('Bài đọc', 'book.fill', 2)"
+        sqlite3_exec(db, sql, nil, nil, nil)
+    }
+
     private func createSRSTables() {
         // Flashcard Progress table for SRS
         let progressSQL = """
@@ -213,7 +247,7 @@ class DatabaseManager {
             let name = String(cString: sqlite3_column_text(stmt, 1))
             let icon = String(cString: sqlite3_column_text(stmt, 2))
 
-            let topics = loadTopics(for: id)
+            let topics = loadTopics(for: id, subjectName: name)
             subjects.append(Subject(id: id, name: name, icon: icon, topics: topics))
         }
         sqlite3_finalize(stmt)
@@ -221,7 +255,7 @@ class DatabaseManager {
     }
 
     // MARK: - Load Topics
-    private func loadTopics(for subjectId: Int) -> [Topic] {
+    private func loadTopics(for subjectId: Int, subjectName: String = "") -> [Topic] {
         var topics: [Topic] = []
 
         let sql = "SELECT id, name FROM topics WHERE subject_id = ? ORDER BY sort_order"
@@ -231,12 +265,14 @@ class DatabaseManager {
 
         sqlite3_bind_int(stmt, 1, Int32(subjectId))
 
+        let isReadingSubject = (subjectName == "Bài đọc")
+
         while sqlite3_step(stmt) == SQLITE_ROW {
             let id = Int(sqlite3_column_int(stmt, 0))
             let name = String(cString: sqlite3_column_text(stmt, 1))
 
             let flashcards = loadFlashcards(for: id)
-            let readings = loadReadings(for: id)
+            let readings: [ReadingPassage] = isReadingSubject ? loadReadings(for: id) : []
 
             topics.append(Topic(
                 id: id,
@@ -248,6 +284,59 @@ class DatabaseManager {
         }
         sqlite3_finalize(stmt)
         return topics
+    }
+
+    // MARK: - Reading Passages (subject Bài đọc)
+
+    private func loadReadings(for topicId: Int) -> [ReadingPassage] {
+        var list: [ReadingPassage] = []
+        let sql = "SELECT id, topic_id, title, content, created_at FROM reading_passages WHERE topic_id = ? ORDER BY sort_order, id"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        sqlite3_bind_int(stmt, 1, Int32(topicId))
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let id = Int(sqlite3_column_int(stmt, 0))
+            let topicId = Int(sqlite3_column_int(stmt, 1))
+            let title = String(cString: sqlite3_column_text(stmt, 2))
+            let content = String(cString: sqlite3_column_text(stmt, 3))
+            let createdAt = sqlite3_column_text(stmt, 4).map { String(cString: $0) } ?? ""
+            list.append(ReadingPassage(id: id, topicId: topicId, title: title, content: content, createdAt: createdAt))
+        }
+        sqlite3_finalize(stmt)
+        return list
+    }
+
+    func insertReadingPassage(topicId: Int, title: String, content: String) {
+        let sql = "INSERT INTO reading_passages (topic_id, title, content, sort_order) VALUES (?, ?, ?, 0)"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            print("❌ reading_passages insert prepare failed: \(String(cString: sqlite3_errmsg(db)))")
+            return
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int(stmt, 1, Int32(topicId))
+        title.withCString { titlePtr in
+            content.withCString { contentPtr in
+                sqlite3_bind_text(stmt, 2, titlePtr, -1, nil)
+                sqlite3_bind_text(stmt, 3, contentPtr, -1, nil)
+                if sqlite3_step(stmt) != SQLITE_DONE {
+                    print("❌ reading_passages insert failed: \(String(cString: sqlite3_errmsg(db)))")
+                }
+            }
+        }
+    }
+
+    func deleteReadingPassage(id: Int) {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM reading_passages WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else {
+            print("❌ deleteReadingPassage: prepare failed: \(String(cString: sqlite3_errmsg(db)))")
+            return
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int(stmt, 1, Int32(id))
+        if sqlite3_step(stmt) != SQLITE_DONE {
+            print("❌ deleteReadingPassage: delete failed: \(String(cString: sqlite3_errmsg(db)))")
+        }
     }
 
     // MARK: - Load Vocabularies
@@ -283,97 +372,6 @@ class DatabaseManager {
         sqlite3_finalize(stmt)
 
         return generateOptions(for: flashcards)
-    }
-
-    // MARK: - Load Reading Passages
-
-    private func loadReadings(for topicId: Int) -> [ReadingPassage] {
-        var passages: [ReadingPassage] = []
-
-        let sql = "SELECT id, title, level, content FROM reading_passages WHERE topic_id = ? ORDER BY sort_order"
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
-
-        sqlite3_bind_int(stmt, 1, Int32(topicId))
-
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            let passageId = Int(sqlite3_column_int(stmt, 0))
-            let title = String(cString: sqlite3_column_text(stmt, 1))
-            let levelStr = String(cString: sqlite3_column_text(stmt, 2))
-            let content = String(cString: sqlite3_column_text(stmt, 3))
-
-            let level = ReadingLevel(rawValue: levelStr) ?? .beginner
-            let questions = loadReadingQuestions(for: passageId)
-            let vocabulary = loadVocabulary(for: passageId)
-
-            passages.append(ReadingPassage(
-                id: passageId,
-                title: title,
-                level: level,
-                content: content,
-                questions: questions,
-                vocabularyHelp: vocabulary.isEmpty ? nil : vocabulary
-            ))
-        }
-        sqlite3_finalize(stmt)
-        return passages
-    }
-
-    private func loadReadingQuestions(for passageId: Int) -> [ReadingQuestion] {
-        var questions: [ReadingQuestion] = []
-
-        let sql = "SELECT id, question, option_a, option_b, option_c, option_d, correct_answer, explanation FROM reading_questions WHERE passage_id = ? ORDER BY sort_order"
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
-
-        sqlite3_bind_int(stmt, 1, Int32(passageId))
-
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            let id = Int(sqlite3_column_int(stmt, 0))
-            let question = String(cString: sqlite3_column_text(stmt, 1))
-            let optA = String(cString: sqlite3_column_text(stmt, 2))
-            let optB = String(cString: sqlite3_column_text(stmt, 3))
-            let optC = String(cString: sqlite3_column_text(stmt, 4))
-            let optD = String(cString: sqlite3_column_text(stmt, 5))
-            let correctAnswer = String(cString: sqlite3_column_text(stmt, 6))
-            let explanation: String? = sqlite3_column_text(stmt, 7).map { String(cString: $0) }
-
-            questions.append(ReadingQuestion(
-                id: id,
-                question: question,
-                options: [optA, optB, optC, optD],
-                correctAnswer: correctAnswer,
-                explanation: explanation?.isEmpty == true ? nil : explanation
-            ))
-        }
-        sqlite3_finalize(stmt)
-        return questions
-    }
-
-    private func loadVocabulary(for passageId: Int) -> [VocabularyItem] {
-        var items: [VocabularyItem] = []
-
-        let sql = "SELECT id, question, answer, hint FROM vocabularies WHERE passage_id = ?"
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
-
-        sqlite3_bind_int(stmt, 1, Int32(passageId))
-
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            let id = Int(sqlite3_column_int(stmt, 0))
-            let word = String(cString: sqlite3_column_text(stmt, 1))
-            let meaning = String(cString: sqlite3_column_text(stmt, 2))
-            let example: String? = sqlite3_column_text(stmt, 3).map { String(cString: $0) }
-
-            items.append(VocabularyItem(
-                id: id,
-                word: word,
-                meaning: meaning,
-                example: example?.isEmpty == true ? nil : example
-            ))
-        }
-        sqlite3_finalize(stmt)
-        return items
     }
 
     // MARK: - Helpers
@@ -457,29 +455,74 @@ class DatabaseManager {
         sqlite3_finalize(stmt)
     }
 
+    func updateFlashcard(id: Int, question: String, answer: String, hint: String?) {
+        var stmt: OpaquePointer?
+        let sql = "UPDATE vocabularies SET question = ?, answer = ?, hint = ? WHERE id = ?"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            print("❌ updateFlashcard: prepare failed")
+            return
+        }
+        defer { sqlite3_finalize(stmt) }
+        let hintVal = hint ?? ""
+        question.withCString { q in
+            answer.withCString { a in
+                hintVal.withCString { h in
+                    sqlite3_bind_text(stmt, 1, q, -1, nil)
+                    sqlite3_bind_text(stmt, 2, a, -1, nil)
+                    sqlite3_bind_text(stmt, 3, h, -1, nil)
+                    sqlite3_bind_int(stmt, 4, Int32(id))
+                    if sqlite3_step(stmt) != SQLITE_DONE {
+                        print("❌ updateFlashcard: update failed: \(String(cString: sqlite3_errmsg(db)))")
+                    }
+                }
+            }
+        }
+    }
+
     func deleteTopic(id: Int) {
         sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
 
-        let deleteFlashcardsSQL = "DELETE FROM vocabularies WHERE topic_id = ?"
-        let deleteReadingsSQL = "DELETE FROM reading_passages WHERE topic_id = ?"
-        let deleteTopicSQL = "DELETE FROM topics WHERE id = ?"
+        // 1. Xóa flashcards (vocabularies)
+        var stmt: OpaquePointer?
+        if sqlite3_prepare_v2(db, "DELETE FROM vocabularies WHERE topic_id = ?", -1, &stmt, nil) != SQLITE_OK {
+            print("❌ deleteTopic: prepare vocabularies failed")
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            return
+        }
+        sqlite3_bind_int(stmt, 1, Int32(id))
+        if sqlite3_step(stmt) != SQLITE_DONE {
+            print("❌ deleteTopic: delete vocabularies failed")
+            sqlite3_finalize(stmt)
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            return
+        }
+        sqlite3_finalize(stmt)
 
-        let queries = [deleteFlashcardsSQL, deleteReadingsSQL, deleteTopicSQL]
-
-        for query in queries {
-            var stmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
-                sqlite3_bind_int(stmt, 1, Int32(id))
-                if sqlite3_step(stmt) != SQLITE_DONE {
-                    print("❌ Error deleting: \(String(cString: sqlite3_errmsg(db)))")
-                    sqlite3_finalize(stmt)
-                    sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
-                    return
-                }
+        // 2. Xóa bài đọc (reading_passages) – bỏ qua nếu bảng chưa có
+        stmt = nil
+        if sqlite3_prepare_v2(db, "DELETE FROM reading_passages WHERE topic_id = ?", -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_int(stmt, 1, Int32(id))
+            if sqlite3_step(stmt) != SQLITE_DONE {
+                print("❌ deleteTopic: delete reading_passages failed: \(String(cString: sqlite3_errmsg(db)))")
             }
             sqlite3_finalize(stmt)
         }
 
+        // 3. Xóa topic
+        stmt = nil
+        if sqlite3_prepare_v2(db, "DELETE FROM topics WHERE id = ?", -1, &stmt, nil) != SQLITE_OK {
+            print("❌ deleteTopic: prepare topics failed")
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            return
+        }
+        sqlite3_bind_int(stmt, 1, Int32(id))
+        if sqlite3_step(stmt) != SQLITE_DONE {
+            print("❌ deleteTopic: delete topic failed: \(String(cString: sqlite3_errmsg(db)))")
+            sqlite3_finalize(stmt)
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            return
+        }
+        sqlite3_finalize(stmt)
         sqlite3_exec(db, "COMMIT", nil, nil, nil)
     }
 

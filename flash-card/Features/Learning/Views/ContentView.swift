@@ -15,6 +15,7 @@ struct SidebarView: View {
     @ObservedObject var viewModel: ContentViewModel
     @EnvironmentObject var appearanceManager: AppearanceManager
     @EnvironmentObject var fontSizeManager: FontSizeManager
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         List(selection: $viewModel.selectedSubject) {
@@ -82,13 +83,14 @@ struct SidebarView: View {
     private var bottomSection: some View {
         VStack(spacing: 8) {
             VStack(spacing: 8) {
-                // Streak indicator
+                // Streak indicator + mascot animated
                 HStack(spacing: 10) {
-                    Image(systemName: "flame.fill")
-                        .scaledFont(22)
-                        .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .orange : .gray)
-                        .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
-                        // .symbolEffect(.pulse, isActive: viewModel.streakInfo.didPracticeToday)
+                    StreakMascotView(
+                        currentStreak: viewModel.streakInfo.currentStreak,
+                        didPracticeToday: viewModel.streakInfo.didPracticeToday,
+                        isLight: colorScheme == .light
+                    )
+                    .frame(minWidth: 48 * fontSizeManager.fontSizeMultiplier, minHeight: 58 * fontSizeManager.fontSizeMultiplier)
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
@@ -117,7 +119,7 @@ struct SidebarView: View {
                     if viewModel.streakInfo.didPracticeToday {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .green : .secondary)
-                            .scaledFont(16)
+                            .scaledFont(14)
                             .frame(minWidth: 16 * fontSizeManager.fontSizeMultiplier)
                     } else {
                         Text("Chưa học")
@@ -178,28 +180,6 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
             }
             
-            // Language picker
-            HStack(spacing: 8) {
-                Image(systemName: "globe")
-                    .scaledFont(14)
-                    .foregroundStyle(.secondary)
-                Picker("", selection: Binding(
-                    get: { LocalizationManager.shared.currentLanguage },
-                    set: { LocalizationManager.shared.setLanguage($0) }
-                )) {
-                    ForEach(LocalizationManager.Language.allCases, id: \.self) { language in
-                        Text(language.displayName).tag(language)
-                    }
-                }
-                .pickerStyle(.menu)
-                .scaledFont(12)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -232,11 +212,11 @@ struct TopicsListView: View {
         HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-                .scaledFont(16)
+                .scaledFont(14)
                 .fontWeight(.medium)
             TextField("Tìm kiếm chủ đề...", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
-                .scaledFont(15)
+                .scaledFont(14)
                 .focused($isSearchFocused)
             if !viewModel.searchText.isEmpty {
                 Button(action: {
@@ -246,7 +226,7 @@ struct TopicsListView: View {
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
-                        .scaledFont(16)
+                        .scaledFont(14)
                 }
                 .buttonStyle(.plain)
                 .transition(.scale.combined(with: .opacity))
@@ -286,13 +266,14 @@ struct TopicsListView: View {
     private var topicsListContent: some View {
         if filteredTopics.isEmpty {
             ContentUnavailableView {
-                Label("Không tìm thấy kết quả", systemImage: "magnifyingglass")
+                Label(emptyStateTitle, systemImage: emptyStateIcon)
             } description: {
-                Text("Thử tìm kiếm với từ khóa khác")
+                Text(emptyStateDescription)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List(filteredTopics, selection: $viewModel.selectedTopic) { topic in
-                TopicRowView(topic: topic, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light) {
+                TopicRowView(topic: topic, subject: subject, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light) {
                     viewModel.deleteTopic(topic)
                 }
             }
@@ -300,6 +281,18 @@ struct TopicsListView: View {
             .scrollContentBackground(.hidden)
             .tint(.green)
         }
+    }
+
+    private var emptyStateTitle: String {
+        viewModel.searchText.isEmpty ? "Chưa có chủ đề nào" : "Không tìm thấy kết quả"
+    }
+
+    private var emptyStateIcon: String {
+        viewModel.searchText.isEmpty ? "folder.badge.plus" : "magnifyingglass"
+    }
+
+    private var emptyStateDescription: String {
+        viewModel.searchText.isEmpty ? "Nhấn \"Thêm chủ đề\" bên dưới để tạo chủ đề mới" : "Thử tìm kiếm với từ khóa khác"
     }
     
     private var addTopicBottomBar: some View {
@@ -348,30 +341,33 @@ Label("Thêm chủ đề", systemImage: "plus.circle.fill")
 // Topic row – content only; selection background is handled by listRowBackground
 private struct TopicRowView: View {
     let topic: Topic
+    let subject: Subject
     let isSelected: Bool
     let isLight: Bool
     let onDelete: () -> Void
-    
+
+    private var isReadingSubject: Bool { subject.name == "Bài đọc" }
+
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
                     .fill(isSelected ? Color.gray.opacity(isLight ? 0.2 : 0.25) : Color.gray.opacity(isLight ? 0.1 : 0.15))
                     .frame(width: 40, height: 40)
-                Image(systemName: "book.fill")
+                Image(systemName: isReadingSubject ? "doc.text.fill" : "book.fill")
                     .scaledFont(18)
                     .foregroundStyle(.secondary)
             }
             .frame(width: 40)
             VStack(alignment: .leading, spacing: 4) {
                 Text(topic.name)
-                    .scaledFont(15)
+                    .scaledFont(14)
                     .fontWeight(isSelected ? .semibold : .medium)
                     .foregroundStyle(.primary)
                 HStack(spacing: 6) {
-                    Image(systemName: "rectangle.stack.fill")
+                    Image(systemName: isReadingSubject ? "doc.richtext" : "rectangle.stack.fill")
                         .scaledFont(11)
-                    Text("\(topic.flashcards.count) flashcards")
+                    Text(isReadingSubject ? "\(topic.readings.count) bài đọc" : "\(topic.flashcards.count) flashcards")
                         .scaledFont(13)
                 }
                 .foregroundStyle(.secondary)
@@ -470,11 +466,374 @@ Image(systemName: subject.icon)
     }
 }
 
+// MARK: - Reading Main View (subject Bài đọc)
+struct ReadingMainView: View {
+    @ObservedObject var viewModel: ContentViewModel
+    let topic: Topic
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var selectedPassage: ReadingPassage?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Button(action: {
+                    viewModel.selectedTopic = nil
+                    viewModel.selectedFlashcard = nil
+                }) {
+                    Label("Quay lại", systemImage: "chevron.left")
+                        .scaledFont(14)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+                Text(topic.name)
+                    .scaledFont(14)
+                    .fontWeight(.semibold)
+                Spacer()
+
+                Button(action: {
+                    viewModel.newReadingTitle = ""
+                    viewModel.newReadingContent = ""
+                    viewModel.showAddReadingSheet = true
+                }) {
+                    Label("Tạo bài đọc", systemImage: "plus.circle.fill")
+                        .scaledFont(14)
+                        .fontWeight(.medium)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+            .padding()
+
+            Divider()
+
+            if topic.readings.isEmpty {
+                ContentUnavailableView {
+                    Label("Chưa có bài đọc", systemImage: "doc.richtext")
+                } description: {
+                    Text("Nhấn \"Tạo bài đọc\" để thêm bài đọc mới")
+                        .scaledFont(14)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                HSplitView {
+                    // Danh sách bài đọc
+                    List(topic.readings, selection: $selectedPassage) { passage in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(passage.title)
+                                .scaledFont(14)
+                                .fontWeight(.semibold)
+                                .lineLimit(2)
+                            Text(passage.content)
+                                .scaledFont(12)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .tag(passage)
+                        .contextMenu {
+                            Button(role: .destructive, action: {
+                                viewModel.deleteReadingPassage(passage)
+                                if selectedPassage?.id == passage.id {
+                                    selectedPassage = topic.readings.first(where: { $0.id != passage.id })
+                                }
+                            }) {
+                                Label("Xoá bài đọc", systemImage: "trash")
+                            }
+                        }
+                    }
+                    .frame(minWidth: 260, idealWidth: 320, maxWidth: 400)
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+
+                    // Nội dung bài đọc
+                    if let passage = selectedPassage {
+                        ReadingDetailView(passage: passage, topicName: topic.name)
+                    } else {
+                        ContentUnavailableView(
+                            "Chọn một bài đọc",
+                            systemImage: "doc.text.fill",
+                            description: Text("Chọn bài đọc từ danh sách bên trái")
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .onAppear {
+                    if selectedPassage == nil, let first = topic.readings.first {
+                        selectedPassage = first
+                    }
+                }
+                .onChange(of: topic.readings.count) { _, _ in
+                    if selectedPassage == nil, let first = topic.readings.first {
+                        selectedPassage = first
+                    } else if let sel = selectedPassage, !topic.readings.contains(where: { $0.id == sel.id }) {
+                        selectedPassage = topic.readings.first
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $viewModel.showAddReadingSheet) {
+            AddReadingSheet(viewModel: viewModel, topic: topic)
+        }
+    }
+}
+
+// MARK: - Reading Detail View (nội dung + smart copy)
+struct ReadingDetailView: View {
+    let passage: ReadingPassage
+    let topicName: String
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Toolbar: Smart copy button
+                HStack {
+                    Text(topicName)
+                        .scaledFont(14)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(action: copyFullContent) {
+                        Label("Sao chép", systemImage: "doc.on.doc")
+                            .scaledFont(14)
+                            .fontWeight(.medium)
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Text(passage.title)
+                    .scaledFont(22)
+                    .fontWeight(.bold)
+
+                Divider()
+
+                // Nội dung với smart copy (chọn đoạn -> context menu Sao chép / Tìm nghĩa)
+                SmartCopyDefineText(text: passage.content, flashcards: nil)
+                    .scaledFont(14)
+                    .lineSpacing(6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(24)
+        }
+        .background(Color(nsColor: .textBackgroundColor))
+    }
+
+    private func copyFullContent() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(passage.content, forType: .string)
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+    }
+}
+
+// MARK: - Add Reading Sheet
+struct AddReadingSheet: View {
+    @ObservedObject var viewModel: ContentViewModel
+    let topic: Topic
+    @FocusState private var focusedField: Field?
+
+    enum Field {
+        case title, content
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text("Tạo bài đọc")
+                    .scaledFont(22)
+                    .fontWeight(.bold)
+                Spacer()
+                Button(action: {
+                    viewModel.newReadingTitle = ""
+                    viewModel.newReadingContent = ""
+                    viewModel.showAddReadingSheet = false
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .scaledFont(22)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 8) {
+                Image(systemName: "folder.fill")
+                    .scaledFont(14)
+                    .foregroundStyle(.secondary)
+                Text(topic.name)
+                    .scaledFont(14)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Tiêu đề")
+                    .scaledFont(14)
+                    .fontWeight(.semibold)
+                TextField("Nhập tiêu đề bài đọc", text: $viewModel.newReadingTitle)
+                    .textFieldStyle(.roundedBorder)
+                    .scaledFont(14)
+                    .focused($focusedField, equals: .title)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Nội dung")
+                    .scaledFont(14)
+                    .fontWeight(.semibold)
+                TextEditor(text: $viewModel.newReadingContent)
+                    .scaledFont(14)
+                    .frame(minHeight: 200, maxHeight: 360)
+                    .scrollContentBackground(.hidden)
+                    .padding(8)
+                    .background(Color(nsColor: .textBackgroundColor))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .focused($focusedField, equals: .content)
+            }
+
+            Spacer(minLength: 0)
+
+            HStack {
+                Button("Huỷ") {
+                    viewModel.newReadingTitle = ""
+                    viewModel.newReadingContent = ""
+                    viewModel.showAddReadingSheet = false
+                }
+                .scaledFont(14)
+                .keyboardShortcut(.escape)
+
+                Spacer()
+
+                Button(action: {
+                    viewModel.addReadingPassage(topicId: topic.id, title: viewModel.newReadingTitle, content: viewModel.newReadingContent)
+                }) {
+                    Text("Lưu bài đọc")
+                        .scaledFont(14)
+                        .fontWeight(.semibold)
+                }
+                .keyboardShortcut(.return)
+                .disabled(viewModel.newReadingTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 500, height: 520)
+        .onAppear { focusedField = .title }
+    }
+}
+
+// MARK: - Edit Flashcard Sheet (Sửa từ gốc, nghĩa, gợi ý)
+struct EditFlashcardSheet: View {
+    let flashcard: Flashcard
+    let topic: Topic
+    @ObservedObject var viewModel: ContentViewModel
+    let onDismiss: () -> Void
+
+    @State private var editQuestion: String = ""
+    @State private var editAnswer: String = ""
+    @State private var editHint: String = ""
+    @FocusState private var focusedField: Field?
+
+    enum Field {
+        case question, answer, hint
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text("Sửa từ vựng")
+                    .scaledFont(22)
+                    .fontWeight(.bold)
+                Spacer()
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark.circle.fill")
+                        .scaledFont(22)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Từ gốc")
+                    .scaledFont(14)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                TextField("Từ gốc", text: $editQuestion)
+                    .textFieldStyle(.roundedBorder)
+                    .scaledFont(14)
+                    .focused($focusedField, equals: .question)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Nghĩa")
+                    .scaledFont(14)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                TextField("Nghĩa", text: $editAnswer)
+                    .textFieldStyle(.roundedBorder)
+                    .scaledFont(14)
+                    .focused($focusedField, equals: .answer)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Gợi ý (không bắt buộc)")
+                    .scaledFont(14)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                TextField("Gợi ý", text: $editHint)
+                    .textFieldStyle(.roundedBorder)
+                    .scaledFont(14)
+                    .focused($focusedField, equals: .hint)
+            }
+
+            Spacer(minLength: 0)
+
+            HStack {
+                Button("Huỷ") {
+                    onDismiss()
+                }
+                .scaledFont(14)
+                .keyboardShortcut(.escape)
+
+                Spacer()
+
+                Button(action: save) {
+                    Text("Lưu")
+                        .scaledFont(14)
+                        .fontWeight(.semibold)
+                }
+                .keyboardShortcut(.return)
+                .disabled(editQuestion.trimmingCharacters(in: .whitespaces).isEmpty || editAnswer.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 440, height: 380)
+        .onAppear {
+            editQuestion = flashcard.question
+            editAnswer = flashcard.answer
+            editHint = flashcard.hint ?? ""
+            focusedField = .question
+        }
+    }
+
+    private func save() {
+        viewModel.updateFlashcard(id: flashcard.id, question: editQuestion, answer: editAnswer, hint: editHint.isEmpty ? nil : editHint)
+        onDismiss()
+    }
+}
+
 // Flashcard Detail View
 struct FlashcardDetailView: View {
     let flashcard: Flashcard
     let topic: Topic
     let subjectName: String
+    var onEdit: (() -> Void)? = nil
     let onAnswered: ((Bool) -> Void)?  // Callback for practice mode
 
     @Environment(\.colorScheme) private var colorScheme
@@ -502,6 +861,14 @@ struct FlashcardDetailView: View {
                     }
                     
                     Spacer()
+
+                    if onEdit != nil {
+                        Button(action: { onEdit?() }) {
+                            Label("Sửa", systemImage: "pencil")
+                                .scaledFont(14)
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
                 
                 Divider()
@@ -792,7 +1159,7 @@ struct FlashcardDetailView: View {
                         .foregroundStyle(isCorrect ? .green : .red)
                     
                     SmartCopyDefineText(text: flashcard.answer, flashcards: topic.flashcards)
-                        .scaledFont(17) // body size
+                        .scaledFont(14) // body size
                         .foregroundStyle(.secondary)
                         .environmentObject(fontSizeManager)
                 }
@@ -837,8 +1204,7 @@ struct ContentView: View {
     @StateObject private var viewModel = ContentViewModel()
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @EnvironmentObject var fontSizeManager: FontSizeManager
-    @EnvironmentObject var localization: LocalizationManager
-    
+
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(viewModel: viewModel)
@@ -847,7 +1213,6 @@ struct ContentView: View {
         } detail: {
             detailColumn
         }
-        .id(localization.currentLanguage)
         .applyFontSizeScaling(multiplier: fontSizeManager.fontSizeMultiplier)
         .onChange(of: viewModel.isInSpecialMode) { oldValue, newValue in
             // Only update if actually changed to avoid unnecessary animations
@@ -899,8 +1264,13 @@ struct ContentView: View {
                 StatisticsDashboardView(viewModel: viewModel)
                     .id("statistics")
             } else if let topic = viewModel.selectedTopic {
-                FlashcardMainView(viewModel: viewModel, topic: topic)
-                    .id("topic-\(topic.id)")
+                if viewModel.selectedSubject?.name == "Bài đọc" {
+                    ReadingMainView(viewModel: viewModel, topic: topic)
+                        .id("reading-\(topic.id)")
+                } else {
+                    FlashcardMainView(viewModel: viewModel, topic: topic)
+                        .id("topic-\(topic.id)")
+                }
             } else {
                 ContentUnavailableView(
                     "Chọn chủ đề",
@@ -931,10 +1301,11 @@ struct ContentView: View {
     }
 }
 
-#Preview {
-    ContentView()
-        .environmentObject(AppearanceManager())
-        .environmentObject(FontSizeManager())
-        .environmentObject(LocalizationManager.shared)
-        .frame(width: 1000, height: 600)
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .environmentObject(AppearanceManager())
+            .environmentObject(FontSizeManager())
+            .frame(width: 1000, height: 600)
+    }
 }

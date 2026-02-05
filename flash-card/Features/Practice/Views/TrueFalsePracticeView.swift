@@ -48,7 +48,7 @@ struct TrueFalsePracticeView: View {
             VStack(spacing: 0) {
                 HStack {
                     Text("Câu \(currentIndex + 1) / \(flashcards.count)")
-                        .scaledFont(16)
+                        .scaledFont(14)
                         .fontWeight(.semibold)
                     
                     Spacer()
@@ -344,7 +344,7 @@ struct TrueFalsePracticeView: View {
                                 .scaledFont(13)
                                 .foregroundStyle(.secondary)
                             SmartCopyDefineText(text: flashcard.answer, flashcards: flashcards)
-                                .scaledFont(16)
+                                .scaledFont(14)
                                 .foregroundStyle(.primary)
                         }
                     }

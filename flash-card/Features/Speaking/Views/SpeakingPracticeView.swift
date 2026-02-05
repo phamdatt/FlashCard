@@ -61,7 +61,7 @@ struct SpeakingPracticeView: View {
 Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.secondary)
                             Text("\(score)/\(totalAnswered)")
-                                .scaledFont(16)
+                                .scaledFont(14)
                         }
                     }
                 }
@@ -80,7 +80,7 @@ Image(systemName: "checkmark.circle.fill")
                     .symbolEffect(.pulse, isActive: isRecording)
 
                 Text("Đọc to câu sau:")
-                    .scaledFont(16)
+                    .scaledFont(14)
                     .foregroundStyle(.secondary)
 
                 Text(flashcard.question)
@@ -114,7 +114,7 @@ Image(systemName: "checkmark.circle.fill")
                                     .scaledFont(12)
                                     .foregroundStyle(.secondary)
                                 Text(recognizedText)
-                                    .scaledFont(16)
+                                    .scaledFont(14)
                                     .foregroundStyle(.primary)
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -124,7 +124,7 @@ Image(systemName: "checkmark.circle.fill")
                         }
 
                         Text("Đáp án đúng: \(flashcard.answer)")
-                            .scaledFont(16)
+                            .scaledFont(14)
                             .foregroundStyle(.blue)
                             .padding()
                             .frame(maxWidth: .infinity)

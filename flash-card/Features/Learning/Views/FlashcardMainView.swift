@@ -18,7 +18,6 @@ struct FlashcardMainView: View {
     enum ViewMode: String, CaseIterable {
         case list = "Danh sách"
         case practice = "Luyện tập"
-        case reading = "Bài đọc"
     }
 
     enum PracticeType: String, CaseIterable {
@@ -52,6 +51,7 @@ struct FlashcardMainView: View {
     @State private var practiceRecorded: Bool = false
     /// Nguồn từ: tất cả hay chỉ từ chưa thuộc (phù hợp topic nhiều từ)
     @State private var practiceSource: PracticeSource = .all
+    @State private var showEditFlashcardSheet: Bool = false
 
     enum PracticeSource: String, CaseIterable {
         case all = "Tất cả"
@@ -177,8 +177,6 @@ struct FlashcardMainView: View {
                 listView
             case .practice:
                 practiceView
-            case .reading:
-                readingView
             }
         }
         .onChange(of: selectedMode) { _, newValue in
@@ -194,6 +192,11 @@ struct FlashcardMainView: View {
         }
         .sheet(isPresented: $viewModel.showAddFlashcardSheet) {
             AddFlashcardSheet(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showEditFlashcardSheet) {
+            if let flashcard = viewModel.selectedFlashcard, let topic = viewModel.selectedTopic {
+                EditFlashcardSheet(flashcard: flashcard, topic: topic, viewModel: viewModel, onDismiss: { showEditFlashcardSheet = false })
+            }
         }
     }
     
@@ -258,6 +261,12 @@ struct FlashcardMainView: View {
                 .padding(.vertical, 4)
                 .padding(.horizontal, 4)
                 .contextMenu {
+                    Button(action: {
+                        viewModel.selectFlashcard(flashcard)
+                        showEditFlashcardSheet = true
+                    }) {
+                        Label("Sửa từ vựng", systemImage: "pencil")
+                    }
                     Button(role: .destructive, action: {
                         viewModel.deleteFlashcard(flashcard)
                     }) {
@@ -270,7 +279,7 @@ struct FlashcardMainView: View {
             .tint(.green)
             
             if let flashcard = viewModel.selectedFlashcard {
-                FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", onAnswered: nil)
+                FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", onEdit: { showEditFlashcardSheet = true }, onAnswered: nil)
             } else {
                 ContentUnavailableView(
                     "Chọn một flashcard",
@@ -403,6 +412,7 @@ struct FlashcardMainView: View {
                     flashcard: flashcard,
                     topic: topic,
                     subjectName: viewModel.selectedSubject?.name ?? "",
+                    onEdit: nil,
                     onAnswered: { isCorrect in
                         handleAnswer(isCorrect: isCorrect)
                     }
@@ -524,425 +534,6 @@ struct FlashcardMainView: View {
         )
     }
     
-    // MARK: - Reading View
-    private var readingView: some View {
-        Group {
-            if topic.readings.isEmpty {
-                VStack {
-                    Spacer()
-                        .frame(height: 60)
-                    ContentUnavailableView(
-                        "Chưa có bài đọc",
-                        systemImage: "book.closed",
-                        description: Text("Chủ đề này chưa có bài đọc nào")
-                    )
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            } else {
-                ReadingPassageListView(readings: topic.readings)
-            }
-        }
-    }
-}
-
-// MARK: - Reading Passage Views
-struct ReadingPassageListView: View {
-    let readings: [ReadingPassage]
-    @State private var selectedReading: ReadingPassage?
-    
-    var body: some View {
-        HSplitView {
-            // Reading list
-            List(readings, selection: $selectedReading) { reading in
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        // Level badge
-                        Text(reading.level.rawValue)
-                            .font(.footnote)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(levelColor(for: reading.level).opacity(0.2))
-                            .foregroundStyle(levelColor(for: reading.level))
-                            .cornerRadius(6)
-
-                        Spacer()
-
-                        // Question count
-                        HStack(spacing: 4) {
-                            Image(systemName: "questionmark.circle.fill")
-                                .font(.footnote)
-                            Text("\(reading.questions.count) câu hỏi")
-                                .font(.footnote)
-                        }
-                        .foregroundStyle(.secondary)
-                    }
-                    
-                    Text(reading.title)
-                        .font(.headline)
-                        .lineLimit(2)
-                    
-                    Text(reading.content.prefix(100) + "...")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-                .padding(.vertical, 8)
-                .tag(reading)
-            }
-            .frame(minWidth: 250, idealWidth: 300, maxWidth: 400)
-            .listStyle(.plain)
-            
-            // Reading detail
-            if let reading = selectedReading {
-                ReadingPassageDetailView(reading: reading)
-            } else {
-                ContentUnavailableView(
-                    "Chọn một bài đọc",
-                    systemImage: "book.fill",
-                    description: Text("Chọn bài đọc từ danh sách bên trái")
-                )
-            }
-        }
-        .onAppear {
-            if selectedReading == nil && !readings.isEmpty {
-                selectedReading = readings.first
-            }
-        }
-    }
-    
-    private func levelColor(for level: ReadingLevel) -> Color {
-        switch level {
-        case .beginner:
-            return .green
-        case .elementary:
-            return .blue
-        case .intermediate:
-            return .orange
-        case .upperIntermediate:
-            return .purple
-        case .advanced:
-            return .red
-        }
-    }
-}
-
-struct ReadingPassageDetailView: View {
-    let reading: ReadingPassage
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var userAnswers: [Int: String] = [:] // questionId -> selected answer
-    @State private var showResults: Bool = false
-    @State private var score: Int = 0
-    
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Header
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text(reading.level.rawValue)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(levelColor(for: reading.level).opacity(0.2))
-                            .foregroundStyle(levelColor(for: reading.level))
-                            .cornerRadius(8)
-                        
-                        Spacer()
-                        
-                        if showResults {
-                            HStack(spacing: 8) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.secondary)
-                                Text("\(score)/\(reading.questions.count)")
-                                    .font(.headline)
-                            }
-                        }
-                    }
-                    
-                    Text(reading.title)
-                        .font(.title)
-                        .fontWeight(.bold)
-                }
-                
-                Divider()
-                
-                // Vocabulary help (if available)
-                if let vocabulary = reading.vocabularyHelp, !vocabulary.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "book.fill")
-                                .foregroundStyle(.secondary)
-                            Text("Từ vựng hỗ trợ")
-                                .font(.headline)
-                        }
-                        
-                        ForEach(vocabulary) { item in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(item.word)
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .foregroundStyle(.primary)
-                                    
-                                    Text("•")
-                                        .foregroundStyle(.secondary)
-                                    
-                                    Text(item.meaning)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                                
-                                if let example = item.example {
-                                    Text("📝 \(example)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .italic()
-                                        .padding(.leading, 4)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(colorScheme == .light
-                                ? Color(nsColor: .controlBackgroundColor)
-                                : Color.green.opacity(0.05))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(colorScheme == .light ? Color.green.opacity(0.15) : Color.clear, lineWidth: 1)
-                    )
-                    .cornerRadius(12)
-                }
-                
-                // Reading content
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "doc.text.fill")
-                            .foregroundStyle(.secondary)
-                        Text("Bài đọc")
-                            .font(.headline)
-                    }
-                    
-                    TappableReadingContent(text: reading.content, vocabularyHelp: reading.vocabularyHelp)
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(colorScheme == .light
-                                    ? Color(nsColor: .textBackgroundColor)
-                                    : Color.green.opacity(0.05))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(colorScheme == .light ? Color.green.opacity(0.2) : Color.clear, lineWidth: 1)
-                        )
-                        .cornerRadius(12)
-                }
-                
-                Divider()
-                
-                // Questions
-                VStack(alignment: .leading, spacing: 20) {
-                    HStack {
-                        Image(systemName: "questionmark.circle.fill")
-                            .foregroundStyle(.orange)
-                        Text("Câu hỏi")
-                            .font(.headline)
-                    }
-                    
-                    ForEach(Array(reading.questions.enumerated()), id: \.element.id) { index, question in
-                        questionView(question: question, index: index + 1)
-                    }
-                }
-                
-                // Submit button
-                if !showResults {
-                    Button(action: checkAnswers) {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                            Text("Nộp bài")
-                        }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(userAnswers.count == reading.questions.count ? Color.green : Color.gray)
-                        .foregroundStyle(.white)
-                        .cornerRadius(12)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(userAnswers.count != reading.questions.count)
-                } else {
-                    Button(action: resetQuiz) {
-                        HStack {
-                            Image(systemName: "arrow.clockwise")
-                            Text("Làm lại")
-                        }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.orange)
-                        .foregroundStyle(.white)
-                        .cornerRadius(12)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(24)
-        }
-    }
-    
-    @ViewBuilder
-    private func questionView(question: ReadingQuestion, index: Int) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Câu \(index): \(question.question)")
-                .font(.body)
-                .fontWeight(.semibold)
-            
-            ForEach(question.options, id: \.self) { option in
-                optionButton(option: option, question: question)
-            }
-            
-            // Show explanation if available and results are shown
-            if showResults, let explanation = question.explanation {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "lightbulb.fill")
-                        .foregroundStyle(.yellow)
-                    Text(explanation)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding()
-                .background(Color.yellow.opacity(0.1))
-                .cornerRadius(8)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(colorScheme == .light
-                    ? Color(nsColor: .controlBackgroundColor)
-                    : Color.gray.opacity(0.05))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(colorScheme == .light ? Color.gray.opacity(0.15) : Color.clear, lineWidth: 1)
-        )
-        .cornerRadius(12)
-    }
-    
-    @ViewBuilder
-    private func optionButton(option: String, question: ReadingQuestion) -> some View {
-        let optionLetter = String(option.prefix(1))
-        let isSelected = userAnswers[question.id] == optionLetter
-        let isCorrect = question.correctAnswer == optionLetter
-        
-        Button(action: {
-            if !showResults {
-                userAnswers[question.id] = optionLetter
-            }
-        }) {
-            HStack {
-                Text(option)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.leading)
-                
-                Spacer()
-                
-                if showResults {
-                    if isCorrect {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                    } else if isSelected && !isCorrect {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
-            .padding()
-            .background(buttonBackground(isSelected: isSelected, isCorrect: isCorrect))
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(buttonBorder(isSelected: isSelected, isCorrect: isCorrect), lineWidth: 2)
-            )
-        }
-        .buttonStyle(.plain)
-        .disabled(showResults)
-    }
-    
-    private func buttonBackground(isSelected: Bool, isCorrect: Bool) -> Color {
-        let isLight = colorScheme == .light
-        if !showResults {
-            if isSelected {
-                return Color.green.opacity(isLight ? 0.08 : 0.1)
-            }
-            return isLight ? Color(nsColor: .controlBackgroundColor) : Color.clear
-        } else {
-            if isCorrect {
-                return Color.green.opacity(isLight ? 0.08 : 0.1)
-            } else if isSelected && !isCorrect {
-                return Color.red.opacity(isLight ? 0.08 : 0.1)
-            }
-            return isLight ? Color(nsColor: .controlBackgroundColor) : Color.clear
-        }
-    }
-
-    private func buttonBorder(isSelected: Bool, isCorrect: Bool) -> Color {
-        let isLight = colorScheme == .light
-        if !showResults {
-            return isSelected ? .green : Color.gray.opacity(isLight ? 0.2 : 0.3)
-        } else {
-            if isCorrect {
-                return .green
-            } else if isSelected && !isCorrect {
-                return .red
-            }
-            return Color.gray.opacity(isLight ? 0.2 : 0.3)
-        }
-    }
-    
-    private func checkAnswers() {
-        var correctCount = 0
-        for question in reading.questions {
-            if userAnswers[question.id] == question.correctAnswer {
-                correctCount += 1
-            }
-        }
-        score = correctCount
-        withAnimation {
-            showResults = true
-        }
-    }
-    
-    private func resetQuiz() {
-        withAnimation {
-            userAnswers.removeAll()
-            showResults = false
-            score = 0
-        }
-    }
-    
-    private func levelColor(for level: ReadingLevel) -> Color {
-        switch level {
-        case .beginner:
-            return .green
-        case .elementary:
-            return .blue
-        case .intermediate:
-            return .orange
-        case .upperIntermediate:
-            return .purple
-        case .advanced:
-            return .red
-        }
-    }
 }
 
 // MARK: - Add Flashcard Sheet
@@ -1054,146 +645,4 @@ struct AddFlashcardSheet: View {
     }
 }
 
-// MARK: - Tappable Reading Content (Smart Define)
-
-struct TappableReadingContent: View {
-    let text: String
-    let vocabularyHelp: [VocabularyItem]?
-
-    @State private var selectedWordIndex: Int? = nil
-    @State private var wordResult: (word: String, meaning: String, hint: String?)? = nil
-
-    private var paragraphs: [[String]] {
-        text.components(separatedBy: "\n").map { paragraph in
-            paragraph.split(separator: " ", omittingEmptySubsequences: false).map(String.init)
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ForEach(Array(paragraphs.enumerated()), id: \.offset) { pIdx, words in
-                if words.joined().trimmingCharacters(in: .whitespaces).isEmpty {
-                    Spacer().frame(height: 4)
-                } else {
-                    WordFlowLayout(horizontalSpacing: 4, verticalSpacing: 5) {
-                        ForEach(Array(words.enumerated()), id: \.offset) { wIdx, word in
-                            let globalIndex = globalIndex(paragraph: pIdx, word: wIdx)
-                            let isSelected = selectedWordIndex == globalIndex
-
-                            Text(word)
-                                .font(.body)
-                                .padding(.vertical, 1)
-                                .padding(.horizontal, 2)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(isSelected ? Color.green.opacity(0.2) : Color.clear)
-                                )
-                                .onTapGesture {
-                                }
-                                .popover(isPresented: .constant(isSelected && wordResult != nil), arrowEdge: .bottom) {
-                                    if let result = wordResult {
-                                        WordDefinitionPopover(result: result) {
-                                            selectedWordIndex = nil
-                                            wordResult = nil
-                                        }
-                                    }
-                                }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func globalIndex(paragraph: Int, word: Int) -> Int {
-        paragraph * 10000 + word
-    }
-
-}
-
-struct WordDefinitionPopover: View {
-    let result: (word: String, meaning: String, hint: String?)
-    let onDismiss: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(result.word)
-                    .font(.headline)
-                Spacer()
-                Button(action: onDismiss) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-
-            Text(result.meaning)
-                .font(.body)
-                .foregroundStyle(.primary)
-
-            if let hint = result.hint, !hint.isEmpty {
-                Divider()
-                HStack(spacing: 4) {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                    Text(hint)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(12)
-        .frame(minWidth: 200, maxWidth: 300)
-    }
-}
-
-// MARK: - Word Flow Layout
-
-struct WordFlowLayout: Layout {
-    var horizontalSpacing: CGFloat = 4
-    var verticalSpacing: CGFloat = 5
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = arrange(proposal: proposal, subviews: subviews)
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = arrange(proposal: ProposedViewSize(width: bounds.width, height: bounds.height), subviews: subviews)
-        for (index, position) in result.positions.enumerated() {
-            subviews[index].place(
-                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
-                proposal: .unspecified
-            )
-        }
-    }
-
-    private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (positions: [CGPoint], size: CGSize) {
-        let maxWidth = proposal.width ?? .infinity
-        var positions: [CGPoint] = []
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        var totalHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-
-            if x + size.width > maxWidth && x > 0 {
-                x = 0
-                y += rowHeight + verticalSpacing
-                rowHeight = 0
-            }
-
-            positions.append(CGPoint(x: x, y: y))
-            rowHeight = max(rowHeight, size.height)
-            x += size.width + horizontalSpacing
-            totalHeight = max(totalHeight, y + rowHeight)
-        }
-
-        return (positions, CGSize(width: maxWidth, height: totalHeight))
-    }
-}
 

@@ -42,7 +42,7 @@ struct ReviewMistakesView: View {
     // MARK: - Header (custom)
     private var headerView: some View {
         HStack(spacing: 16) {
-            Text("review.mistakes.title".localized)
+            Text("Ôn lại từ đã sai")
                 .scaledFont(20)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
@@ -125,12 +125,12 @@ struct ReviewMistakesView: View {
                     .symbolEffect(.pulse)
             }
             VStack(spacing: 10) {
-                Text("review.no_mistakes".localized)
+                Text("Không có từ đã sai")
                     .scaledFont(24)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
-                Text(String(format: "review.no_mistakes_in_period".localized, daysFilter))
-                    .scaledFont(16)
+                Text(String(format: "Bạn chưa có từ nào sai trong %d ngày qua!", daysFilter))
+                    .scaledFont(14)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -253,7 +253,7 @@ private struct MistakeSectionCard: View {
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(section.topicName)
-                        .scaledFont(16)
+                        .scaledFont(14)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
@@ -356,7 +356,7 @@ struct FlashcardReviewView: View {
 
             Spacer()
             Text(sectionName)
-                .scaledFont(16)
+                .scaledFont(14)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
             Spacer()
@@ -448,13 +448,13 @@ struct FlashcardReviewView: View {
                     HStack(spacing: 16) {
                         reviewActionButton(
                             icon: "xmark",
-                            label: "review.wrong".localized,
+                            label: "Sai",
                             color: .orange,
                             action: { submitAnswer(false) }
                         )
                         reviewActionButton(
                             icon: "checkmark",
-                            label: "review.correct".localized,
+                            label: "Đúng",
                             color: .green,
                             action: { submitAnswer(true) }
                         )
@@ -554,12 +554,12 @@ struct FlashcardReviewView: View {
                     .symbolEffect(.bounce)
             }
             VStack(spacing: 10) {
-                Text("review.completed".localized)
+                Text("Hoàn thành ôn tập!")
                     .scaledFont(26)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
-                Text(String(format: "review.reviewed_count".localized, completedCount))
-                    .scaledFont(16)
+                Text(String(format: "Đã ôn %d từ", completedCount))
+                    .scaledFont(14)
                     .foregroundStyle(.secondary)
             }
             if completedCount > 0 {
@@ -568,7 +568,7 @@ struct FlashcardReviewView: View {
                         .scaledFont(44)
                         .fontWeight(.bold)
                         .foregroundStyle(accuracy >= 70 ? .green : .orange)
-                    Text("review.accuracy".localized)
+                    Text("Độ chính xác")
                         .scaledFont(14)
                         .foregroundStyle(.secondary)
                 }
@@ -577,10 +577,10 @@ struct FlashcardReviewView: View {
             Button(action: onBack) {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
-                        .scaledFont(16)
+                        .scaledFont(14)
                         .foregroundStyle(.white)
                     Text("Quay lại danh sách")
-                        .scaledFont(16)
+                        .scaledFont(14)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
                 }

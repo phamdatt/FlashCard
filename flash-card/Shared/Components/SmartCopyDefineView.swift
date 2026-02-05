@@ -18,6 +18,7 @@ struct SmartCopyDefineText: View {
     
     var body: some View {
         Text(text)
+            .scaledFont(14)
             .textSelection(.enabled)
             .contextMenu {
                 Button(action: {
@@ -134,10 +135,10 @@ struct DefinitionPopover: View {
             HStack {
                 Image(systemName: "book.fill")
                     .foregroundStyle(.blue)
-                    .font(.title3)
+                    .scaledFont(20)
                 
                 Text(word)
-                    .font(.headline)
+                    .scaledFont(14)
                     .fontWeight(.bold)
                 
                 Spacer()
@@ -154,12 +155,12 @@ struct DefinitionPopover: View {
             // Meaning
             VStack(alignment: .leading, spacing: 6) {
                 Text("Nghĩa")
-                    .font(.subheadline)
+                    .scaledFont(14)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                 
                 Text(meaning)
-                    .font(.body)
+                    .scaledFont(14)
                     .foregroundStyle(.primary)
             }
             
@@ -174,7 +175,7 @@ struct DefinitionPopover: View {
                     Image(systemName: "doc.on.doc")
                     Text("Sao chép")
                 }
-                .font(.subheadline)
+                .scaledFont(14)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
             }
