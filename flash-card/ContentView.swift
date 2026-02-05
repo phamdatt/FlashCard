@@ -516,6 +516,7 @@ struct FlashcardDetailView: View {
         let optionLetter = String(option.prefix(1))
         let isSelected = selectedAnswer == optionLetter
         let isCorrect = flashcard.correctAnswer == optionLetter
+        let shortcutKey = KeyEquivalent(Character(optionLetter.lowercased()))
         
         @State var isPressed = false
         
@@ -624,7 +625,8 @@ struct FlashcardDetailView: View {
             )
             .offset(y: isPressed ? 2 : 0)
         }
-        .buttonStyle(DuolingoButtonStyle(isPressed: $isPressed, isDisabled: showResult))
+        .buttonStyle(CoreButtonStyle(isPressed: $isPressed, isDisabled: showResult))
+        .keyboardShortcut(shortcutKey, modifiers: [])
         .scaleEffect(showResult && (isCorrect || (isSelected && !isCorrect)) ? 1.0 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showResult)
     }
@@ -661,8 +663,7 @@ struct FlashcardDetailView: View {
     }
 }
 
-// Custom Duolingo-style Button Style
-struct DuolingoButtonStyle: ButtonStyle {
+struct CoreButtonStyle: ButtonStyle {
     @Binding var isPressed: Bool
     let isDisabled: Bool
     

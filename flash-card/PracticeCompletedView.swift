@@ -42,11 +42,9 @@ struct PracticeCompletedView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // --- BẢNG KẾT QUẢ ---
                 VStack(spacing: 20) {
                     let percentage = totalAnswered > 0 ? Int((Double(score) / Double(totalAnswered)) * 100) : 0
 
-                    // Vòng tròn tỷ lệ %
                     ZStack {
                         Circle()
                             .stroke(Color.gray.opacity(0.1), lineWidth: 10)
@@ -84,7 +82,6 @@ struct PracticeCompletedView: View {
                 )
                 .padding(.horizontal, 24)
 
-                // --- UNKNOWN CARDS LIST (for Speed Cards) ---
                 if let unknownCards = unknownCards, !unknownCards.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -121,7 +118,6 @@ struct PracticeCompletedView: View {
                     }
                 }
 
-                // --- NÚT ĐIỀU KHIỂN ---
                 VStack(spacing: 12) {
                     Button(action: onContinue) {
                         HStack {

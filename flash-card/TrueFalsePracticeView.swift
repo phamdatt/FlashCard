@@ -256,16 +256,13 @@ struct TrueFalsePracticeView: View {
         guard currentIndex < flashcards.count else { return }
         let flashcard = flashcards[currentIndex]
 
-        // 50% chance of showing correct answer
         currentIsTrue = Bool.random()
 
         if currentIsTrue {
             displayedAnswer = flashcard.answer
         } else {
-            // Pick a random wrong answer from other flashcards
             let otherAnswers = flashcards.filter { $0.id != flashcard.id }.map { $0.answer }
             displayedAnswer = otherAnswers.randomElement() ?? flashcard.answer
-            // If we couldn't find a different answer, make it true
             if displayedAnswer == flashcard.answer {
                 currentIsTrue = true
             }
