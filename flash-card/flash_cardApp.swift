@@ -77,17 +77,28 @@ class AppearanceManager: ObservableObject {
     }
 }
 
+private let hasCompletedOnboardingKey = "hasCompletedOnboarding"
+
 @main
 struct flash_cardApp: App {
     @StateObject private var appearanceManager = AppearanceManager()
     @StateObject private var fontSizeManager = FontSizeManager()
+    @AppStorage(hasCompletedOnboardingKey) private var hasCompletedOnboarding = false
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(appearanceManager)
-                .environmentObject(fontSizeManager)
-                .applyGlobalFontSize(fontSizeManager: fontSizeManager)
+            Group {
+                if hasCompletedOnboarding {
+                    ContentView()
+                } else {
+                    OnboardingView(onComplete: {
+                        hasCompletedOnboarding = true
+                    })
+                }
+            }
+            .environmentObject(appearanceManager)
+            .environmentObject(fontSizeManager)
+            .applyGlobalFontSize(fontSizeManager: fontSizeManager)
         }
         .commands {
             CommandGroup(after: .textEditing) {
@@ -107,6 +118,11 @@ struct flash_cardApp: App {
                     fontSizeManager.resetFontSize()
                 }
                 .keyboardShortcut("0", modifiers: .command)
+            }
+            CommandGroup(after: .help) {
+                Button("Phím tắt") {
+                    NotificationCenter.default.post(name: .openKeyboardShortcuts, object: nil)
+                }
             }
         }
     }

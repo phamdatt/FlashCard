@@ -259,11 +259,11 @@ Image(systemName: "checkmark.circle.fill")
     
     private func showTextInputDialog(completion: @escaping (String) -> Void) {
         let alert = NSAlert()
-        alert.messageText = "Nhập câu bạn đã nói"
-        alert.informativeText = "Vì macOS không hỗ trợ speech recognition tự động, vui lòng nhập câu bạn đã đọc:"
+        alert.messageText = "Nhập câu bạn đã đọc"
+        alert.informativeText = "Trên macOS chưa hỗ trợ nhận diện giọng nói tự động. Bạn hãy gõ lại câu bạn vừa đọc (đáp án) để kiểm tra."
         
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 400, height: 24))
-        input.placeholderString = "Nhập đáp án..."
+        input.placeholderString = "Gõ đáp án..."
         alert.accessoryView = input
         alert.addButton(withTitle: "Xác nhận")
         alert.addButton(withTitle: "Hủy")

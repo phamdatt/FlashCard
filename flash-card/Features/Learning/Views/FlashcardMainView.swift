@@ -77,16 +77,26 @@ struct FlashcardMainView: View {
                 
                 Spacer()
 
-                // Add flashcard button
-                Button(action: {
-                    viewModel.showAddFlashcardSheet = true
-                }) {
-                    Label("Thêm từ", systemImage: "plus.circle.fill")
-                        .scaledFont(13)
-                        .fontWeight(.medium)
+                HStack(spacing: 12) {
+                    Button(action: {
+                        viewModel.showAddFlashcardSheet = true
+                    }) {
+                        Label("Thêm từ", systemImage: "plus.circle.fill")
+                            .scaledFont(13)
+                            .fontWeight(.medium)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    Button(action: {
+                        viewModel.showImportFlashcardSheet = true
+                    }) {
+                        Label("Import", systemImage: "square.and.arrow.down")
+                            .scaledFont(13)
+                            .fontWeight(.medium)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
             }
             .padding()
 
@@ -193,9 +203,30 @@ struct FlashcardMainView: View {
         .sheet(isPresented: $viewModel.showAddFlashcardSheet) {
             AddFlashcardSheet(viewModel: viewModel)
         }
+        .sheet(isPresented: $viewModel.showImportFlashcardSheet) {
+            ImportFlashcardSheet(viewModel: viewModel)
+        }
         .sheet(isPresented: $showEditFlashcardSheet) {
             if let flashcard = viewModel.selectedFlashcard, let topic = viewModel.selectedTopic {
                 EditFlashcardSheet(flashcard: flashcard, topic: topic, viewModel: viewModel, onDismiss: { showEditFlashcardSheet = false })
+            }
+        }
+        .confirmationDialog("Xóa từ vựng?", isPresented: Binding(
+            get: { viewModel.flashcardToDelete != nil },
+            set: { if !$0 { viewModel.flashcardToDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Xóa", role: .destructive) {
+                if let fc = viewModel.flashcardToDelete {
+                    viewModel.flashcardToDelete = nil
+                    viewModel.deleteFlashcard(fc)
+                }
+            }
+            Button("Huỷ", role: .cancel) {
+                viewModel.flashcardToDelete = nil
+            }
+        } message: {
+            if let fc = viewModel.flashcardToDelete {
+                Text("Từ \"\(fc.question)\" sẽ bị xóa. Không thể hoàn tác.")
             }
         }
     }
@@ -268,7 +299,7 @@ struct FlashcardMainView: View {
                         Label("Sửa từ vựng", systemImage: "pencil")
                     }
                     Button(role: .destructive, action: {
-                        viewModel.deleteFlashcard(flashcard)
+                        viewModel.flashcardToDelete = flashcard
                     }) {
                         Label("Xoá từ vựng", systemImage: "trash")
                     }

@@ -42,7 +42,36 @@ class ContentViewModel: ObservableObject {
     @Published var showReviewMode = false
     @Published var showReviewMistakes = false
     @Published var showStatistics = false
-    
+
+    // Pending delete (show confirmation before actually deleting)
+    @Published var topicToDelete: Topic?
+    @Published var flashcardToDelete: Flashcard?
+    @Published var passageToDelete: ReadingPassage?
+
+    // Error message for DB failures (shown as alert)
+    @Published var errorMessage: String?
+
+    // Loading state (initial load / reload)
+    @Published var isLoading = false
+
+    // Undo delete: show banner and allow restore within a few seconds
+    enum UndoableItem {
+        case topic(name: String, subjectId: Int, flashcards: [Flashcard], readings: [(title: String, content: String)])
+        case flashcard(Flashcard, topicId: Int)
+        case passage(title: String, content: String, topicId: Int)
+    }
+    @Published var undoableItem: UndoableItem?
+    private var undoClearWorkItem: DispatchWorkItem?
+
+    // Keyboard shortcuts help sheet (menu Help → Phím tắt / sidebar)
+    @Published var showKeyboardShortcutsSheet = false
+
+    // Backup / Restore sheet (sidebar)
+    @Published var showBackupRestoreSheet = false
+
+    // Import flashcards sheet (from CSV/JSON)
+    @Published var showImportFlashcardSheet = false
+
     // MARK: - Navigation Helpers
     
     var isInSpecialMode: Bool {
@@ -94,11 +123,15 @@ class ContentViewModel: ObservableObject {
     }
 
     init() {
-        loadLearningData()
-        loadStreakInfo()
+        isLoading = true
+        DispatchQueue.main.async { [weak self] in
+            self?.loadLearningData()
+            self?.loadStreakInfo()
+            self?.isLoading = false
+        }
     }
 
-    // Filter topics based on search text
+    // Filter topics based on search text (topic name)
     func filteredTopics(for subject: Subject) -> [Topic] {
         if searchText.isEmpty {
             return subject.topics
@@ -106,6 +139,21 @@ class ContentViewModel: ObservableObject {
         return subject.topics.filter { topic in
             topic.name.localizedCaseInsensitiveContains(searchText)
         }
+    }
+
+    /// Search in flashcard question/answer within the given subject. Returns (topic, flashcard) pairs.
+    func flashcardSearchResults(for subject: Subject) -> [(topic: Topic, flashcard: Flashcard)] {
+        let q = searchText.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return [] }
+        var results: [(topic: Topic, flashcard: Flashcard)] = []
+        for topic in subject.topics {
+            for card in topic.flashcards {
+                if card.question.localizedCaseInsensitiveContains(q) || (card.answer.localizedCaseInsensitiveContains(q)) {
+                    results.append((topic, card))
+                }
+            }
+        }
+        return results
     }
 
     // MARK: - CRUD Operations
@@ -185,8 +233,73 @@ class ContentViewModel: ObservableObject {
             showAddFlashcardSheet = false
     }
 
+    private func scheduleUndoClear() {
+        undoClearWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                self?.undoableItem = nil
+            }
+        }
+        undoClearWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: work)
+    }
+
+    func restoreUndo() {
+        guard let item = undoableItem else { return }
+        undoClearWorkItem?.cancel()
+        undoClearWorkItem = nil
+        switch item {
+        case .topic(let name, let subjectId, let flashcards, let readings):
+            let newTopic = Topic(name: name, subjectId: subjectId, flashcards: [], readings: [])
+            let newTopicId = DatabaseManager.shared.insertTopic(newTopic)
+            for card in flashcards {
+                DatabaseManager.shared.insertFlashcard(card, topicId: newTopicId)
+            }
+            for (title, content) in readings {
+                DatabaseManager.shared.insertReadingPassage(topicId: newTopicId, title: title, content: content)
+            }
+            loadLearningData()
+            if let sub = subjects.first(where: { $0.id == subjectId }),
+               let restored = sub.topics.first(where: { $0.name == name }) {
+                selectedSubject = sub
+                selectedTopic = restored
+                selectedFlashcard = restored.flashcards.first
+            }
+        case .flashcard(let card, let topicId):
+            DatabaseManager.shared.insertFlashcard(card, topicId: topicId)
+            loadLearningData()
+            if let subId = selectedSubject?.id, let sub = subjects.first(where: { $0.id == subId }),
+               let topic = sub.topics.first(where: { $0.id == topicId }) {
+                selectedSubject = sub
+                selectedTopic = topic
+                selectedFlashcard = topic.flashcards.last
+            }
+        case .passage(let title, let content, let topicId):
+            DatabaseManager.shared.insertReadingPassage(topicId: topicId, title: title, content: content)
+            loadLearningData()
+            if let subId = selectedSubject?.id, let sub = subjects.first(where: { $0.id == subId }),
+               let topic = sub.topics.first(where: { $0.id == topicId }) {
+                selectedSubject = sub
+                selectedTopic = topic
+            }
+        }
+        undoableItem = nil
+    }
+
+    func dismissUndoBanner() {
+        undoClearWorkItem?.cancel()
+        undoClearWorkItem = nil
+        undoableItem = nil
+    }
+
     func deleteTopic(_ topic: Topic) {
-        DatabaseManager.shared.deleteTopic(id: topic.id)
+        guard DatabaseManager.shared.deleteTopic(id: topic.id) else {
+            errorMessage = "Không thể xóa chủ đề. Vui lòng thử lại."
+            return
+        }
+        let readingsSnapshot = topic.readings.map { ($0.title, $0.content) }
+        undoableItem = .topic(name: topic.name, subjectId: topic.subjectId, flashcards: topic.flashcards, readings: readingsSnapshot)
+        scheduleUndoClear()
         let currentSubjectId = selectedSubject?.id
         let wasSelected = (selectedTopic?.id == topic.id)
         if wasSelected {
@@ -224,9 +337,14 @@ class ContentViewModel: ObservableObject {
     }
 
     func deleteReadingPassage(_ passage: ReadingPassage) {
+        guard DatabaseManager.shared.deleteReadingPassage(id: passage.id) else {
+            errorMessage = "Không thể xóa bài đọc. Vui lòng thử lại."
+            return
+        }
+        undoableItem = .passage(title: passage.title, content: passage.content, topicId: passage.topicId)
+        scheduleUndoClear()
         let currentTopicId = selectedTopic?.id
         let currentSubjectId = selectedSubject?.id
-        DatabaseManager.shared.deleteReadingPassage(id: passage.id)
         loadLearningData()
         if let subId = currentSubjectId, let tId = currentTopicId {
             selectedSubject = subjects.first(where: { $0.id == subId })
@@ -235,8 +353,15 @@ class ContentViewModel: ObservableObject {
     }
 
     func deleteFlashcard(_ flashcard: Flashcard) {
-        DatabaseManager.shared.deleteFlashcard(id: flashcard.id)
-        
+        let topicId = selectedTopic?.id
+        guard DatabaseManager.shared.deleteFlashcard(id: flashcard.id) else {
+            errorMessage = "Không thể xóa từ vựng. Vui lòng thử lại."
+            return
+        }
+        if let topicId = topicId {
+            undoableItem = .flashcard(flashcard, topicId: topicId)
+            scheduleUndoClear()
+        }
         let currentTopicId = selectedTopic?.id
         let currentSubjectId = selectedSubject?.id
 
@@ -246,7 +371,7 @@ class ContentViewModel: ObservableObject {
             selectedSubject = subjects.first(where: { $0.id == subId })
             selectedTopic = selectedSubject?.topics.first(where: { $0.id == tId })
         }
-        
+
         if selectedFlashcard?.id == flashcard.id {
             selectedFlashcard = selectedTopic?.flashcards.first
         }
@@ -281,8 +406,11 @@ class ContentViewModel: ObservableObject {
 
     // MARK: - Learning Data Management
 
-    private func loadLearningData() {
+    func loadLearningData() {
         subjects = DatabaseManager.shared.loadAllSubjects()
+        if selectedSubject == nil, let first = subjects.first {
+            selectSubject(first)
+        }
     }
 
     func selectSubject(_ subject: Subject) {

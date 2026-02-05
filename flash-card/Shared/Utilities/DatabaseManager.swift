@@ -326,17 +326,20 @@ class DatabaseManager {
         }
     }
 
-    func deleteReadingPassage(id: Int) {
+    /// Returns true if delete succeeded, false otherwise.
+    func deleteReadingPassage(id: Int) -> Bool {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, "DELETE FROM reading_passages WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else {
             print("❌ deleteReadingPassage: prepare failed: \(String(cString: sqlite3_errmsg(db)))")
-            return
+            return false
         }
         defer { sqlite3_finalize(stmt) }
         sqlite3_bind_int(stmt, 1, Int32(id))
         if sqlite3_step(stmt) != SQLITE_DONE {
             print("❌ deleteReadingPassage: delete failed: \(String(cString: sqlite3_errmsg(db)))")
+            return false
         }
+        return true
     }
 
     // MARK: - Load Vocabularies
@@ -479,26 +482,25 @@ class DatabaseManager {
         }
     }
 
-    func deleteTopic(id: Int) {
+    /// Returns true if delete succeeded, false otherwise.
+    func deleteTopic(id: Int) -> Bool {
         sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
 
-        // 1. Xóa flashcards (vocabularies)
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, "DELETE FROM vocabularies WHERE topic_id = ?", -1, &stmt, nil) != SQLITE_OK {
             print("❌ deleteTopic: prepare vocabularies failed")
             sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
-            return
+            return false
         }
         sqlite3_bind_int(stmt, 1, Int32(id))
         if sqlite3_step(stmt) != SQLITE_DONE {
             print("❌ deleteTopic: delete vocabularies failed")
             sqlite3_finalize(stmt)
             sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
-            return
+            return false
         }
         sqlite3_finalize(stmt)
 
-        // 2. Xóa bài đọc (reading_passages) – bỏ qua nếu bảng chưa có
         stmt = nil
         if sqlite3_prepare_v2(db, "DELETE FROM reading_passages WHERE topic_id = ?", -1, &stmt, nil) == SQLITE_OK {
             sqlite3_bind_int(stmt, 1, Int32(id))
@@ -508,33 +510,146 @@ class DatabaseManager {
             sqlite3_finalize(stmt)
         }
 
-        // 3. Xóa topic
         stmt = nil
         if sqlite3_prepare_v2(db, "DELETE FROM topics WHERE id = ?", -1, &stmt, nil) != SQLITE_OK {
             print("❌ deleteTopic: prepare topics failed")
             sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
-            return
+            return false
         }
         sqlite3_bind_int(stmt, 1, Int32(id))
         if sqlite3_step(stmt) != SQLITE_DONE {
             print("❌ deleteTopic: delete topic failed: \(String(cString: sqlite3_errmsg(db)))")
             sqlite3_finalize(stmt)
             sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
-            return
+            return false
         }
         sqlite3_finalize(stmt)
         sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        return true
     }
 
-    func deleteFlashcard(id: Int) {
+    /// Returns true if delete succeeded, false otherwise.
+    func deleteFlashcard(id: Int) -> Bool {
         let deleteSQL = "DELETE FROM vocabularies WHERE id = ?"
         var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, deleteSQL, -1, &stmt, nil) == SQLITE_OK else {
+            print("❌ deleteFlashcard: prepare failed")
+            return false
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int(stmt, 1, Int32(id))
+        return sqlite3_step(stmt) == SQLITE_DONE
+    }
 
-        if sqlite3_prepare_v2(db, deleteSQL, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_int(stmt, 1, Int32(id))
-            sqlite3_step(stmt)
+    // MARK: - Backup / Restore
+
+    /// Exports all user-created data (topics with is_user_created=1 and their flashcards/readings) as JSON.
+    func exportUserData() -> Data? {
+        let payload = loadUserDataForExport()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try? encoder.encode(payload)
+    }
+
+    /// Loads only user-created topics per subject and builds BackupPayload.
+    private func loadUserDataForExport() -> BackupPayload {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let exportedAt = formatter.string(from: Date())
+        var exportSubjects: [ExportSubject] = []
+        let subjectSQL = "SELECT id, name, icon FROM subjects ORDER BY sort_order"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, subjectSQL, -1, &stmt, nil) == SQLITE_OK else { return BackupPayload(version: 1, exportedAt: exportedAt, subjects: []) }
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let subjectId = Int(sqlite3_column_int(stmt, 0))
+            let name = String(cString: sqlite3_column_text(stmt, 1))
+            let icon = String(cString: sqlite3_column_text(stmt, 2))
+            let topics = loadUserCreatedTopics(for: subjectId, subjectName: name)
+            if !topics.isEmpty {
+                exportSubjects.append(ExportSubject(id: subjectId, name: name, icon: icon, topics: topics))
+            }
         }
         sqlite3_finalize(stmt)
+        return BackupPayload(version: 1, exportedAt: exportedAt, subjects: exportSubjects)
+    }
+
+    private func loadUserCreatedTopics(for subjectId: Int, subjectName: String) -> [ExportTopic] {
+        var result: [ExportTopic] = []
+        let sql = "SELECT id, name FROM topics WHERE subject_id = ? AND is_user_created = 1 ORDER BY sort_order"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        sqlite3_bind_int(stmt, 1, Int32(subjectId))
+        let isReading = (subjectName == "Bài đọc")
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let topicId = Int(sqlite3_column_int(stmt, 0))
+            let name = String(cString: sqlite3_column_text(stmt, 1))
+            let flashcards = loadFlashcards(for: topicId).map { ExportFlashcard(question: $0.question, answer: $0.answer, hint: $0.hint, exerciseType: $0.exerciseType.rawValue) }
+            let readings: [ExportReading] = isReading ? loadReadings(for: topicId).map { ExportReading(title: $0.title, content: $0.content) } : []
+            result.append(ExportTopic(name: name, flashcards: flashcards, readings: readings))
+        }
+        sqlite3_finalize(stmt)
+        return result
+    }
+
+    /// Imports user data from a backup payload. Replaces all current user-created topics and their content.
+    /// Returns true on success, false on failure.
+    func importUserData(_ payload: BackupPayload) -> Bool {
+        sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
+        defer { sqlite3_exec(db, "ROLLBACK", nil, nil, nil) }
+        if !deleteAllUserCreatedData() {
+            return false
+        }
+        for exportSubj in payload.subjects {
+            for exportTopic in exportSubj.topics {
+                let newTopic = Topic(name: exportTopic.name, subjectId: exportSubj.id, flashcards: [], readings: [])
+                let newTopicId = insertTopic(newTopic)
+                for card in exportTopic.flashcards {
+                    let ex = ExerciseType(rawValue: card.exerciseType) ?? .chineseToVietnamese
+                    let hintVal = (card.hint ?? "").isEmpty ? nil : card.hint
+                    let f = Flashcard(question: card.question, answer: card.answer, hint: hintVal, exerciseType: ex)
+                    insertFlashcard(f, topicId: newTopicId)
+                }
+                for reading in exportTopic.readings {
+                    insertReadingPassage(topicId: newTopicId, title: reading.title, content: reading.content)
+                }
+            }
+        }
+        sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        return true
+    }
+
+    private func deleteAllUserCreatedData() -> Bool {
+        var stmt: OpaquePointer?
+        if sqlite3_prepare_v2(db, "DELETE FROM vocabularies WHERE topic_id IN (SELECT id FROM topics WHERE is_user_created = 1)", -1, &stmt, nil) != SQLITE_OK {
+            print("❌ deleteAllUserCreatedData: vocabularies failed")
+            return false
+        }
+        if sqlite3_step(stmt) != SQLITE_DONE {
+            sqlite3_finalize(stmt)
+            return false
+        }
+        sqlite3_finalize(stmt)
+        stmt = nil
+        if sqlite3_prepare_v2(db, "DELETE FROM reading_passages WHERE topic_id IN (SELECT id FROM topics WHERE is_user_created = 1)", -1, &stmt, nil) != SQLITE_OK {
+            print("❌ deleteAllUserCreatedData: reading_passages failed")
+            return false
+        }
+        if sqlite3_step(stmt) != SQLITE_DONE {
+            sqlite3_finalize(stmt)
+            return false
+        }
+        sqlite3_finalize(stmt)
+        stmt = nil
+        if sqlite3_prepare_v2(db, "DELETE FROM topics WHERE is_user_created = 1", -1, &stmt, nil) != SQLITE_OK {
+            print("❌ deleteAllUserCreatedData: topics failed")
+            return false
+        }
+        if sqlite3_step(stmt) != SQLITE_DONE {
+            sqlite3_finalize(stmt)
+            return false
+        }
+        sqlite3_finalize(stmt)
+        return true
     }
 
     // MARK: - Private Helpers for CRUD

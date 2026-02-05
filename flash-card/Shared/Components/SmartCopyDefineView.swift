@@ -26,13 +26,16 @@ struct SmartCopyDefineText: View {
                 }) {
                     Label("Sao chép", systemImage: "doc.on.doc")
                 }
-                
-                Divider()
-                
                 Button(action: {
                     findDefinitionForText(text)
                 }) {
                     Label("Tìm nghĩa", systemImage: "book.fill")
+                }
+                Divider()
+                Button(action: {
+                    speakText(text)
+                }) {
+                    Label("Phát âm", systemImage: "speaker.wave.2")
                 }
             }
             .popover(isPresented: $showDefinition, arrowEdge: .bottom) {
@@ -118,6 +121,10 @@ struct SmartCopyDefineText: View {
         
         // Haptic feedback
         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+    }
+
+    private func speakText(_ text: String) {
+        SpeechManager.shared.speak(text: text, language: nil)
     }
 }
 

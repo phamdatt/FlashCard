@@ -8,6 +8,10 @@
 import SwiftUI
 import AppKit
 
+extension Notification.Name {
+    static let openKeyboardShortcuts = Notification.Name("OpenKeyboardShortcuts")
+}
+
 // MARK: - Views
 
 // Unified Sidebar View
@@ -175,6 +179,72 @@ struct SidebarView: View {
                     )
                 }
                 .buttonStyle(.plain)
+
+                // Keyboard shortcuts
+                Button(action: {
+                    viewModel.showKeyboardShortcutsSheet = true
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "keyboard")
+                            .scaledFont(22)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
+                        Text("Phím tắt")
+                            .scaledFont(14)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .scaledFont(10)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.tertiary)
+                            .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(nsColor: .controlBackgroundColor))
+                    )
+                }
+                .buttonStyle(.plain)
+
+                // Backup / Restore
+                Button(action: {
+                    viewModel.showBackupRestoreSheet = true
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "externaldrive.fill")
+                            .scaledFont(22)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
+                        Text("Sao lưu / Phục hồi")
+                            .scaledFont(14)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .scaledFont(10)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.tertiary)
+                            .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(nsColor: .controlBackgroundColor))
+                    )
+                }
+                .buttonStyle(.plain)
             }
             
         }
@@ -248,7 +318,7 @@ struct TopicsListView: View {
     private var searchResultsInfo: some View {
         if !viewModel.searchText.isEmpty {
             HStack {
-                Text("\(filteredTopics.count) kết quả")
+                Text("\(filteredTopics.count) chủ đề")
                     .font(.app(.caption))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -256,6 +326,47 @@ struct TopicsListView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
             .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    private var flashcardSearchSection: some View {
+        let results = viewModel.flashcardSearchResults(for: subject)
+        return Group {
+            if !viewModel.searchText.isEmpty && !results.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Kết quả trong flashcard")
+                        .font(.app(.caption))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+                    List {
+                        ForEach(Array(results.enumerated()), id: \.offset) { _, pair in
+                            Button(action: {
+                                viewModel.selectedTopic = pair.topic
+                                viewModel.selectedFlashcard = pair.flashcard
+                            }) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(pair.topic.name)
+                                        .scaledFont(12)
+                                        .foregroundStyle(.secondary)
+                                    Text(pair.flashcard.question)
+                                        .scaledFont(14)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .frame(maxHeight: 180)
+                }
+                .padding(.bottom, 8)
+            }
         }
     }
     
@@ -271,7 +382,7 @@ struct TopicsListView: View {
         } else {
             List(filteredTopics, selection: $viewModel.selectedTopic) { topic in
                 TopicRowView(topic: topic, subject: subject, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light) {
-                    viewModel.deleteTopic(topic)
+                    viewModel.topicToDelete = topic
                 }
             }
             .listStyle(.plain)
@@ -322,6 +433,7 @@ Label("Thêm chủ đề", systemImage: "plus.circle.fill")
         VStack(spacing: 0) {
             searchBar
             searchResultsInfo
+            flashcardSearchSection
             topicsListContent
         }
         .safeAreaInset(edge: .bottom) {
@@ -331,6 +443,24 @@ Label("Thêm chủ đề", systemImage: "plus.circle.fill")
         .animation(.easeInOut(duration: 0.2), value: viewModel.searchText)
         .sheet(isPresented: $viewModel.showAddTopicSheet) {
             AddTopicSheet(viewModel: viewModel)
+        }
+        .confirmationDialog("Xóa chủ đề?", isPresented: Binding(
+            get: { viewModel.topicToDelete != nil },
+            set: { if !$0 { viewModel.topicToDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Xóa", role: .destructive) {
+                if let t = viewModel.topicToDelete {
+                    viewModel.topicToDelete = nil
+                    viewModel.deleteTopic(t)
+                }
+            }
+            Button("Huỷ", role: .cancel) {
+                viewModel.topicToDelete = nil
+            }
+        } message: {
+            if let t = viewModel.topicToDelete {
+                Text("Chủ đề \"\(t.name)\" và mọi flashcard, bài đọc trong đó sẽ bị xóa. Không thể hoàn tác.")
+            }
         }
     }
 }
@@ -533,10 +663,7 @@ struct ReadingMainView: View {
                         .tag(passage)
                         .contextMenu {
                             Button(role: .destructive, action: {
-                                viewModel.deleteReadingPassage(passage)
-                                if selectedPassage?.id == passage.id {
-                                    selectedPassage = topic.readings.first(where: { $0.id != passage.id })
-                                }
+                                viewModel.passageToDelete = passage
                             }) {
                                 Label("Xoá bài đọc", systemImage: "trash")
                             }
@@ -574,6 +701,27 @@ struct ReadingMainView: View {
         }
         .sheet(isPresented: $viewModel.showAddReadingSheet) {
             AddReadingSheet(viewModel: viewModel, topic: topic)
+        }
+        .confirmationDialog("Xóa bài đọc?", isPresented: Binding(
+            get: { viewModel.passageToDelete != nil },
+            set: { if !$0 { viewModel.passageToDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Xóa", role: .destructive) {
+                if let p = viewModel.passageToDelete {
+                    viewModel.passageToDelete = nil
+                    viewModel.deleteReadingPassage(p)
+                    if selectedPassage?.id == p.id {
+                        selectedPassage = topic.readings.first(where: { $0.id != p.id })
+                    }
+                }
+            }
+            Button("Huỷ", role: .cancel) {
+                viewModel.passageToDelete = nil
+            }
+        } message: {
+            if let p = viewModel.passageToDelete {
+                Text("Bài đọc \"\(p.title)\" sẽ bị xóa. Không thể hoàn tác.")
+            }
         }
     }
 }
@@ -838,7 +986,15 @@ struct FlashcardDetailView: View {
     @State private var isFlipped = false
     @State private var selectedAnswer: String? = nil
     @State private var showResult = false
-    
+    @State private var nextReviewDateString: String? = nil
+
+    private static var nextReviewFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM"
+        f.locale = Locale(identifier: "vi_VN")
+        return f
+    }()
+
     var body: some View {
         ScrollView {
             VStack(spacing: 30) {
@@ -855,6 +1011,11 @@ struct FlashcardDetailView: View {
                         Text(topic.name)
                             .font(.app(.title2))
                             .fontWeight(.semibold)
+                        if let dateStr = nextReviewDateString {
+                            Text("Ôn lại vào: \(dateStr)")
+                                .font(.app(.caption))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     
                     Spacer()
@@ -883,6 +1044,13 @@ struct FlashcardDetailView: View {
             .padding()
         }
         .frame(minWidth: 500)
+        .onAppear {
+            if let progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id), progress.totalReviews > 0 {
+                nextReviewDateString = Self.nextReviewFormatter.string(from: progress.nextReviewDate)
+            } else {
+                nextReviewDateString = nil
+            }
+        }
     }
     
     // Traditional flip card view
@@ -899,10 +1067,14 @@ struct FlashcardDetailView: View {
                     )
                 
                 VStack(spacing: 16) {
-                    Text(isFlipped ? "Đáp án" : "Câu hỏi")
-                        .font(.app(.body))
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text(isFlipped ? "Đáp án" : "Câu hỏi")
+                            .font(.app(.body))
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        SpeakButton(text: isFlipped ? flashcard.answer : flashcard.question, fontSize: 18)
+                    }
 
                     SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.question, flashcards: topic.flashcards)
                         .scaledFont(28)
@@ -1196,9 +1368,50 @@ struct CoreButtonStyle: ButtonStyle {
     }
 }
 
+// MARK: - Undo Banner
+private struct UndoBannerView: View {
+    let onUndo: () -> Void
+    let onDismiss: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "trash.slash")
+                .scaledFont(16)
+                .foregroundStyle(.secondary)
+            Text("Đã xóa.")
+                .scaledFont(14)
+                .fontWeight(.medium)
+            Spacer()
+            Button("Hoàn tác") {
+                onUndo()
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+            .scaledFont(13)
+            Button(action: onDismiss) {
+                Image(systemName: "xmark.circle.fill")
+                    .scaledFont(18)
+                    .foregroundStyle(.secondary)
+                    .symbolRenderingMode(.hierarchical)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(nsColor: .controlBackgroundColor))
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.4 : 0.12), radius: 8, y: 4)
+        )
+        .frame(maxWidth: 420)
+    }
+}
+
 // MARK: - Main View
 struct ContentView: View {
     @StateObject private var viewModel = ContentViewModel()
+    @ObservedObject private var speechManager = SpeechManager.shared
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @EnvironmentObject var fontSizeManager: FontSizeManager
 
@@ -1224,6 +1437,54 @@ struct ContentView: View {
             // Don't auto-switch when user toggles columns in special mode
             // Let user manually control column visibility
         }
+        .alert("Lỗi", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK") { viewModel.errorMessage = nil }
+        } message: {
+            if let msg = viewModel.errorMessage {
+                Text(msg)
+            }
+        }
+        .alert("Không thể phát âm", isPresented: Binding(
+            get: { speechManager.ttsUnavailableMessage != nil },
+            set: { if !$0 { speechManager.ttsUnavailableMessage = nil } }
+        )) {
+            Button("Mở Cài đặt") {
+                speechManager.openSpeechSettings()
+                speechManager.ttsUnavailableMessage = nil
+            }
+            Button("Đóng", role: .cancel) {
+                speechManager.ttsUnavailableMessage = nil
+            }
+        } message: {
+            if let msg = speechManager.ttsUnavailableMessage {
+                Text(msg)
+            }
+        }
+        .overlay(alignment: .top) {
+            if viewModel.undoableItem != nil {
+                UndoBannerView(
+                    onUndo: { viewModel.restoreUndo() },
+                    onDismiss: { viewModel.dismissUndoBanner() }
+                )
+                .padding(.top, 12)
+                .padding(.horizontal, 20)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.25), value: viewModel.undoableItem != nil)
+                .zIndex(100)
+            }
+        }
+        .sheet(isPresented: $viewModel.showKeyboardShortcutsSheet) {
+            KeyboardShortcutsView()
+        }
+        .sheet(isPresented: $viewModel.showBackupRestoreSheet) {
+            BackupRestoreView(viewModel: viewModel)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openKeyboardShortcuts)) { _ in
+            viewModel.showKeyboardShortcutsSheet = true
+        }
     }
     
     // MARK: - Columns
@@ -1235,16 +1496,26 @@ struct ContentView: View {
             Color.clear
                 .frame(width: 0)
                 .navigationSplitViewColumnWidth(min: 0, ideal: 0, max: 0)
+        } else if viewModel.isLoading && viewModel.subjects.isEmpty {
+            VStack(spacing: 12) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                Text("Đang tải...")
+                    .scaledFont(14)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationSplitViewColumnWidth(min: 420, ideal: 320, max: 420)
         } else if let subject = viewModel.selectedSubject {
             TopicsListView(viewModel: viewModel, subject: subject)
-                .navigationSplitViewColumnWidth(min: 250, ideal: 300, max: 400)
+                .navigationSplitViewColumnWidth(min: 420, ideal: 320, max: 420)
         } else {
             ContentUnavailableView(
                 "Chọn môn học",
                 systemImage: "book.fill",
                 description: Text("Chọn một môn học từ sidebar")
             )
-            .navigationSplitViewColumnWidth(min: 250, ideal: 300, max: 400)
+            .navigationSplitViewColumnWidth(min: 420, ideal: 320, max: 420)
         }
     }
     
