@@ -26,26 +26,44 @@ struct SidebarView: View {
         .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
         .navigationTitle("Menu")
         .safeAreaInset(edge: .bottom) {
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    appearanceManager.cycleMode()
-                }
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: appearanceManager.mode.icon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.blue)
-                        .contentTransition(.symbolEffect(.replace))
+            VStack(spacing: 8) {
+                // Streak indicator
+                HStack(spacing: 10) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .orange : .gray)
+                        .symbolEffect(.pulse, isActive: viewModel.streakInfo.didPracticeToday)
 
-                    Text(appearanceManager.mode.rawValue)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.primary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Text("\(viewModel.streakInfo.currentStreak)")
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                            Text("ngày")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if viewModel.streakInfo.longestStreak > 0 {
+                            Text("Kỷ lục: \(viewModel.streakInfo.longestStreak) ngày")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
 
                     Spacer()
 
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+                    if viewModel.streakInfo.didPracticeToday {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.system(size: 16))
+                    } else {
+                        Text("Chưa học")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(.orange))
+                    }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -53,8 +71,38 @@ struct SidebarView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color(nsColor: .controlBackgroundColor))
                 )
+
+                // Theme toggle
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        appearanceManager.cycleMode()
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: appearanceManager.mode.icon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.blue)
+                            .contentTransition(.symbolEffect(.replace))
+
+                        Text(appearanceManager.mode.rawValue)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.primary)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(nsColor: .controlBackgroundColor))
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
@@ -94,7 +142,7 @@ struct TopicsListView: View {
                 // Search TextField
                 TextField("Tìm kiếm chủ đề...", text: $viewModel.searchText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 14))
+                    .font(.system(size: 15))
                     .focused($isSearchFocused)
                 
                 // Clear Button
@@ -165,27 +213,22 @@ struct TopicsListView: View {
                 List(filteredTopics, selection: $viewModel.selectedTopic) { topic in
                     HStack(spacing: 12) {
                         // Topic Icon
-                        ZStack {
-                            Circle()
-                                .fill(Color.accentColor.opacity(0.1))
-                                .frame(width: 40, height: 40)
-
-                            Image(systemName: "book.fill")
-                                .font(.system(size: 16))
-                                .foregroundStyle(.gray)
-                        }
+                        Image(systemName: "book.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.accentColor)
+                            .frame(width: 32)
 
                         // Topic Info
                         VStack(alignment: .leading, spacing: 4) {
                             Text(topic.name)
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.primary)
 
                             HStack(spacing: 6) {
                                 Image(systemName: "rectangle.stack.fill")
-                                    .font(.system(size: 10))
-                                Text("\(topic.flashcards.count) flashcards")
                                     .font(.system(size: 12))
+                                Text("\(topic.flashcards.count) flashcards")
+                                    .font(.system(size: 14))
                             }
                             .foregroundStyle(.secondary)
                         }
@@ -208,7 +251,7 @@ struct TopicsListView: View {
                         }
                     }
                 }
-                .listStyle(.sidebar)
+                .listStyle(.plain)
             }
         }
         .navigationTitle(subject.name)
@@ -365,12 +408,12 @@ struct FlashcardDetailView: View {
                 
                 VStack(spacing: 16) {
                     Text(isFlipped ? "Đáp án" : "Câu hỏi")
-                        .font(.caption)
+                        .font(.body)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
-                    
+
                     Text(isFlipped ? flashcard.answer : flashcard.question)
-                        .font(.title)
+                        .font(.system(size: 28, weight: .bold))
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
                         .padding()
@@ -421,12 +464,12 @@ struct FlashcardDetailView: View {
             // Question card
             VStack(spacing: 16) {
                 Text("Câu hỏi")
-                    .font(.caption)
+                    .font(.body)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
-                
+
                 Text(flashcard.question)
-                    .font(.title2)
+                    .font(.title)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
                     .padding()
@@ -466,29 +509,6 @@ struct FlashcardDetailView: View {
             if showResult {
                 resultView
             }
-            
-            // // Reset button
-            // if showResult {
-            //     Button(action: {
-            //         withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-            //             selectedAnswer = nil
-            //             showResult = false
-            //         }
-            //     }) {
-            //         Label("Thử lại", systemImage: "arrow.clockwise")
-            //             .font(.headline)
-            //             .padding()
-            //             .frame(maxWidth: .infinity)
-            //             .background(Color.accentColor)
-            //             .foregroundStyle(.white)
-            //             .cornerRadius(12)
-            //     }
-            //     .buttonStyle(.plain)
-            //     .padding(.horizontal)
-            //     .transition(.scale.combined(with: .opacity))
-            //     .scaleEffect(1.0)
-            //     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showResult)
-            // }
         }
     }
     
@@ -509,9 +529,9 @@ struct FlashcardDetailView: View {
                 return isLight ? Color(nsColor: .controlBackgroundColor) : Color.gray.opacity(0.08)
             } else {
                 if isCorrect {
-                    return Color.green.opacity(isLight ? 0.1 : 0.2)
+                    return Color.green.opacity(isLight ? 0.18 : 0.2)
                 } else if isSelected && !isCorrect {
-                    return Color.red.opacity(isLight ? 0.1 : 0.2)
+                    return Color.red.opacity(isLight ? 0.18 : 0.2)
                 }
                 return isLight ? Color(nsColor: .controlBackgroundColor) : Color.gray.opacity(0.08)
             }
@@ -537,9 +557,9 @@ struct FlashcardDetailView: View {
                     : Color.gray.opacity(isLight ? 0.15 : 0.4)
             } else {
                 if isCorrect {
-                    return Color.green.opacity(isLight ? 0.2 : 0.5)
+                    return Color.green.opacity(isLight ? 0.35 : 0.5)
                 } else if isSelected && !isCorrect {
-                    return Color.red.opacity(isLight ? 0.2 : 0.5)
+                    return Color.red.opacity(isLight ? 0.35 : 0.5)
                 }
                 return Color.gray.opacity(isLight ? 0.15 : 0.4)
             }
@@ -553,9 +573,10 @@ struct FlashcardDetailView: View {
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
                     selectedAnswer = optionLetter
                     showResult = true
-                    
+
                     // Notify parent in practice mode
                     let isCorrect = optionLetter == flashcard.correctAnswer
+                    NSSound(named: isCorrect ? "Hero" : "Basso")?.play()
                     onAnswered?(isCorrect)
                 }
             }
@@ -624,7 +645,7 @@ struct FlashcardDetailView: View {
                         .foregroundStyle(isCorrect ? .green : .red)
                     
                     Text(flashcard.answer)
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundStyle(.secondary)
                 }
                 
@@ -632,8 +653,8 @@ struct FlashcardDetailView: View {
             }
             .padding()
             .background(isCorrect
-                ? Color.green.opacity(colorScheme == .light ? 0.08 : 0.1)
-                : Color.red.opacity(colorScheme == .light ? 0.08 : 0.1))
+                ? Color.green.opacity(colorScheme == .light ? 0.15 : 0.1)
+                : Color.red.opacity(colorScheme == .light ? 0.15 : 0.1))
             .cornerRadius(12)
         }
         .transition(.scale.combined(with: .opacity))

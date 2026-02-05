@@ -30,8 +30,12 @@ class ContentViewModel: ObservableObject {
     @Published var newFlashcardAnswer = ""
     @Published var newFlashcardHint = ""
 
+    // Streak
+    @Published var streakInfo = StreakInfo(currentStreak: 0, longestStreak: 0, didPracticeToday: false)
+
     init() {
         loadLearningData()
+        loadStreakInfo()
     }
 
     // Filter topics based on search text
@@ -173,5 +177,26 @@ class ContentViewModel: ObservableObject {
 
     func selectFlashcard(_ flashcard: Flashcard) {
         selectedFlashcard = flashcard
+    }
+
+    // MARK: - Streak
+
+    func loadStreakInfo() {
+        streakInfo = DatabaseManager.shared.getStreakInfo()
+    }
+
+    func recordPractice(practiceType: String, topicId: Int, correct: Int, total: Int) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = formatter.string(from: Date())
+
+        DatabaseManager.shared.recordPracticeSession(
+            practiceDate: today,
+            practiceType: practiceType,
+            topicId: topicId,
+            correct: correct,
+            total: total
+        )
+        loadStreakInfo()
     }
 }

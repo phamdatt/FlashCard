@@ -124,3 +124,9 @@ enum ReadingLevel: String, Hashable, Codable {
     case upperIntermediate = "Trung cấp cao"
     case advanced = "Nâng cao"
 }
+
+struct StreakInfo {
+    let currentStreak: Int
+    let longestStreak: Int
+    let didPracticeToday: Bool
+}

@@ -12,7 +12,7 @@ class DatabaseManager {
     static let shared = DatabaseManager()
 
     private var db: OpaquePointer?
-    private let currentSeedVersion = 2
+    private let currentSeedVersion = 4
 
     private init() {
         copyDatabaseIfNeeded()
@@ -64,7 +64,7 @@ class DatabaseManager {
                     // Lấy user flashcards (join với topics để lấy tên topic)
                     let cardSQL = """
                         SELECT t.name, t.subject_id, f.question, f.answer, COALESCE(f.hint, ''), f.exercise_type
-                        FROM flashcards f
+                        FROM vocabularies f
                         JOIN topics t ON f.topic_id = t.id
                         WHERE t.is_user_created = 1
                     """
@@ -117,9 +117,9 @@ class DatabaseManager {
                     }
                     sqlite3_finalize(stmt)
 
-                    // Insert flashcards — tìm topic_id qua name + subject_id
+                    // Insert vocabularies — tìm topic_id qua name + subject_id
                     let insertCardSQL = """
-                        INSERT OR IGNORE INTO flashcards (topic_id, question, answer, hint, exercise_type)
+                        INSERT OR IGNORE INTO vocabularies (topic_id, question, answer, hint, exercise_type)
                         VALUES ((SELECT id FROM topics WHERE name = ? AND subject_id = ?), ?, ?, ?, ?)
                     """
                     if sqlite3_prepare_v2(newDb, insertCardSQL, -1, &stmt, nil) == SQLITE_OK {
@@ -152,6 +152,7 @@ class DatabaseManager {
         } else {
             print("✅ Database opened at \(fileURL.path)")
             sqlite3_exec(db, "PRAGMA foreign_keys = ON", nil, nil, nil)
+            createPracticeSessionsTable()
         }
     }
 
@@ -214,12 +215,12 @@ class DatabaseManager {
         return topics
     }
 
-    // MARK: - Load Flashcards
+    // MARK: - Load Vocabularies
 
     func loadFlashcards(for topicId: Int) -> [Flashcard] {
         var flashcards: [Flashcard] = []
 
-        let querySQL = "SELECT id, question, answer, hint, exercise_type FROM flashcards WHERE topic_id = ?"
+        let querySQL = "SELECT id, question, answer, hint, exercise_type FROM vocabularies WHERE topic_id = ?"
         var stmt: OpaquePointer?
 
         guard sqlite3_prepare_v2(db, querySQL, -1, &stmt, nil) == SQLITE_OK else { return [] }
@@ -318,7 +319,7 @@ class DatabaseManager {
     private func loadVocabulary(for passageId: Int) -> [VocabularyItem] {
         var items: [VocabularyItem] = []
 
-        let sql = "SELECT id, word, meaning, example FROM vocabulary_items WHERE passage_id = ? ORDER BY sort_order"
+        let sql = "SELECT id, question, answer, hint FROM vocabularies WHERE passage_id = ?"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
 
@@ -405,7 +406,7 @@ class DatabaseManager {
     }
 
     func insertFlashcard(_ card: Flashcard, topicId: Int) {
-        let insertSQL = "INSERT INTO flashcards (topic_id, question, answer, hint, exercise_type) VALUES (?, ?, ?, ?, ?)"
+        let insertSQL = "INSERT INTO vocabularies (topic_id, question, answer, hint, exercise_type) VALUES (?, ?, ?, ?, ?)"
         var stmt: OpaquePointer?
 
         if sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nil) == SQLITE_OK {
@@ -425,7 +426,7 @@ class DatabaseManager {
     func deleteTopic(id: Int) {
         sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
 
-        let deleteFlashcardsSQL = "DELETE FROM flashcards WHERE topic_id = ?"
+        let deleteFlashcardsSQL = "DELETE FROM vocabularies WHERE topic_id = ?"
         let deleteReadingsSQL = "DELETE FROM reading_passages WHERE topic_id = ?"
         let deleteTopicSQL = "DELETE FROM topics WHERE id = ?"
 
@@ -449,7 +450,7 @@ class DatabaseManager {
     }
 
     func deleteFlashcard(id: Int) {
-        let deleteSQL = "DELETE FROM flashcards WHERE id = ?"
+        let deleteSQL = "DELETE FROM vocabularies WHERE id = ?"
         var stmt: OpaquePointer?
 
         if sqlite3_prepare_v2(db, deleteSQL, -1, &stmt, nil) == SQLITE_OK {
@@ -460,6 +461,106 @@ class DatabaseManager {
     }
 
     // MARK: - Private Helpers for CRUD
+
+    // MARK: - Practice Sessions & Streak
+
+    private func createPracticeSessionsTable() {
+        let sql = """
+            CREATE TABLE IF NOT EXISTS practice_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                practice_date TEXT NOT NULL,
+                practice_type TEXT NOT NULL,
+                topic_id INTEGER,
+                correct_answers INTEGER NOT NULL,
+                total_questions INTEGER NOT NULL,
+                created_at TEXT DEFAULT (datetime('now','localtime'))
+            )
+        """
+        sqlite3_exec(db, sql, nil, nil, nil)
+    }
+
+    func recordPracticeSession(practiceDate: String, practiceType: String, topicId: Int, correct: Int, total: Int) {
+        let sql = "INSERT INTO practice_sessions (practice_date, practice_type, topic_id, correct_answers, total_questions) VALUES (?, ?, ?, ?, ?)"
+        var stmt: OpaquePointer?
+
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_text(stmt, 1, (practiceDate as NSString).utf8String, -1, nil)
+            sqlite3_bind_text(stmt, 2, (practiceType as NSString).utf8String, -1, nil)
+            sqlite3_bind_int(stmt, 3, Int32(topicId))
+            sqlite3_bind_int(stmt, 4, Int32(correct))
+            sqlite3_bind_int(stmt, 5, Int32(total))
+            sqlite3_step(stmt)
+        }
+        sqlite3_finalize(stmt)
+    }
+
+    func getStreakInfo() -> StreakInfo {
+        // Get all distinct practice dates, ordered descending
+        let sql = "SELECT DISTINCT practice_date FROM practice_sessions ORDER BY practice_date DESC"
+        var stmt: OpaquePointer?
+        var dates: [String] = []
+
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                let date = String(cString: sqlite3_column_text(stmt, 0))
+                dates.append(date)
+            }
+        }
+        sqlite3_finalize(stmt)
+
+        guard !dates.isEmpty else {
+            return StreakInfo(currentStreak: 0, longestStreak: 0, didPracticeToday: false)
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayStr = formatter.string(from: Date())
+        let didPracticeToday = dates.first == todayStr
+
+        // Calculate current streak
+        let calendar = Calendar.current
+        var currentStreak = 0
+        var checkDate = Date()
+
+        // If haven't practiced today, start checking from yesterday
+        if !didPracticeToday {
+            checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
+        }
+
+        for dateStr in dates {
+            let checkStr = formatter.string(from: checkDate)
+            if dateStr == checkStr {
+                currentStreak += 1
+                checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
+            } else if dateStr < checkStr {
+                break
+            }
+        }
+
+        // Calculate longest streak
+        var longestStreak = 0
+        var tempStreak = 1
+
+        for i in 0..<dates.count {
+            if i == 0 {
+                tempStreak = 1
+                continue
+            }
+            guard let current = formatter.date(from: dates[i]),
+                  let previous = formatter.date(from: dates[i - 1]) else { continue }
+
+            let diff = calendar.dateComponents([.day], from: current, to: previous).day ?? 0
+            if diff == 1 {
+                tempStreak += 1
+            } else {
+                longestStreak = max(longestStreak, tempStreak)
+                tempStreak = 1
+            }
+        }
+        longestStreak = max(longestStreak, tempStreak)
+
+        return StreakInfo(currentStreak: currentStreak, longestStreak: longestStreak, didPracticeToday: didPracticeToday)
+    }
 
     private func getTotalTopicsCount(for subjectId: Int) -> Int {
         let sql = "SELECT COUNT(*) FROM topics WHERE subject_id = ?"
