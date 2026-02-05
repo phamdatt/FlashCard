@@ -1,30 +1,30 @@
 # FlashCard
 
-Native macOS app học từ vựng đa ngôn ngữ (Anh–Việt, Trung) với nhiều chế độ luyện tập.
+Native macOS app for multilingual vocabulary learning (English–Vietnamese, Chinese) with multiple practice modes.
 
-## Tính năng
+## Features
 
-- **Flashcard** – Lật thẻ, hiển thị câu hỏi / đáp án / gợi ý
-- **Trắc nghiệm** – 4 đáp án, phản hồi tức thì, điểm và tỷ lệ đúng
-- **Đọc hiểu** – Bài đọc theo cấp độ (Beginner → Advanced), câu hỏi và từ vựng hỗ trợ
-- **Quản lý nội dung** – Thêm / xóa chủ đề và flashcard tùy chỉnh
-- **Tìm kiếm** – Lọc chủ đề theo từ khóa
-- **Ôn tập SRS** – Spaced repetition, ôn theo lịch
-- **Ôn lại từ sai** – Ôn tập từ đã sai theo chủ đề
-- **Thống kê** – Tổng quan học tập, streak, độ chính xác
-- **Đa ngôn ngữ UI** – Tiếng Việt, English, 中文 (đổi ngay không cần tắt app)
+- **Flashcards** – Flip cards, show question / answer / hint
+- **Multiple choice** – 4 options, instant feedback, score and accuracy rate
+- **Reading** – Passages by level (Beginner → Advanced), with vocabulary support
+- **Content management** – Add / delete topics and custom flashcards
+- **Search** – Filter topics by keyword
+- **SRS review** – Spaced repetition, scheduled review
+- **Review mistakes** – Practice previously missed words by topic
+- **Statistics** – Learning overview, streak, accuracy
+- **Scalable font** – Adjust content font size in settings
 
 ## Tech Stack
 
-| Thành phần   | Công nghệ   |
-|-------------|-------------|
-| Framework   | SwiftUI     |
-| Ngôn ngữ    | Swift       |
-| Database    | SQLite3     |
-| Kiến trúc   | MVVM        |
-| State       | Combine     |
+| Component  | Technology |
+|-----------|------------|
+| Framework | SwiftUI    |
+| Language  | Swift      |
+| Database  | SQLite3    |
+| Architecture | MVVM    |
+| State     | Combine    |
 
-## Cấu trúc project
+## Project structure
 
 ```
 flash-card/
@@ -40,7 +40,7 @@ flash-card/
 │   │   │   ├── ViewModels/
 │   │   │   │   └── ContentViewModel.swift
 │   │   │   └── Views/
-│   │   │       ├── ContentView.swift    # 3 cột: Sidebar, Topics, Detail
+│   │   │       ├── ContentView.swift    # 3 columns: Sidebar, Topics, Detail
 │   │   │       └── FlashcardMainView.swift
 │   │   ├── Practice/
 │   │   │   └── Views/
@@ -51,9 +51,6 @@ flash-card/
 │   │   ├── FillInTheBlank/
 │   │   │   └── Views/
 │   │   │       └── FillInTheBlankView.swift
-│   │   ├── Reading/
-│   │   │   └── Models/
-│   │   │       └── ReadingModels.swift
 │   │   ├── Speaking/
 │   │   │   └── Views/
 │   │   │       └── SpeakingPracticeView.swift
@@ -71,7 +68,8 @@ flash-card/
 │   ├── Shared/
 │   │   ├── Components/
 │   │   │   ├── ScaleButtonStyle.swift
-│   │   │   └── SmartCopyDefineView.swift
+│   │   │   ├── SmartCopyDefineView.swift
+│   │   │   └── StreakMascotView.swift
 │   │   ├── Models/
 │   │   │   └── SharedModels.swift
 │   │   ├── Resources/
@@ -83,7 +81,7 @@ flash-card/
 │   │       ├── SoundManager.swift
 │   │       └── ThemeColors.swift
 │   ├── Assets.xcassets/
-│   └── LearnMacOS.xcdatamodeld/         # (legacy Core Data, không dùng chính)
+│   └── LearnMacOS.xcdatamodeld/         # (legacy Core Data, not used as primary)
 ├── flash-cardTests/
 ├── flash-cardUITests/
 └── README.md
@@ -92,40 +90,39 @@ flash-card/
 ## Data model
 
 ```
-Subject (môn học)
-  └── Topic (chủ đề)
+Subject
+  └── Topic
         ├── Flashcard (vocabularies)
-        │     └── exercise_type: Anh→Việt, Việt→Anh, Trung→Việt, ...
-        └── ReadingPassage (bài đọc)
-              ├── ReadingQuestion
-              └── VocabularyItem (từ vựng hỗ trợ)
+        │     └── exercise_type: English→Vietnamese, Vietnamese→English, Chinese→Vietnamese, ...
+        └── ReadingPassage
+              └── title, content
 ```
 
 SRS: `flashcard_progress`, `mistake_records` (DatabaseManager).
 
-## Giao diện
+## UI layout
 
-- **Cột 1 (Sidebar)** – Môn học, Ôn tập SRS, Ôn từ sai, Thống kê; dưới có streak, theme, ngôn ngữ.
-- **Cột 2** – Danh sách chủ đề + tìm kiếm.
-- **Cột 3** – Chi tiết: List / Practice / Reading theo chủ đề, hoặc màn Review/Statistics.
+- **Column 1 (Sidebar)** – Subjects, SRS review, Review mistakes, Statistics; bottom: streak, theme, font size.
+- **Column 2** – Topic list and search.
+- **Column 3** – Detail: list / practice / reading per topic, or Review / Statistics screen.
 
-## Dữ liệu mặc định
+## Default data
 
-- Tiếng Anh: family, seasons, colors, food, IELTS topics, IT, …
-- Tiếng Trung: Family, Colors, HSK1, Radicals, HSK2, HSK3.1
+- English: family, seasons, colors, food, IELTS topics, IT, …
+- Chinese: Family, Colors, HSK1, Radicals, HSK2, HSK3.1
 
-## Yêu cầu
+## Requirements
 
 - macOS
 - Xcode
 
-## Chạy project
+## Run the project
 
 ```bash
 git clone <repo-url>
 cd flash-card
 open flash-card.xcodeproj
-# Cmd + R để build và chạy
+# Cmd + R to build and run
 ```
 
-Database được copy từ bundle vào Application Support khi lần đầu chạy (hoặc khi tăng `currentSeedVersion`).
+The database is copied from the bundle to Application Support on first launch (or when `currentSeedVersion` is increased).
