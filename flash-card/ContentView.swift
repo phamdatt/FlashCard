@@ -577,7 +577,7 @@ struct FlashcardDetailView: View {
 
                     // Notify parent in practice mode
                     let isCorrect = optionLetter == flashcard.correctAnswer
-                    NSSound(named: isCorrect ? "Hero" : "Basso")?.play()
+                    NSSound(named: isCorrect ? "Glass" : "Bottle")?.play()
                     onAnswered?(isCorrect)
                 }
             }
