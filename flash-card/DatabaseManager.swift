@@ -24,9 +24,6 @@ class DatabaseManager {
     }
 
     // MARK: - Database Setup
-
-    /// Copy file sqlite từ bundle xuống Application Support nếu chưa có hoặc cần migration
-    /// Giữ lại dữ liệu user tạo (is_user_created = 1)
     private func copyDatabaseIfNeeded() {
         let destURL = DatabaseManager.databaseURL()
         let fileManager = FileManager.default
@@ -41,14 +38,12 @@ class DatabaseManager {
                 return
             }
 
-            // Backup dữ liệu user tạo trước khi copy
             var userTopics: [(name: String, subjectId: Int, sortOrder: Int)] = []
             var userFlashcards: [(topicName: String, subjectId: Int, question: String, answer: String, hint: String, exerciseType: String)] = []
 
             if dbExists {
                 var oldDb: OpaquePointer?
                 if sqlite3_open(destURL.path, &oldDb) == SQLITE_OK {
-                    // Lấy user topics
                     var stmt: OpaquePointer?
                     let topicSQL = "SELECT name, subject_id, sort_order FROM topics WHERE is_user_created = 1"
                     if sqlite3_prepare_v2(oldDb, topicSQL, -1, &stmt, nil) == SQLITE_OK {
@@ -61,7 +56,6 @@ class DatabaseManager {
                     }
                     sqlite3_finalize(stmt)
 
-                    // Lấy user flashcards (join với topics để lấy tên topic)
                     let cardSQL = """
                         SELECT t.name, t.subject_id, f.question, f.answer, COALESCE(f.hint, ''), f.exercise_type
                         FROM vocabularies f
@@ -97,7 +91,6 @@ class DatabaseManager {
                 return
             }
 
-            // Khôi phục dữ liệu user tạo
             if !userTopics.isEmpty {
                 var newDb: OpaquePointer?
                 if sqlite3_open(destURL.path, &newDb) == SQLITE_OK {
@@ -117,7 +110,6 @@ class DatabaseManager {
                     }
                     sqlite3_finalize(stmt)
 
-                    // Insert vocabularies — tìm topic_id qua name + subject_id
                     let insertCardSQL = """
                         INSERT OR IGNORE INTO vocabularies (topic_id, question, answer, hint, exercise_type)
                         VALUES ((SELECT id FROM topics WHERE name = ? AND subject_id = ?), ?, ?, ?, ?)
@@ -164,7 +156,6 @@ class DatabaseManager {
     }
 
     // MARK: - Load All Subjects
-
     func loadAllSubjects() -> [Subject] {
         var subjects: [Subject] = []
 
@@ -185,7 +176,6 @@ class DatabaseManager {
     }
 
     // MARK: - Load Topics
-
     private func loadTopics(for subjectId: Int) -> [Topic] {
         var topics: [Topic] = []
 
@@ -216,7 +206,6 @@ class DatabaseManager {
     }
 
     // MARK: - Load Vocabularies
-
     func loadFlashcards(for topicId: Int) -> [Flashcard] {
         var flashcards: [Flashcard] = []
 

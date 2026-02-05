@@ -19,7 +19,7 @@ struct SidebarView: View {
             Section {
                 ForEach(viewModel.subjects) { subject in
                     Label(subject.name, systemImage: subject.icon)
-                        .tag(subject)
+                        .tag(subject).font(.system(size: 14))
                 }
             }
         }
@@ -32,14 +32,14 @@ struct SidebarView: View {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 22))
                         .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .orange : .gray)
-                        .symbolEffect(.pulse, isActive: viewModel.streakInfo.didPracticeToday)
+                        // .symbolEffect(.pulse, isActive: viewModel.streakInfo.didPracticeToday)
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
                             Text("\(viewModel.streakInfo.currentStreak)")
                                 .font(.system(size: 18, weight: .bold, design: .rounded))
                             Text("ngày")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
 
@@ -80,12 +80,12 @@ struct SidebarView: View {
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: appearanceManager.mode.icon)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(.blue)
                             .contentTransition(.symbolEffect(.replace))
 
                         Text(appearanceManager.mode.rawValue)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.primary)
 
                         Spacer()
@@ -692,24 +692,28 @@ struct ContentView: View {
             // Middle column - Topics list
             if let subject = viewModel.selectedSubject {
                 TopicsListView(viewModel: viewModel, subject: subject)
+                    .navigationSplitViewColumnWidth(min: 250, ideal: 300, max: 400)
             } else {
                 ContentUnavailableView(
                     "Chọn môn học",
                     systemImage: "book.fill",
                     description: Text("Chọn một môn học từ sidebar")
                 )
+                .navigationSplitViewColumnWidth(min: 250, ideal: 300, max: 400)
             }
         } detail: {
             // Detail column - Flashcards
             if let topic = viewModel.selectedTopic {
                 FlashcardMainView(viewModel: viewModel, topic: topic)
                     .id(topic.id)
+                    .navigationSplitViewColumnWidth(min: 450, ideal: 550)
             } else {
                 ContentUnavailableView(
                     "Chọn chủ đề",
                     systemImage: "text.book.closed.fill",
                     description: Text("Chọn một chủ đề để xem flashcards")
                 )
+                .navigationSplitViewColumnWidth(min: 450, ideal: 550)
             }
         }
     }

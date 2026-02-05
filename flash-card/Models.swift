@@ -111,6 +111,7 @@ struct VocabularyItem: Identifiable, Hashable, Codable {
 
 enum ExerciseType: String, Hashable, Codable {
     case englishToVietnamese = "Dịch Anh → Việt"
+    case chineseToVietnamese = "Dịch Trung → Việt"
     case vietnameseToEnglish = "Dịch Việt → Anh"
     case fillInTheBlank = "Điền từ vào chỗ trống"
     case chooseCorrectWord = "Chọn từ đúng"

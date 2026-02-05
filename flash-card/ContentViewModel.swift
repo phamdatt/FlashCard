@@ -63,10 +63,8 @@ class ContentViewModel: ObservableObject {
             readings: []
         )
 
-        // Lưu vào SQLite
         DatabaseManager.shared.insertTopic(newTopic)
 
-        // Load lại dữ liệu để UI cập nhật
         loadLearningData()
 
         // Reset form
@@ -92,13 +90,10 @@ class ContentViewModel: ObservableObject {
                 exerciseType: .englishToVietnamese
             )
             
-            // 1. Lưu xuống SQLite
             DatabaseManager.shared.insertFlashcard(newFlashcard, topicId: topic.id)
 
-            // 2. Load lại toàn bộ (Hàm loadFlashcards trong DatabaseManager sẽ tự động gen Options mới)
             loadLearningData()
 
-            // 3. Khôi phục trạng thái lựa chọn
             if let updatedSubject = subjects.first(where: { $0.id == topic.subjectId }),
             let updatedTopic = updatedSubject.topics.first(where: { $0.id == topic.id }) {
                 self.selectedSubject = updatedSubject
@@ -113,10 +108,8 @@ class ContentViewModel: ObservableObject {
     }
 
     func deleteTopic(_ topic: Topic) {
-        // 1. Xóa trong SQLite
         DatabaseManager.shared.deleteTopic(id: topic.id)
 
-        // 2. Sync UI
         let currentSubjectId = selectedSubject?.id
         loadLearningData()
 
@@ -131,10 +124,8 @@ class ContentViewModel: ObservableObject {
     }
 
     func deleteFlashcard(_ flashcard: Flashcard) {
-        // 1. Xóa trong SQLite
         DatabaseManager.shared.deleteFlashcard(id: flashcard.id)
         
-        // 2. Sync UI
         let currentTopicId = selectedTopic?.id
         let currentSubjectId = selectedSubject?.id
 
@@ -158,10 +149,8 @@ class ContentViewModel: ObservableObject {
 
     func selectSubject(_ subject: Subject) {
         selectedSubject = subject
-        // Auto-select first topic if available
         if let firstTopic = subject.topics.first {
             selectedTopic = firstTopic
-            // Auto-select first flashcard if available
             selectedFlashcard = firstTopic.flashcards.first
         } else {
             selectedTopic = nil
@@ -171,7 +160,6 @@ class ContentViewModel: ObservableObject {
 
     func selectTopic(_ topic: Topic) {
         selectedTopic = topic
-        // Auto-select first flashcard if available
         selectedFlashcard = topic.flashcards.first
     }
 

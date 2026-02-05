@@ -181,7 +181,7 @@ struct FlashcardMainView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(flashcard.exerciseType.rawValue)
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.blue.opacity(0.2))
@@ -569,9 +569,7 @@ struct ReadingPassageDetailView: View {
                             .font(.headline)
                     }
                     
-                    Text(reading.content)
-                        .font(.body)
-                        .lineSpacing(6)
+                    TappableReadingContent(text: reading.content, vocabularyHelp: reading.vocabularyHelp)
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(
@@ -893,6 +891,149 @@ struct AddFlashcardSheet: View {
         viewModel.newFlashcardAnswer = ""
         viewModel.newFlashcardHint = ""
         viewModel.showAddFlashcardSheet = false
+    }
+}
+
+// MARK: - Tappable Reading Content (Smart Define)
+
+struct TappableReadingContent: View {
+    let text: String
+    let vocabularyHelp: [VocabularyItem]?
+
+    @State private var selectedWordIndex: Int? = nil
+    @State private var wordResult: (word: String, meaning: String, hint: String?)? = nil
+
+    private var paragraphs: [[String]] {
+        text.components(separatedBy: "\n").map { paragraph in
+            paragraph.split(separator: " ", omittingEmptySubsequences: false).map(String.init)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(paragraphs.enumerated()), id: \.offset) { pIdx, words in
+                if words.joined().trimmingCharacters(in: .whitespaces).isEmpty {
+                    Spacer().frame(height: 4)
+                } else {
+                    WordFlowLayout(horizontalSpacing: 4, verticalSpacing: 5) {
+                        ForEach(Array(words.enumerated()), id: \.offset) { wIdx, word in
+                            let globalIndex = globalIndex(paragraph: pIdx, word: wIdx)
+                            let isSelected = selectedWordIndex == globalIndex
+
+                            Text(word)
+                                .font(.body)
+                                .padding(.vertical, 1)
+                                .padding(.horizontal, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(isSelected ? Color.blue.opacity(0.2) : Color.clear)
+                                )
+                                .onTapGesture {
+                                }
+                                .popover(isPresented: .constant(isSelected && wordResult != nil), arrowEdge: .bottom) {
+                                    if let result = wordResult {
+                                        WordDefinitionPopover(result: result) {
+                                            selectedWordIndex = nil
+                                            wordResult = nil
+                                        }
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func globalIndex(paragraph: Int, word: Int) -> Int {
+        paragraph * 10000 + word
+    }
+
+}
+
+struct WordDefinitionPopover: View {
+    let result: (word: String, meaning: String, hint: String?)
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(result.word)
+                    .font(.headline)
+                Spacer()
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Text(result.meaning)
+                .font(.body)
+                .foregroundStyle(.blue)
+
+            if let hint = result.hint, !hint.isEmpty {
+                Divider()
+                HStack(spacing: 4) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Text(hint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(12)
+        .frame(minWidth: 200, maxWidth: 300)
+    }
+}
+
+// MARK: - Word Flow Layout
+
+struct WordFlowLayout: Layout {
+    var horizontalSpacing: CGFloat = 4
+    var verticalSpacing: CGFloat = 5
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = arrange(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = arrange(proposal: ProposedViewSize(width: bounds.width, height: bounds.height), subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+                proposal: .unspecified
+            )
+        }
+    }
+
+    private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (positions: [CGPoint], size: CGSize) {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var totalHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if x + size.width > maxWidth && x > 0 {
+                x = 0
+                y += rowHeight + verticalSpacing
+                rowHeight = 0
+            }
+
+            positions.append(CGPoint(x: x, y: y))
+            rowHeight = max(rowHeight, size.height)
+            x += size.width + horizontalSpacing
+            totalHeight = max(totalHeight, y + rowHeight)
+        }
+
+        return (positions, CGSize(width: maxWidth, height: totalHeight))
     }
 }
 
