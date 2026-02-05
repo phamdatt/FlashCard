@@ -80,11 +80,34 @@ class AppearanceManager: ObservableObject {
 @main
 struct flash_cardApp: App {
     @StateObject private var appearanceManager = AppearanceManager()
+    @StateObject private var fontSizeManager = FontSizeManager()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(appearanceManager)
+                .environmentObject(fontSizeManager)
+                .applyGlobalFontSize(fontSizeManager: fontSizeManager)
+        }
+        .commands {
+            CommandGroup(after: .textEditing) {
+                Divider()
+                
+                Button("Tăng kích thước chữ") {
+                    fontSizeManager.increaseFontSize()
+                }
+                .keyboardShortcut("+", modifiers: .command)
+                
+                Button("Giảm kích thước chữ") {
+                    fontSizeManager.decreaseFontSize()
+                }
+                .keyboardShortcut("-", modifiers: .command)
+                
+                Button("Đặt lại kích thước chữ") {
+                    fontSizeManager.resetFontSize()
+                }
+                .keyboardShortcut("0", modifiers: .command)
+            }
         }
     }
 }

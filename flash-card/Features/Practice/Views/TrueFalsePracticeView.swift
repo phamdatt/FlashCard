@@ -9,11 +9,13 @@ import SwiftUI
 
 struct TrueFalsePracticeView: View {
     let flashcards: [Flashcard]
+    let topicId: Int
     let onComplete: (Int, Int) -> Void
     let onReset: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var currentIndex: Int = 0
+    @State private var srsAlgorithm = SRSAlgorithm()
     @State private var score: Int = 0
     @State private var totalAnswered: Int = 0
     @State private var showResult: Bool = false
@@ -70,7 +72,7 @@ struct TrueFalsePracticeView: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
 
-                        Text(flashcard.question)
+                        SmartCopyDefineText(text: flashcard.question, flashcards: flashcards)
                             .font(.title)
                             .fontWeight(.bold)
                             .multilineTextAlignment(.center)
@@ -100,7 +102,7 @@ struct TrueFalsePracticeView: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
 
-                        Text(displayedAnswer)
+                        SmartCopyDefineText(text: displayedAnswer, flashcards: flashcards)
                             .font(.title)
                             .fontWeight(.bold)
                             .multilineTextAlignment(.center)
@@ -142,7 +144,7 @@ struct TrueFalsePracticeView: View {
                                 )
                                 .foregroundStyle(.green)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(ScaleButtonStyle())
 
                             // FALSE button
                             Button(action: { answerTapped(false) }) {
@@ -165,7 +167,7 @@ struct TrueFalsePracticeView: View {
                                 )
                                 .foregroundStyle(.red)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(ScaleButtonStyle())
                         }
                         .padding(.horizontal, 24)
                     }
@@ -205,19 +207,21 @@ struct TrueFalsePracticeView: View {
         let userCorrect = (userAnsweredTrue == currentIsTrue)
 
         return VStack(spacing: 12) {
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 Image(systemName: userCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .font(.title)
+                    .font(.system(size: 32))
                     .foregroundStyle(userCorrect ? .green : .red)
-                    .symbolEffect(.bounce, value: showResult)
+                    .symbolEffect(.bounce.up, value: showResult)
+                    .scaleEffect(showResult ? 1.1 : 1.0)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(userCorrect ? "Chính xác!" : "Chưa đúng")
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(userCorrect ? "Chính xác! 🎉" : "Chưa đúng")
+                        .font(.title3)
+                        .fontWeight(.bold)
                         .foregroundStyle(userCorrect ? .green : .red)
 
                     if !currentIsTrue {
-                        Text("Đáp án đúng: \(flashcard.answer)")
+                        SmartCopyDefineText(text: "Đáp án đúng: \(flashcard.answer)", flashcards: flashcards)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -225,15 +229,20 @@ struct TrueFalsePracticeView: View {
 
                 Spacer()
             }
-            .padding()
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 16)
                     .fill(userCorrect
-                          ? Color.green.opacity(colorScheme == .light ? 0.08 : 0.1)
-                          : Color.red.opacity(colorScheme == .light ? 0.08 : 0.1))
+                          ? Color.green.opacity(colorScheme == .light ? 0.12 : 0.15)
+                          : Color.red.opacity(colorScheme == .light ? 0.12 : 0.15))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(userCorrect ? Color.green.opacity(0.3) : Color.red.opacity(0.3), lineWidth: 2)
+                    )
             )
         }
         .padding(.horizontal, 24)
+        .transition(.scale.combined(with: .opacity))
     }
 
     private var completedView: some View {
@@ -274,11 +283,27 @@ struct TrueFalsePracticeView: View {
         let isCorrect = (userSaidTrue == currentIsTrue)
         totalAnswered += 1
         if isCorrect { score += 1 }
+        
+        // Update SRS progress
+        let flashcard = flashcards[currentIndex]
+        updateSRSProgress(flashcard: flashcard, isCorrect: isCorrect)
+        
+        // Record mistake if wrong
+        if !isCorrect {
+            DatabaseManager.shared.recordMistake(
+                flashcardId: flashcard.id,
+                practiceType: "True/False",
+                topicId: topicId
+            )
+        }
 
-        NSSound(named: isCorrect ? "Hero" : "Basso")?.play()
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+        if isCorrect {
+            SoundManager.shared.playCorrectWithHaptic()
+        } else {
+            SoundManager.shared.playIncorrectWithHaptic()
+        }
 
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.65, blendDuration: 0.2)) {
             showResult = true
         }
 
@@ -292,5 +317,14 @@ struct TrueFalsePracticeView: View {
                 setupQuestion()
             }
         }
+    }
+    
+    private func updateSRSProgress(flashcard: Flashcard, isCorrect: Bool) {
+        var progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id) ?? 
+            FlashcardProgress(flashcardId: flashcard.id)
+        
+        let quality: Double = isCorrect ? 1.0 : 0.0
+        progress = srsAlgorithm.calculateNextReview(progress: progress, quality: quality)
+        DatabaseManager.shared.saveFlashcardProgress(progress)
     }
 }

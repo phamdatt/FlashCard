@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 // MARK: - Views
 
@@ -13,60 +14,127 @@ import SwiftUI
 struct SidebarView: View {
     @ObservedObject var viewModel: ContentViewModel
     @EnvironmentObject var appearanceManager: AppearanceManager
+    @EnvironmentObject var fontSizeManager: FontSizeManager
 
     var body: some View {
         List(selection: $viewModel.selectedSubject) {
-            Section {
-                ForEach(viewModel.subjects) { subject in
-                    Label(subject.name, systemImage: subject.icon)
-                        .tag(subject).font(.system(size: 14))
-                }
-            }
+            learningSection
+            reviewSection
+            statisticsSection
         }
         .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
         .navigationTitle("Menu")
         .safeAreaInset(edge: .bottom) {
+            bottomSection
+        }
+    }
+    
+    // MARK: - Sections
+    
+    private var learningSection: some View {
+        Section("Học tập") {
+            ForEach(viewModel.subjects) { subject in
+                Button(action: {
+                    // Use transaction to batch updates
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        viewModel.selectSubject(subject)
+                        viewModel.switchToLearningMode()
+                    }
+                }) {
+                    Label(subject.name, systemImage: subject.icon)
+                        .scaledFont(14)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+    
+    private var reviewSection: some View {
+        Section("Ôn tập") {
+            Button(action: {
+                viewModel.switchToReviewMode()
+            }) {
+                Label("Ôn tập SRS", systemImage: "repeat.circle.fill")
+                    .scaledFont(14)
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: {
+                viewModel.switchToReviewMistakes()
+            }) {
+                Label("Ôn lại từ sai", systemImage: "xmark.circle.fill")
+                    .scaledFont(14)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    private var statisticsSection: some View {
+        Section("Thống kê") {
+            Button(action: {
+                viewModel.switchToStatistics()
+            }) {
+                Label("Thống kê", systemImage: "chart.line.uptrend.xyaxis")
+                    .scaledFont(14)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    private var bottomSection: some View {
+        VStack(spacing: 8) {
             VStack(spacing: 8) {
                 // Streak indicator
                 HStack(spacing: 10) {
                     Image(systemName: "flame.fill")
-                        .font(.system(size: 22))
+                        .scaledFont(22)
                         .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .orange : .gray)
+                        .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
                         // .symbolEffect(.pulse, isActive: viewModel.streakInfo.didPracticeToday)
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
                             Text("\(viewModel.streakInfo.currentStreak)")
-                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .scaledFont(18)
+                                .fontWeight(.bold)
+                                .lineLimit(1)
                             Text("ngày")
-                                .font(.system(size: 14, weight: .medium))
+                                .scaledFont(14)
+                                .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
                         }
 
                         if viewModel.streakInfo.longestStreak > 0 {
                             Text("Kỷ lục: \(viewModel.streakInfo.longestStreak) ngày")
-                                .font(.system(size: 11))
+                                .scaledFont(11)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
                         }
                     }
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
                     Spacer()
 
                     if viewModel.streakInfo.didPracticeToday {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.green)
-                            .font(.system(size: 16))
+                            .scaledFont(16)
+                            .frame(minWidth: 16 * fontSizeManager.fontSizeMultiplier)
                     } else {
                         Text("Chưa học")
-                            .font(.system(size: 11, weight: .medium))
+                            .scaledFont(11)
+                            .fontWeight(.medium)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
+                            .lineLimit(1)
                             .background(Capsule().fill(.orange))
                     }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
+                .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color(nsColor: .controlBackgroundColor))
@@ -80,22 +148,30 @@ struct SidebarView: View {
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: appearanceManager.mode.icon)
-                            .font(.system(size: 22, weight: .semibold))
+                            .scaledFont(22)
+                            .fontWeight(.semibold)
                             .foregroundStyle(.blue)
                             .contentTransition(.symbolEffect(.replace))
+                            .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
 
                         Text(appearanceManager.mode.rawValue)
-                            .font(.system(size: 14, weight: .medium))
+                            .scaledFont(14)
+                            .fontWeight(.medium)
                             .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
                         Spacer()
 
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
+                            .scaledFont(10)
+                            .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
+                            .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
+                    .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color(nsColor: .controlBackgroundColor))
@@ -125,6 +201,7 @@ struct TopicsListView: View {
     @ObservedObject var viewModel: ContentViewModel
     let subject: Subject
     @FocusState private var isSearchFocused: Bool
+    @State private var lastSelectedTopicId: Int? = nil
     
     var filteredTopics: [Topic] {
         viewModel.filteredTopics(for: subject)
@@ -137,12 +214,13 @@ struct TopicsListView: View {
                 // Search Icon
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(16)
+                    .fontWeight(.medium)
                 
                 // Search TextField
                 TextField("Tìm kiếm chủ đề...", text: $viewModel.searchText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 15))
+                    .scaledFont(15)
                     .focused($isSearchFocused)
                 
                 // Clear Button
@@ -154,7 +232,7 @@ struct TopicsListView: View {
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
-                            .font(.system(size: 16))
+                            .scaledFont(16)
                     }
                     .buttonStyle(.plain)
                     .transition(.scale.combined(with: .opacity))
@@ -186,21 +264,6 @@ struct TopicsListView: View {
                 .padding(.bottom, 8)
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
-            
-            // Add Topic Button
-            HStack {
-                Spacer()
-                Button(action: {
-                    viewModel.showAddTopicSheet = true
-                }) {
-                    Label("Thêm chủ đề", systemImage: "plus.circle.fill")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.blue)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
 
             // Topics List
             if filteredTopics.isEmpty {
@@ -214,21 +277,22 @@ struct TopicsListView: View {
                     HStack(spacing: 12) {
                         // Topic Icon
                         Image(systemName: "book.fill")
-                            .font(.system(size: 18))
+                            .scaledFont(18)
                             .foregroundColor(.accentColor)
                             .frame(width: 32)
 
                         // Topic Info
                         VStack(alignment: .leading, spacing: 4) {
                             Text(topic.name)
-                                .font(.system(size: 14, weight: .medium))
+                                .scaledFont(14)
+                                .fontWeight(.medium)
                                 .foregroundStyle(.primary)
 
                             HStack(spacing: 6) {
                                 Image(systemName: "rectangle.stack.fill")
-                                    .font(.system(size: 12))
+                                    .scaledFont(12)
                                 Text("\(topic.flashcards.count) flashcards")
-                                    .font(.system(size: 14))
+                                    .scaledFont(14)
                             }
                             .foregroundStyle(.secondary)
                         }
@@ -237,7 +301,8 @@ struct TopicsListView: View {
 
                         // Chevron
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(12)
+                            .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
                     }
                     .padding(.vertical, 8)
@@ -252,7 +317,63 @@ struct TopicsListView: View {
                     }
                 }
                 .listStyle(.plain)
+                .onChange(of: viewModel.selectedTopic) { oldValue, newValue in
+                    // Lưu lại ID của topic được chọn
+                    if let newTopic = newValue {
+                        lastSelectedTopicId = newTopic.id
+                    }
+                    
+                    // Nếu click vào vùng trống làm selectedTopic thành nil, restore lại topic trước đó
+                    if newValue == nil && lastSelectedTopicId != nil && !filteredTopics.isEmpty {
+                        // Chỉ restore nếu topic cũ vẫn còn trong danh sách
+                        if let topic = filteredTopics.first(where: { $0.id == lastSelectedTopicId }) {
+                            DispatchQueue.main.async {
+                                viewModel.selectedTopic = topic
+                            }
+                        } else {
+                            // Nếu topic cũ không còn trong danh sách (có thể do filter), chọn topic đầu tiên
+                            if let firstTopic = filteredTopics.first {
+                                DispatchQueue.main.async {
+                                    viewModel.selectedTopic = firstTopic
+                                }
+                            }
+                        }
+                    }
+                }
+                .onAppear {
+                    // Lưu lại topic hiện tại khi view xuất hiện
+                    if let currentTopic = viewModel.selectedTopic {
+                        lastSelectedTopicId = currentTopic.id
+                    }
+                }
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            // Add Topic Button - Sticky at bottom
+            HStack {
+                Spacer()
+                Button(action: {
+                    viewModel.showAddTopicSheet = true
+                }) {
+                    Label("Thêm chủ đề", systemImage: "plus.circle.fill")
+                        .scaledFont(13)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.blue)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                // Gradient fade để tạo hiệu ứng mượt
+                LinearGradient(
+                    colors: [Color(nsColor: .windowBackgroundColor).opacity(0), Color(nsColor: .windowBackgroundColor)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 60)
+                .allowsHitTesting(false)
+            )
         }
         .navigationTitle(subject.name)
         .animation(.easeInOut(duration: 0.3), value: viewModel.searchText)
@@ -346,6 +467,7 @@ struct FlashcardDetailView: View {
     let onAnswered: ((Bool) -> Void)?  // Callback for practice mode
 
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var fontSizeManager: FontSizeManager
     @State private var isFlipped = false
     @State private var selectedAnswer: String? = nil
     @State private var showResult = false
@@ -412,11 +534,12 @@ struct FlashcardDetailView: View {
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
 
-                    Text(isFlipped ? flashcard.answer : flashcard.question)
-                        .font(.system(size: 28, weight: .bold))
+                    SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.question, flashcards: topic.flashcards)
+                        .scaledFont(28)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
                         .padding()
+                        .environmentObject(fontSizeManager)
                 }
                 .padding()
             }
@@ -447,7 +570,7 @@ struct FlashcardDetailView: View {
                         .font(.headline)
                         .foregroundStyle(.orange)
                     
-                    Text(hint)
+                    SmartCopyDefineText(text: hint, flashcards: topic.flashcards)
                         .font(.body)
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -468,11 +591,12 @@ struct FlashcardDetailView: View {
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
 
-                Text(flashcard.question)
-                    .font(.title)
+                SmartCopyDefineText(text: flashcard.question, flashcards: topic.flashcards)
+                    .scaledFont(28) // title size
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
                     .padding()
+                    .environmentObject(fontSizeManager)
             }
             .padding()
             .frame(maxWidth: .infinity)
@@ -488,7 +612,7 @@ struct FlashcardDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "lightbulb.fill")
                         .foregroundStyle(.orange)
-                    Text(hint)
+                    SmartCopyDefineText(text: hint, flashcards: topic.flashcards)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -568,16 +692,18 @@ struct FlashcardDetailView: View {
         
         return Button(action: {
             if !showResult {
-                // Haptic feedback
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                let isCorrect = optionLetter == flashcard.correctAnswer
                 
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
+                // Improved sound and haptic feedback
+                if isCorrect {
+                    SoundManager.shared.playCorrectWithHaptic()
+                } else {
+                    SoundManager.shared.playIncorrectWithHaptic()
+                }
+                
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.65, blendDuration: 0.15)) {
                     selectedAnswer = optionLetter
                     showResult = true
-
-                    // Notify parent in practice mode
-                    let isCorrect = optionLetter == flashcard.correctAnswer
-                    NSSound(named: isCorrect ? "Glass" : "Bottle")?.play()
                     onAnswered?(isCorrect)
                 }
             }
@@ -596,12 +722,14 @@ struct FlashcardDetailView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.title3)
                             .foregroundStyle(.green)
-                            .symbolEffect(.bounce, value: showResult)
+                            .symbolEffect(.bounce.up, value: showResult)
+                            .shadow(color: .green.opacity(0.5), radius: 4)
                     } else if isSelected && !isCorrect {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title3)
                             .foregroundStyle(.red)
-                            .symbolEffect(.bounce, value: showResult)
+                            .symbolEffect(.bounce.down, value: showResult)
+                            .shadow(color: .red.opacity(0.5), radius: 4)
                     }
                 }
             }
@@ -627,39 +755,58 @@ struct FlashcardDetailView: View {
         }
         .buttonStyle(CoreButtonStyle(isPressed: $isPressed, isDisabled: showResult))
         .keyboardShortcut(shortcutKey, modifiers: [])
-        .scaleEffect(showResult && (isCorrect || (isSelected && !isCorrect)) ? 1.0 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showResult)
+        // Sử dụng opacity và border thay vì scale để tránh tràn
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    showResult && isCorrect ? Color.green.opacity(0.6) : 
+                    (showResult && isSelected && !isCorrect ? Color.red.opacity(0.6) : Color.clear),
+                    lineWidth: showResult ? 3 : 0
+                )
+        )
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showResult)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
     }
     
     private var resultView: some View {
         VStack(spacing: 12) {
             let isCorrect = selectedAnswer == flashcard.correctAnswer
             
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .font(.title)
+                    .font(.system(size: 36))
                     .foregroundStyle(isCorrect ? .green : .red)
-                    .symbolEffect(.bounce, value: showResult)
+                    .symbolEffect(.bounce.up, value: showResult)
+                    .scaleEffect(showResult ? 1.15 : 1.0)
                 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(isCorrect ? "Chính xác! 🎉" : "Chưa đúng")
-                        .font(.headline)
+                        .font(.title3)
+                        .fontWeight(.bold)
                         .foregroundStyle(isCorrect ? .green : .red)
                     
-                    Text(flashcard.answer)
-                        .font(.body)
+                    SmartCopyDefineText(text: flashcard.answer, flashcards: topic.flashcards)
+                        .scaledFont(17) // body size
                         .foregroundStyle(.secondary)
+                        .environmentObject(fontSizeManager)
                 }
                 
                 Spacer()
             }
-            .padding()
-            .background(isCorrect
-                ? Color.green.opacity(colorScheme == .light ? 0.15 : 0.1)
-                : Color.red.opacity(colorScheme == .light ? 0.15 : 0.1))
-            .cornerRadius(12)
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isCorrect
+                        ? Color.green.opacity(colorScheme == .light ? 0.12 : 0.15)
+                        : Color.red.opacity(colorScheme == .light ? 0.12 : 0.15))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isCorrect ? Color.green.opacity(0.3) : Color.red.opacity(0.3), lineWidth: 2)
+                    )
+            )
         }
         .transition(.scale.combined(with: .opacity))
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showResult)
     }
 }
 
@@ -683,38 +830,88 @@ struct CoreButtonStyle: ButtonStyle {
 struct ContentView: View {
     @StateObject private var viewModel = ContentViewModel()
     @State private var columnVisibility = NavigationSplitViewVisibility.all
+    @EnvironmentObject var fontSizeManager: FontSizeManager
     
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            // Sidebar
             SidebarView(viewModel: viewModel)
         } content: {
-            // Middle column - Topics list
-            if let subject = viewModel.selectedSubject {
-                TopicsListView(viewModel: viewModel, subject: subject)
-                    .navigationSplitViewColumnWidth(min: 250, ideal: 300, max: 400)
-            } else {
-                ContentUnavailableView(
-                    "Chọn môn học",
-                    systemImage: "book.fill",
-                    description: Text("Chọn một môn học từ sidebar")
-                )
-                .navigationSplitViewColumnWidth(min: 250, ideal: 300, max: 400)
-            }
+            middleColumn
         } detail: {
-            // Detail column - Flashcards
-            if let topic = viewModel.selectedTopic {
+            detailColumn
+        }
+        .applyFontSizeScaling(multiplier: fontSizeManager.fontSizeMultiplier)
+        .onChange(of: viewModel.isInSpecialMode) { oldValue, newValue in
+            // Only update if actually changed to avoid unnecessary animations
+            if oldValue != newValue {
+                updateColumnVisibility(animated: true)
+            }
+        }
+    }
+    
+    // MARK: - Columns
+    
+    @ViewBuilder
+    private var middleColumn: some View {
+        if viewModel.isInSpecialMode {
+            // Empty view when in special mode
+            Color.clear
+                .frame(width: 0)
+                .navigationSplitViewColumnWidth(min: 0, ideal: 0, max: 0)
+        } else if let subject = viewModel.selectedSubject {
+            TopicsListView(viewModel: viewModel, subject: subject)
+                .navigationSplitViewColumnWidth(min: 250, ideal: 300, max: 400)
+        } else {
+            ContentUnavailableView(
+                "Chọn môn học",
+                systemImage: "book.fill",
+                description: Text("Chọn một môn học từ sidebar")
+            )
+            .navigationSplitViewColumnWidth(min: 250, ideal: 300, max: 400)
+        }
+    }
+    
+    @ViewBuilder
+    private var detailColumn: some View {
+        Group {
+            if viewModel.showReviewMode {
+                ReviewModeView(viewModel: viewModel)
+                    .id("review-mode")
+            } else if viewModel.showReviewMistakes {
+                ReviewMistakesView(viewModel: viewModel)
+                    .id("review-mistakes")
+            } else if viewModel.showStatistics {
+                StatisticsDashboardView(viewModel: viewModel)
+                    .id("statistics")
+            } else if let topic = viewModel.selectedTopic {
                 FlashcardMainView(viewModel: viewModel, topic: topic)
-                    .id(topic.id)
-                    .navigationSplitViewColumnWidth(min: 450, ideal: 550)
+                    .id("topic-\(topic.id)")
             } else {
                 ContentUnavailableView(
                     "Chọn chủ đề",
                     systemImage: "text.book.closed.fill",
                     description: Text("Chọn một chủ đề để xem flashcards")
                 )
-                .navigationSplitViewColumnWidth(min: 450, ideal: 550)
             }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+    
+    // MARK: - Helpers
+    
+    private func updateColumnVisibility(animated: Bool) {
+        let newVisibility: NavigationSplitViewVisibility = viewModel.isInSpecialMode ? .doubleColumn : .all
+        
+        // Use transaction for smoother animation
+        if animated {
+            var transaction = Transaction(animation: .easeInOut(duration: 0.3))
+            transaction.disablesAnimations = false
+            withTransaction(transaction) {
+                columnVisibility = newVisibility
+            }
+        } else {
+            columnVisibility = newVisibility
         }
     }
 }

@@ -145,7 +145,52 @@ class DatabaseManager {
             print("✅ Database opened at \(fileURL.path)")
             sqlite3_exec(db, "PRAGMA foreign_keys = ON", nil, nil, nil)
             createPracticeSessionsTable()
+            createSRSTables()
         }
+    }
+    
+    private func createSRSTables() {
+        // Flashcard Progress table for SRS
+        let progressSQL = """
+            CREATE TABLE IF NOT EXISTS flashcard_progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                flashcard_id INTEGER NOT NULL UNIQUE,
+                ease_factor REAL DEFAULT 2.5,
+                interval_days INTEGER DEFAULT 0,
+                repetitions INTEGER DEFAULT 0,
+                next_review_date TEXT NOT NULL,
+                last_review_date TEXT,
+                difficulty REAL DEFAULT 0.0,
+                total_reviews INTEGER DEFAULT 0,
+                correct_reviews INTEGER DEFAULT 0,
+                incorrect_reviews INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now','localtime')),
+                updated_at TEXT DEFAULT (datetime('now','localtime')),
+                FOREIGN KEY (flashcard_id) REFERENCES vocabularies(id) ON DELETE CASCADE
+            )
+        """
+        sqlite3_exec(db, progressSQL, nil, nil, nil)
+        
+        // Mistake Records table
+        let mistakeSQL = """
+            CREATE TABLE IF NOT EXISTS mistake_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                flashcard_id INTEGER NOT NULL,
+                practice_date TEXT NOT NULL,
+                practice_type TEXT NOT NULL,
+                topic_id INTEGER NOT NULL,
+                created_at TEXT DEFAULT (datetime('now','localtime')),
+                FOREIGN KEY (flashcard_id) REFERENCES vocabularies(id) ON DELETE CASCADE,
+                FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
+            )
+        """
+        sqlite3_exec(db, mistakeSQL, nil, nil, nil)
+        
+        // Create indexes for better performance
+        sqlite3_exec(db, "CREATE INDEX IF NOT EXISTS idx_progress_flashcard ON flashcard_progress(flashcard_id)", nil, nil, nil)
+        sqlite3_exec(db, "CREATE INDEX IF NOT EXISTS idx_progress_next_review ON flashcard_progress(next_review_date)", nil, nil, nil)
+        sqlite3_exec(db, "CREATE INDEX IF NOT EXISTS idx_mistake_flashcard ON mistake_records(flashcard_id)", nil, nil, nil)
+        sqlite3_exec(db, "CREATE INDEX IF NOT EXISTS idx_mistake_date ON mistake_records(practice_date)", nil, nil, nil)
     }
 
     static func databaseURL() -> URL {
@@ -563,5 +608,344 @@ class DatabaseManager {
         }
         sqlite3_finalize(stmt)
         return count
+    }
+    
+    // MARK: - SRS (Spaced Repetition System)
+    
+    func getFlashcardProgress(flashcardId: Int) -> FlashcardProgress? {
+        let sql = """
+            SELECT id, flashcard_id, ease_factor, interval_days, repetitions, 
+                   next_review_date, last_review_date, difficulty, total_reviews, 
+                   correct_reviews, incorrect_reviews
+            FROM flashcard_progress
+            WHERE flashcard_id = ?
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return nil }
+        
+        sqlite3_bind_int(stmt, 1, Int32(flashcardId))
+        
+        var progress: FlashcardProgress? = nil
+        if sqlite3_step(stmt) == SQLITE_ROW {
+            let id = Int(sqlite3_column_int(stmt, 0))
+            let flashcardId = Int(sqlite3_column_int(stmt, 1))
+            let easeFactor = sqlite3_column_double(stmt, 2)
+            let interval = Int(sqlite3_column_int(stmt, 3))
+            let repetitions = Int(sqlite3_column_int(stmt, 4))
+            let nextReviewStr = String(cString: sqlite3_column_text(stmt, 5))
+            let lastReviewStr: String? = sqlite3_column_text(stmt, 6).map { String(cString: $0) }
+            let difficulty = sqlite3_column_double(stmt, 7)
+            let totalReviews = Int(sqlite3_column_int(stmt, 8))
+            let correctReviews = Int(sqlite3_column_int(stmt, 9))
+            let incorrectReviews = Int(sqlite3_column_int(stmt, 10))
+            
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            let nextReviewDate = formatter.date(from: nextReviewStr) ?? Date()
+            let lastReviewDate = lastReviewStr.flatMap { formatter.date(from: $0) }
+            
+            progress = FlashcardProgress(
+                id: id,
+                flashcardId: flashcardId,
+                easeFactor: easeFactor,
+                interval: interval,
+                repetitions: repetitions,
+                nextReviewDate: nextReviewDate,
+                lastReviewDate: lastReviewDate,
+                difficulty: difficulty,
+                totalReviews: totalReviews,
+                correctReviews: correctReviews,
+                incorrectReviews: incorrectReviews
+            )
+        }
+        sqlite3_finalize(stmt)
+        return progress
+    }
+    
+    func saveFlashcardProgress(_ progress: FlashcardProgress) {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        let nextReviewStr = formatter.string(from: progress.nextReviewDate)
+        let lastReviewStr = progress.lastReviewDate.map { formatter.string(from: $0) }
+        
+        let sql = """
+            INSERT INTO flashcard_progress 
+            (flashcard_id, ease_factor, interval_days, repetitions, next_review_date, 
+             last_review_date, difficulty, total_reviews, correct_reviews, incorrect_reviews, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
+            ON CONFLICT(flashcard_id) DO UPDATE SET
+                ease_factor = excluded.ease_factor,
+                interval_days = excluded.interval_days,
+                repetitions = excluded.repetitions,
+                next_review_date = excluded.next_review_date,
+                last_review_date = excluded.last_review_date,
+                difficulty = excluded.difficulty,
+                total_reviews = excluded.total_reviews,
+                correct_reviews = excluded.correct_reviews,
+                incorrect_reviews = excluded.incorrect_reviews,
+                updated_at = datetime('now','localtime')
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        
+        sqlite3_bind_int(stmt, 1, Int32(progress.flashcardId))
+        sqlite3_bind_double(stmt, 2, progress.easeFactor)
+        sqlite3_bind_int(stmt, 3, Int32(progress.interval))
+        sqlite3_bind_int(stmt, 4, Int32(progress.repetitions))
+        sqlite3_bind_text(stmt, 5, (nextReviewStr as NSString).utf8String, -1, nil)
+        if let lastReviewStr = lastReviewStr {
+            sqlite3_bind_text(stmt, 6, (lastReviewStr as NSString).utf8String, -1, nil)
+        } else {
+            sqlite3_bind_null(stmt, 6)
+        }
+        sqlite3_bind_double(stmt, 7, progress.difficulty)
+        sqlite3_bind_int(stmt, 8, Int32(progress.totalReviews))
+        sqlite3_bind_int(stmt, 9, Int32(progress.correctReviews))
+        sqlite3_bind_int(stmt, 10, Int32(progress.incorrectReviews))
+        
+        sqlite3_step(stmt)
+        sqlite3_finalize(stmt)
+    }
+    
+    func getDueFlashcards() -> [Int] {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let nowStr = formatter.string(from: Date())
+        
+        let sql = """
+            SELECT flashcard_id FROM flashcard_progress
+            WHERE next_review_date <= ?
+            ORDER BY next_review_date ASC
+        """
+        var stmt: OpaquePointer?
+        var flashcardIds: [Int] = []
+        
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        sqlite3_bind_text(stmt, 1, (nowStr as NSString).utf8String, -1, nil)
+        
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            flashcardIds.append(Int(sqlite3_column_int(stmt, 0)))
+        }
+        sqlite3_finalize(stmt)
+        return flashcardIds
+    }
+    
+    // MARK: - Mistake Records
+    
+    func recordMistake(flashcardId: Int, practiceType: String, topicId: Int) {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let dateStr = formatter.string(from: Date())
+        
+        let sql = """
+            INSERT INTO mistake_records (flashcard_id, practice_date, practice_type, topic_id)
+            VALUES (?, ?, ?, ?)
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        
+        sqlite3_bind_int(stmt, 1, Int32(flashcardId))
+        sqlite3_bind_text(stmt, 2, (dateStr as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (practiceType as NSString).utf8String, -1, nil)
+        sqlite3_bind_int(stmt, 4, Int32(topicId))
+        
+        sqlite3_step(stmt)
+        sqlite3_finalize(stmt)
+    }
+    
+    func getMistakeFlashcards(days: Int = 30) -> [Int] {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+        let cutoffStr = formatter.string(from: cutoffDate)
+        
+        let sql = """
+            SELECT DISTINCT flashcard_id FROM mistake_records
+            WHERE practice_date >= ?
+            ORDER BY practice_date DESC
+        """
+        var stmt: OpaquePointer?
+        var flashcardIds: [Int] = []
+        
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        sqlite3_bind_text(stmt, 1, (cutoffStr as NSString).utf8String, -1, nil)
+        
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            flashcardIds.append(Int(sqlite3_column_int(stmt, 0)))
+        }
+        sqlite3_finalize(stmt)
+        return flashcardIds
+    }
+    
+    // MARK: - Statistics
+    
+    func getLearningStatistics() -> LearningStatistics {
+        // Get all flashcards
+        let totalFlashcards = getTotalFlashcardsCount()
+        
+        // Get learned flashcards (has progress)
+        let learnedFlashcards = getLearnedFlashcardsCount()
+        
+        // Get mastered flashcards (high accuracy, many reviews)
+        let masteredFlashcards = getMasteredFlashcardsCount()
+        
+        // Get due flashcards
+        let dueFlashcards = getDueFlashcards().count
+        
+        // Get accuracy by topic
+        let accuracyByTopic = getAccuracyByTopic()
+        
+        // Get accuracy by subject
+        let accuracyBySubject = getAccuracyBySubject()
+        
+        // Get practice history
+        let practiceHistory = getPracticeHistory()
+        
+        // Get streak info
+        let streakInfo = getStreakInfo()
+        
+        return LearningStatistics(
+            totalFlashcards: totalFlashcards,
+            learnedFlashcards: learnedFlashcards,
+            masteredFlashcards: masteredFlashcards,
+            dueFlashcards: dueFlashcards,
+            accuracyByTopic: accuracyByTopic,
+            accuracyBySubject: accuracyBySubject,
+            practiceHistory: practiceHistory,
+            streakInfo: streakInfo
+        )
+    }
+    
+    private func getTotalFlashcardsCount() -> Int {
+        let sql = "SELECT COUNT(*) FROM vocabularies"
+        var stmt: OpaquePointer?
+        var count = 0
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+            if sqlite3_step(stmt) == SQLITE_ROW {
+                count = Int(sqlite3_column_int(stmt, 0))
+            }
+        }
+        sqlite3_finalize(stmt)
+        return count
+    }
+    
+    private func getLearnedFlashcardsCount() -> Int {
+        let sql = "SELECT COUNT(DISTINCT flashcard_id) FROM flashcard_progress WHERE total_reviews > 0"
+        var stmt: OpaquePointer?
+        var count = 0
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+            if sqlite3_step(stmt) == SQLITE_ROW {
+                count = Int(sqlite3_column_int(stmt, 0))
+            }
+        }
+        sqlite3_finalize(stmt)
+        return count
+    }
+    
+    private func getMasteredFlashcardsCount() -> Int {
+        let sql = """
+            SELECT COUNT(*) FROM flashcard_progress
+            WHERE total_reviews >= 5 AND 
+                  (CAST(correct_reviews AS REAL) / CAST(total_reviews AS REAL)) >= 0.8
+        """
+        var stmt: OpaquePointer?
+        var count = 0
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+            if sqlite3_step(stmt) == SQLITE_ROW {
+                count = Int(sqlite3_column_int(stmt, 0))
+            }
+        }
+        sqlite3_finalize(stmt)
+        return count
+    }
+    
+    private func getAccuracyByTopic() -> [Int: Double] {
+        let sql = """
+            SELECT v.topic_id, 
+                   CAST(SUM(fp.correct_reviews) AS REAL) / CAST(SUM(fp.total_reviews) AS REAL) as accuracy
+            FROM flashcard_progress fp
+            JOIN vocabularies v ON fp.flashcard_id = v.id
+            WHERE fp.total_reviews > 0
+            GROUP BY v.topic_id
+        """
+        var stmt: OpaquePointer?
+        var accuracy: [Int: Double] = [:]
+        
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [:] }
+        
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let topicId = Int(sqlite3_column_int(stmt, 0))
+            let acc = sqlite3_column_double(stmt, 1)
+            accuracy[topicId] = acc
+        }
+        sqlite3_finalize(stmt)
+        return accuracy
+    }
+    
+    private func getAccuracyBySubject() -> [Int: Double] {
+        let sql = """
+            SELECT t.subject_id,
+                   CAST(SUM(fp.correct_reviews) AS REAL) / CAST(SUM(fp.total_reviews) AS REAL) as accuracy
+            FROM flashcard_progress fp
+            JOIN vocabularies v ON fp.flashcard_id = v.id
+            JOIN topics t ON v.topic_id = t.id
+            WHERE fp.total_reviews > 0
+            GROUP BY t.subject_id
+        """
+        var stmt: OpaquePointer?
+        var accuracy: [Int: Double] = [:]
+        
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [:] }
+        
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let subjectId = Int(sqlite3_column_int(stmt, 0))
+            let acc = sqlite3_column_double(stmt, 1)
+            accuracy[subjectId] = acc
+        }
+        sqlite3_finalize(stmt)
+        return accuracy
+    }
+    
+    private func getPracticeHistory() -> [DailyPractice] {
+        let sql = """
+            SELECT practice_date, 
+                   SUM(total_questions) as total,
+                   SUM(correct_answers) as correct,
+                   GROUP_CONCAT(DISTINCT topic_id) as topics
+            FROM practice_sessions
+            GROUP BY practice_date
+            ORDER BY practice_date DESC
+            LIMIT 30
+        """
+        var stmt: OpaquePointer?
+        var history: [DailyPractice] = []
+        
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        var index = 0
+        
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let dateStr = String(cString: sqlite3_column_text(stmt, 0))
+            let total = Int(sqlite3_column_int(stmt, 1))
+            let correct = Int(sqlite3_column_int(stmt, 2))
+            let topicsStr: String? = sqlite3_column_text(stmt, 3).map { String(cString: $0) }
+            
+            let date = formatter.date(from: dateStr) ?? Date()
+            let topics = topicsStr?.components(separatedBy: ",").compactMap { Int($0) } ?? []
+            
+            history.append(DailyPractice(
+                id: index,
+                date: date,
+                totalPracticed: total,
+                correctAnswers: correct,
+                topicsPracticed: topics
+            ))
+            index += 1
+        }
+        sqlite3_finalize(stmt)
+        return history.reversed() // Oldest first
     }
 }

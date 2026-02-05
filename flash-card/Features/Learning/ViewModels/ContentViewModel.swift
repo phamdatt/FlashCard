@@ -32,6 +32,53 @@ class ContentViewModel: ObservableObject {
 
     // Streak
     @Published var streakInfo = StreakInfo(currentStreak: 0, longestStreak: 0, didPracticeToday: false)
+    
+    // SRS Views
+    @Published var showReviewMode = false
+    @Published var showReviewMistakes = false
+    @Published var showStatistics = false
+    
+    // MARK: - Navigation Helpers
+    
+    var isInSpecialMode: Bool {
+        showReviewMode || showReviewMistakes || showStatistics
+    }
+    
+    func switchToLearningMode() {
+        showReviewMode = false
+        showReviewMistakes = false
+        showStatistics = false
+    }
+    
+    func switchToReviewMode() {
+        // Batch updates to avoid multiple view updates
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showReviewMode = true
+            showReviewMistakes = false
+            showStatistics = false
+            selectedTopic = nil
+        }
+    }
+    
+    func switchToReviewMistakes() {
+        // Batch updates to avoid multiple view updates
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showReviewMode = false
+            showReviewMistakes = true
+            showStatistics = false
+            selectedTopic = nil
+        }
+    }
+    
+    func switchToStatistics() {
+        // Batch updates to avoid multiple view updates
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showReviewMode = false
+            showReviewMistakes = false
+            showStatistics = true
+            selectedTopic = nil
+        }
+    }
 
     init() {
         loadLearningData()
@@ -54,6 +101,9 @@ class ContentViewModel: ObservableObject {
         guard let subject = selectedSubject,
             !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
 
+        // Lưu lại ID trước khi load lại data
+        let currentSubjectId = subject.id
+
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
 
         let newTopic = Topic(
@@ -67,6 +117,16 @@ class ContentViewModel: ObservableObject {
 
         loadLearningData()
 
+        // Restore lại selection sau khi load
+        if let updatedSubject = subjects.first(where: { $0.id == currentSubjectId }) {
+            self.selectedSubject = updatedSubject
+            // Giữ nguyên topic đang chọn nếu có
+            if let currentTopicId = selectedTopic?.id,
+               let updatedTopic = updatedSubject.topics.first(where: { $0.id == currentTopicId }) {
+                self.selectedTopic = updatedTopic
+            }
+        }
+
         // Reset form
         newTopicName = ""
         showAddTopicSheet = false
@@ -76,6 +136,10 @@ class ContentViewModel: ObservableObject {
             guard let topic = selectedTopic,
                 !question.trimmingCharacters(in: .whitespaces).isEmpty,
                 !answer.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+
+            // Lưu lại ID trước khi load lại data
+            let currentTopicId = topic.id
+            let currentSubjectId = topic.subjectId
 
             let trimmedQuestion = question.trimmingCharacters(in: .whitespaces)
             let trimmedAnswer = answer.trimmingCharacters(in: .whitespaces)
@@ -87,15 +151,16 @@ class ContentViewModel: ObservableObject {
                 hint: trimmedHint.isEmpty ? nil : trimmedHint,
                 options: nil,
                 correctAnswer: nil,
-                exerciseType: .englishToVietnamese
+                exerciseType: .chineseToVietnamese
             )
             
-            DatabaseManager.shared.insertFlashcard(newFlashcard, topicId: topic.id)
+            DatabaseManager.shared.insertFlashcard(newFlashcard, topicId: currentTopicId)
 
             loadLearningData()
 
-            if let updatedSubject = subjects.first(where: { $0.id == topic.subjectId }),
-            let updatedTopic = updatedSubject.topics.first(where: { $0.id == topic.id }) {
+            // Restore lại selection sau khi load
+            if let updatedSubject = subjects.first(where: { $0.id == currentSubjectId }),
+               let updatedTopic = updatedSubject.topics.first(where: { $0.id == currentTopicId }) {
                 self.selectedSubject = updatedSubject
                 self.selectedTopic = updatedTopic
                 self.selectedFlashcard = updatedTopic.flashcards.last // Chọn thẻ vừa tạo
@@ -148,8 +213,25 @@ class ContentViewModel: ObservableObject {
     }
 
     func selectSubject(_ subject: Subject) {
+        // Kiểm tra xem topic hiện tại có thuộc subject mới không
+        let currentTopicId = selectedTopic?.id
+        let currentTopicBelongsToNewSubject = currentTopicId != nil && 
+            subject.topics.contains(where: { $0.id == currentTopicId })
+        
         selectedSubject = subject
-        if let firstTopic = subject.topics.first {
+        
+        if currentTopicBelongsToNewSubject, let currentTopic = subject.topics.first(where: { $0.id == currentTopicId }) {
+            // Giữ nguyên topic đang chọn nếu nó thuộc subject mới
+            selectedTopic = currentTopic
+            // Giữ nguyên flashcard nếu có thể
+            if let currentFlashcardId = selectedFlashcard?.id,
+               currentTopic.flashcards.contains(where: { $0.id == currentFlashcardId }) {
+                selectedFlashcard = currentTopic.flashcards.first(where: { $0.id == currentFlashcardId })
+            } else {
+                selectedFlashcard = currentTopic.flashcards.first
+            }
+        } else if let firstTopic = subject.topics.first {
+            // Chỉ chọn topic đầu tiên nếu topic hiện tại không thuộc subject mới
             selectedTopic = firstTopic
             selectedFlashcard = firstTopic.flashcards.first
         } else {
@@ -159,8 +241,11 @@ class ContentViewModel: ObservableObject {
     }
 
     func selectTopic(_ topic: Topic) {
-        selectedTopic = topic
-        selectedFlashcard = topic.flashcards.first
+        // Chỉ update nếu topic thực sự thay đổi
+        if selectedTopic?.id != topic.id {
+            selectedTopic = topic
+            selectedFlashcard = topic.flashcards.first
+        }
     }
 
     func selectFlashcard(_ flashcard: Flashcard) {

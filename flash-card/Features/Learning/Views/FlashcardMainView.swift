@@ -11,6 +11,7 @@ import SwiftUI
 struct FlashcardMainView: View {
     @ObservedObject var viewModel: ContentViewModel
     let topic: Topic
+    @EnvironmentObject var fontSizeManager: FontSizeManager
     
     // Mode selection
     enum ViewMode: String, CaseIterable {
@@ -69,7 +70,8 @@ struct FlashcardMainView: View {
                     viewModel.showAddFlashcardSheet = true
                 }) {
                     Label("Thêm từ", systemImage: "plus.circle.fill")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(13)
+                        .fontWeight(.medium)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.blue)
@@ -181,7 +183,8 @@ struct FlashcardMainView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(flashcard.exerciseType.rawValue)
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(12)
+                            .fontWeight(.medium)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.blue.opacity(0.2))
@@ -191,7 +194,8 @@ struct FlashcardMainView: View {
                     }
                     
                     Text(flashcard.question)
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(14)
+                        .fontWeight(.medium)
                         .lineLimit(2)
 
                     if let hint = flashcard.hint {
@@ -234,6 +238,7 @@ struct FlashcardMainView: View {
             case .matching:
                 MatchingPracticeView(
                     flashcards: shuffledFlashcards,
+                    topicId: topic.id,
                     onComplete: { correctCount, total in
                         score = correctCount
                         totalAnswered = total
@@ -246,6 +251,7 @@ struct FlashcardMainView: View {
             case .trueFalse:
                 TrueFalsePracticeView(
                     flashcards: shuffledFlashcards,
+                    topicId: topic.id,
                     onComplete: { correctCount, total in
                         score = correctCount
                         totalAnswered = total
@@ -258,6 +264,7 @@ struct FlashcardMainView: View {
             case .speedCards:
                 SpeedCardsPracticeView(
                     flashcards: shuffledFlashcards,
+                    topicId: topic.id,
                     onComplete: { knownCount, total in
                         score = knownCount
                         totalAnswered = total
@@ -343,6 +350,27 @@ struct FlashcardMainView: View {
         totalAnswered += 1
         if isCorrect {
             score += 1
+        }
+        
+        // Update SRS progress
+        if currentIndex < shuffledFlashcards.count {
+            let flashcard = shuffledFlashcards[currentIndex]
+            var progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id) ?? 
+                FlashcardProgress(flashcardId: flashcard.id)
+            
+            let srsAlgorithm = SRSAlgorithm()
+            let quality: Double = isCorrect ? 1.0 : 0.0
+            progress = srsAlgorithm.calculateNextReview(progress: progress, quality: quality)
+            DatabaseManager.shared.saveFlashcardProgress(progress)
+            
+            // Record mistake if wrong
+            if !isCorrect {
+                DatabaseManager.shared.recordMistake(
+                    flashcardId: flashcard.id,
+                    practiceType: "Multiple Choice",
+                    topicId: topic.id
+                )
+            }
         }
 
         // Auto advance after 1.5 seconds

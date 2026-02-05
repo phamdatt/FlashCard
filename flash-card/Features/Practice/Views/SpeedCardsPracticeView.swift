@@ -9,11 +9,13 @@ import SwiftUI
 
 struct SpeedCardsPracticeView: View {
     let flashcards: [Flashcard]
+    let topicId: Int
     let onComplete: (Int, Int) -> Void
     let onReset: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var currentIndex: Int = 0
+    @State private var srsAlgorithm = SRSAlgorithm()
     @State private var isFlipped: Bool = false
     @State private var knownCount: Int = 0
     @State private var unknownCards: [Flashcard] = []
@@ -117,14 +119,14 @@ struct SpeedCardsPracticeView: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
 
-                            Text(isFlipped ? flashcard.answer : flashcard.question)
+                            SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.question, flashcards: flashcards)
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
 
                             if !isFlipped, let hint = flashcard.hint {
-                                Text(hint)
+                                SmartCopyDefineText(text: hint, flashcards: flashcards)
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                     .italic()
@@ -135,8 +137,9 @@ struct SpeedCardsPracticeView: View {
                     }
                     .frame(minHeight: 220)
                     .padding(.horizontal, 24)
+                    .scaleEffect(isFlipped ? 1.0 : 1.0)
                     .onTapGesture {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75, blendDuration: 0.2)) {
                             isFlipped.toggle()
                         }
                     }
@@ -172,7 +175,7 @@ struct SpeedCardsPracticeView: View {
                                 )
                                 .foregroundStyle(.red)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(ScaleButtonStyle())
 
                             // Known
                             Button(action: { markCard(known: true) }) {
@@ -195,7 +198,7 @@ struct SpeedCardsPracticeView: View {
                                 )
                                 .foregroundStyle(.green)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(ScaleButtonStyle())
                         }
                         .padding(.horizontal, 24)
                         .transition(.scale.combined(with: .opacity))
@@ -267,10 +270,25 @@ struct SpeedCardsPracticeView: View {
             unknownCards.append(flashcard)
         }
 
-        NSSound(named: known ? "Hero" : "Basso")?.play()
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+        // Update SRS progress
+        updateSRSProgress(flashcard: flashcard, isCorrect: known)
+        
+        // Record mistake if unknown
+        if !known {
+            DatabaseManager.shared.recordMistake(
+                flashcardId: flashcard.id,
+                practiceType: "Speed Cards",
+                topicId: topicId
+            )
+        }
 
-        withAnimation {
+        if known {
+            SoundManager.shared.playCorrectWithHaptic()
+        } else {
+            SoundManager.shared.playIncorrectWithHaptic()
+        }
+
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
             currentIndex += 1
             isFlipped = false
         }
@@ -281,5 +299,14 @@ struct SpeedCardsPracticeView: View {
             showSummary = true
             onComplete(knownCount, flashcards.count)
         }
+    }
+    
+    private func updateSRSProgress(flashcard: Flashcard, isCorrect: Bool) {
+        var progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id) ?? 
+            FlashcardProgress(flashcardId: flashcard.id)
+        
+        let quality: Double = isCorrect ? 1.0 : 0.0
+        progress = srsAlgorithm.calculateNextReview(progress: progress, quality: quality)
+        DatabaseManager.shared.saveFlashcardProgress(progress)
     }
 }

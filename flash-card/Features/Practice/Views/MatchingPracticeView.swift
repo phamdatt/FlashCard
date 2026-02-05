@@ -9,10 +9,13 @@ import SwiftUI
 
 struct MatchingPracticeView: View {
     let flashcards: [Flashcard]
+    let topicId: Int
     let onComplete: (Int, Int) -> Void
     let onReset: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var fontSizeManager: FontSizeManager
+    @State private var srsAlgorithm = SRSAlgorithm()
 
     // Batch of 5 pairs at a time
     private let batchSize = 5
@@ -116,29 +119,34 @@ struct MatchingPracticeView: View {
 
         return Button(action: {
             if !isMatched {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                     selectedQuestion = flashcard.id
                 }
             }
         }) {
-            Text(flashcard.question)
-                .font(.system(size: 16, weight: .medium))
+            SmartCopyDefineText(text: flashcard.question, flashcards: flashcards)
+                .scaledFont(16)
+                .fontWeight(.medium)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
                 .padding(12)
                 .frame(maxWidth: .infinity, minHeight: 60)
+                .environmentObject(fontSizeManager)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
                         .fill(questionBackground(isMatched: isMatched, isSelected: isSelected, isWrong: isWrong))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(questionBorder(isMatched: isMatched, isSelected: isSelected, isWrong: isWrong), lineWidth: 2)
+                        .stroke(questionBorder(isMatched: isMatched, isSelected: isSelected, isWrong: isWrong), lineWidth: isSelected ? 3 : 2)
                 )
-                .opacity(isMatched ? 0.5 : 1)
+                // Sử dụng opacity thay vì scale để tránh tràn
+                .opacity(isMatched ? 0.5 : (isWrong ? 0.7 : 1.0))
         }
         .buttonStyle(.plain)
         .disabled(isMatched)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isWrong)
     }
 
     private func answerCard(answer: String) -> some View {
@@ -151,24 +159,30 @@ struct MatchingPracticeView: View {
                 checkMatch(questionId: questionId, selectedAnswer: answer)
             }
         }) {
-            Text(answer)
-                .font(.system(size: 16, weight: .medium))
+            SmartCopyDefineText(text: answer, flashcards: flashcards)
+                .scaledFont(16)
+                .fontWeight(.medium)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
                 .padding(12)
                 .frame(maxWidth: .infinity, minHeight: 60)
+                .environmentObject(fontSizeManager)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
                         .fill(answerBackground(isMatched: isMatched, isWrong: isWrong))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(answerBorder(isMatched: isMatched, isWrong: isWrong), lineWidth: 2)
+                        .stroke(answerBorder(isMatched: isMatched, isWrong: isWrong), lineWidth: isMatched ? 3 : 2)
                 )
-                .opacity(isMatched ? 0.5 : 1)
+                // Sử dụng opacity và shadow thay vì scale để tránh tràn
+                .shadow(color: isMatched ? .green.opacity(0.3) : (isWrong ? .red.opacity(0.2) : .clear), radius: isMatched ? 8 : (isWrong ? 4 : 0))
+                .opacity(isMatched ? 0.6 : (isWrong ? 0.7 : 1.0))
         }
         .buttonStyle(.plain)
         .disabled(isMatched || selectedQuestion == nil)
+        .animation(.spring(response: 0.4, dampingFraction: 0.6), value: isMatched)
+        .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isWrong)
     }
 
     // MARK: - Colors
@@ -226,40 +240,62 @@ struct MatchingPracticeView: View {
         guard let flashcard = currentBatch.first(where: { $0.id == questionId }) else { return }
 
         totalAttempts += 1
+        let isCorrect = flashcard.answer == selectedAnswer
 
-        if flashcard.answer == selectedAnswer {
+        if isCorrect {
             totalCorrect += 1
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            // Improved animation với spring effect mượt mà hơn
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6, blendDuration: 0.2)) {
                 matchedPairs.insert(questionId)
                 selectedQuestion = nil
             }
-            NSSound(named: "Hero")?.play()
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-
+            SoundManager.shared.playCorrectWithHaptic()
+            
+            // Update SRS progress
+            updateSRSProgress(flashcard: flashcard, isCorrect: true)
+            
             // Check if batch is complete
             if matchedPairs.count == currentBatch.count {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    withAnimation {
+                SoundManager.shared.playSuccessWithHaptic()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                         batchIndex += 1
                         loadBatch()
                     }
                 }
             }
         } else {
-            // Wrong match
-            NSSound(named: "Basso")?.play()
-            withAnimation(.easeInOut(duration: 0.2)) {
+            // Wrong match với animation rõ ràng hơn
+            SoundManager.shared.playIncorrectWithHaptic()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
                 wrongPair = (questionId, selectedAnswer)
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                withAnimation {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     wrongPair = nil
                     selectedQuestion = nil
                 }
             }
+            
+            // Update SRS progress and record mistake
+            updateSRSProgress(flashcard: flashcard, isCorrect: false)
+            DatabaseManager.shared.recordMistake(
+                flashcardId: flashcard.id,
+                practiceType: "Matching",
+                topicId: topicId
+            )
         }
 
         onComplete(totalCorrect, totalAttempts)
+    }
+    
+    private func updateSRSProgress(flashcard: Flashcard, isCorrect: Bool) {
+        var progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id) ?? 
+            FlashcardProgress(flashcardId: flashcard.id)
+        
+        let quality: Double = isCorrect ? 1.0 : 0.0
+        progress = srsAlgorithm.calculateNextReview(progress: progress, quality: quality)
+        DatabaseManager.shared.saveFlashcardProgress(progress)
     }
 
     private var completedView: some View {
