@@ -45,7 +45,58 @@ class DatabaseManager {
     }
 
     deinit {
-        sqlite3_close(db)
+        closeDatabase()
+    }
+
+    /// Đóng kết nối database (dùng trước khi thay file .sqlite để phục hồi).
+    private func closeDatabase() {
+        guard let pointer = db else { return }
+        sqlite3_close(pointer)
+        db = nil
+    }
+
+    /// Thay database hiện tại bằng file .sqlite từ sourceURL (đóng DB → copy file → mở lại). Gọi loadLearningData() sau khi xong.
+    func replaceDatabase(withFileAt sourceURL: URL) throws {
+        closeDatabase()
+        let destURL = DatabaseManager.databaseURL()
+        let fm = FileManager.default
+        if fm.fileExists(atPath: destURL.path) {
+            try fm.removeItem(at: destURL)
+        }
+        try fm.copyItem(at: sourceURL, to: destURL)
+        openDatabase()
+        guard db != nil else {
+            throw DBError.databaseNotOpen
+        }
+    }
+
+    /// Export (copy) database ra file .sqlite tại destURL bằng SQLite Backup API. DB vẫn mở, không cần đóng.
+    func exportDatabase(to destURL: URL) throws {
+        guard let sourceDb = db else { throw DBError.databaseNotOpen }
+        let fm = FileManager.default
+        if fm.fileExists(atPath: destURL.path) {
+            try fm.removeItem(at: destURL)
+        }
+        var destDb: OpaquePointer?
+        if sqlite3_open(destURL.path, &destDb) != SQLITE_OK {
+            let msg = destDb.flatMap { String(cString: sqlite3_errmsg($0)) } ?? "unknown"
+            sqlite3_close(destDb)
+            throw DBError.openFailed(msg)
+        }
+        defer { sqlite3_close(destDb) }
+        guard let backup = sqlite3_backup_init(destDb, "main", sourceDb, "main") else {
+            let msg = String(cString: sqlite3_errmsg(destDb))
+            throw DBError.message("Backup init failed: \(msg)")
+        }
+        defer { sqlite3_backup_finish(backup) }
+        var rc = sqlite3_backup_step(backup, -1)
+        while rc == SQLITE_OK {
+            rc = sqlite3_backup_step(backup, -1)
+        }
+        if rc != SQLITE_DONE {
+            let msg = destDb.flatMap { String(cString: sqlite3_errmsg($0)) } ?? "unknown"
+            throw DBError.message("Backup failed: \(msg)")
+        }
     }
 
     /// subjects, topics, vocabularies tables for in-memory test.
@@ -658,6 +709,22 @@ class DatabaseManager {
             throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
         return Int(sqlite3_last_insert_rowid(db))
+    }
+
+    /// Updates topic name. Throws on error.
+    func updateTopicName(id: Int, name: String) throws {
+        let db = try requireDB()
+        let sql = "UPDATE topics SET name = ? WHERE id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, (name as NSString).utf8String, -1, nil)
+        sqlite3_bind_int(stmt, 2, Int32(id))
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
+        }
     }
 
     /// Inserts flashcard into topic. Throws on error.

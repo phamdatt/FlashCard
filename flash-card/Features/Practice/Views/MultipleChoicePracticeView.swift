@@ -36,7 +36,14 @@ struct MultipleChoicePracticeView: View {
             PracticeCompletedView(
                 score: score,
                 totalAnswered: totalAnswered,
-                onContinue: onReset
+                onContinue: {
+                    withAnimation {
+                        currentIndex = 0
+                        score = 0
+                        totalAnswered = 0
+                    }
+                    onReset()
+                }
             )
         }
     }

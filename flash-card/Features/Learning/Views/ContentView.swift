@@ -443,9 +443,7 @@ struct TopicsListView: View {
                 get: { viewModel.selectedTopic },
                 set: { viewModel.setSelectedTopic($0) }
             )) { topic in
-                TopicRowView(topic: topic, subject: subject, practiceCount: viewModel.topicPracticeCounts[topic.id] ?? 0, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light) {
-                    viewModel.topicToDelete = topic
-                }
+                TopicRowView(topic: topic, subject: subject, practiceCount: viewModel.topicPracticeCounts[topic.id] ?? 0, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light, onDelete: { viewModel.topicToDelete = topic }, onRename: { viewModel.startRenameTopic(topic) })
                 .contentShape(Rectangle())
                 .onTapGesture {
                     viewModel.setSelectedTopic(topic)
@@ -510,23 +508,29 @@ Label("Thêm chủ đề", systemImage: "plus.circle.fill")
         .sheet(isPresented: $viewModel.showAddTopicSheet) {
             AddTopicSheet(viewModel: viewModel)
         }
-        .confirmationDialog("Xóa chủ đề?", isPresented: Binding(
-            get: { viewModel.topicToDelete != nil },
-            set: { if !$0 { viewModel.topicToDelete = nil } }
-        ), titleVisibility: .visible) {
-            Button("Xóa", role: .destructive) {
-                if let t = viewModel.topicToDelete {
-                    viewModel.topicToDelete = nil
-                    viewModel.deleteTopic(t)
+        .sheet(isPresented: Binding(
+            get: { viewModel.topicToRename != nil },
+            set: { if !$0 { viewModel.topicToRename = nil; viewModel.renameTopicName = "" } }
+        )) {
+            RenameTopicSheet(viewModel: viewModel)
+        }
+        .overlay {
+            ConfirmActionOverlay(
+                title: "Xóa chủ đề?",
+                message: viewModel.topicToDelete.map { "Chủ đề \"\($0.name)\" và mọi flashcard, bài đọc trong đó sẽ bị xóa. Không thể hoàn tác." } ?? "",
+                destructiveTitle: "Xóa",
+                cancelTitle: "Huỷ",
+                isPresented: Binding(
+                    get: { viewModel.topicToDelete != nil },
+                    set: { if !$0 { viewModel.topicToDelete = nil } }
+                ),
+                onConfirm: {
+                    if let t = viewModel.topicToDelete {
+                        viewModel.topicToDelete = nil
+                        viewModel.deleteTopic(t)
+                    }
                 }
-            }
-            Button("Huỷ", role: .cancel) {
-                viewModel.topicToDelete = nil
-            }
-        } message: {
-            if let t = viewModel.topicToDelete {
-                Text("Chủ đề \"\(t.name)\" và mọi flashcard, bài đọc trong đó sẽ bị xóa. Không thể hoàn tác.")
-            }
+            )
         }
     }
 }
@@ -539,6 +543,7 @@ private struct TopicRowView: View {
     let isSelected: Bool
     let isLight: Bool
     let onDelete: () -> Void
+    let onRename: () -> Void
 
     private var isReadingSubject: Bool { subject.name == "Bài đọc" }
     private var hasPracticed: Bool { practiceCount > 0 }
@@ -584,6 +589,9 @@ private struct TopicRowView: View {
         .contentShape(Rectangle())
         .tag(topic)
         .contextMenu {
+            Button(action: onRename) {
+                Label("Sửa tên", systemImage: "pencil")
+            }
             Button(role: .destructive, action: onDelete) {
                 Label("Xoá chủ đề", systemImage: "trash")
             }
@@ -598,11 +606,11 @@ struct AddTopicSheet: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            // Header
             HStack {
                 Text("Tạo chủ đề mới")
                     .font(.app(.title2))
                     .fontWeight(.bold)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Button(action: {
                     viewModel.newTopicName = ""
@@ -611,15 +619,15 @@ struct AddTopicSheet: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.app(.title2))
                         .foregroundStyle(.secondary)
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
             }
 
-            // Subject info
             if let subject = viewModel.selectedSubject {
                 HStack(spacing: 8) {
-Image(systemName: subject.icon)
-                    .foregroundStyle(.secondary)
+                    Image(systemName: subject.icon)
+                        .foregroundStyle(.secondary)
                     Text(subject.name)
                         .font(.app(.subheadline))
                         .foregroundStyle(.secondary)
@@ -628,11 +636,12 @@ Image(systemName: subject.icon)
             }
 
             Divider()
+                .background(Color(nsColor: .separatorColor))
 
-            // Topic name input
             VStack(alignment: .leading, spacing: 8) {
                 Text("Tên chủ đề")
                     .font(.app(.headline))
+                    .foregroundStyle(.primary)
                 TextField("Ví dụ: Sports (Thể thao)", text: $viewModel.newTopicName)
                     .textFieldStyle(.roundedBorder)
                     .font(.app(.body))
@@ -641,13 +650,13 @@ Image(systemName: subject.icon)
 
             Spacer()
 
-            // Action buttons
-            HStack {
+            HStack(spacing: 12) {
                 Button("Huỷ") {
                     viewModel.newTopicName = ""
                     viewModel.showAddTopicSheet = false
                 }
                 .keyboardShortcut(.escape)
+                .buttonStyle(.bordered)
 
                 Spacer()
 
@@ -659,10 +668,76 @@ Image(systemName: subject.icon)
                 }
                 .keyboardShortcut(.return)
                 .disabled(viewModel.newTopicName.trimmingCharacters(in: .whitespaces).isEmpty)
+                .buttonStyle(.borderedProminent)
+                .tint(.accentColor)
             }
         }
         .padding(24)
         .frame(width: 400, height: 280)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .onAppear { isFocused = true }
+    }
+}
+
+// MARK: - Rename Topic Sheet
+struct RenameTopicSheet: View {
+    @ObservedObject var viewModel: ContentViewModel
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text("Sửa tên chủ đề")
+                    .font(.app(.title2))
+                    .fontWeight(.bold)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Button(action: {
+                    viewModel.topicToRename = nil
+                    viewModel.renameTopicName = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.app(.title2))
+                        .foregroundStyle(.secondary)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.plain)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Tên chủ đề")
+                    .font(.app(.headline))
+                    .foregroundStyle(.primary)
+                TextField("Tên chủ đề", text: $viewModel.renameTopicName)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.app(.body))
+                    .focused($isFocused)
+            }
+
+            Spacer()
+
+            HStack(spacing: 12) {
+                Button("Huỷ") {
+                    viewModel.topicToRename = nil
+                    viewModel.renameTopicName = ""
+                }
+                .keyboardShortcut(.escape)
+                .buttonStyle(.bordered)
+
+                Spacer()
+                Button(action: { viewModel.renameTopic() }) {
+                    Text("Lưu")
+                        .fontWeight(.semibold)
+                }
+                .keyboardShortcut(.return)
+                .disabled(viewModel.renameTopicName.trimmingCharacters(in: .whitespaces).isEmpty)
+                .buttonStyle(.borderedProminent)
+                .tint(.accentColor)
+            }
+        }
+        .padding(24)
+        .frame(width: 400, height: 240)
+        .background(Color(nsColor: .windowBackgroundColor))
         .onAppear { isFocused = true }
     }
 }
@@ -776,26 +851,26 @@ struct ReadingMainView: View {
         .sheet(isPresented: $viewModel.showAddReadingSheet) {
             AddReadingSheet(viewModel: viewModel, topic: topic)
         }
-        .confirmationDialog("Xóa bài đọc?", isPresented: Binding(
-            get: { viewModel.passageToDelete != nil },
-            set: { if !$0 { viewModel.passageToDelete = nil } }
-        ), titleVisibility: .visible) {
-            Button("Xóa", role: .destructive) {
-                if let p = viewModel.passageToDelete {
-                    viewModel.passageToDelete = nil
-                    viewModel.deleteReadingPassage(p)
-                    if selectedPassage?.id == p.id {
-                        selectedPassage = topic.readings.first(where: { $0.id != p.id })
+        .overlay {
+            ConfirmActionOverlay(
+                title: "Xóa bài đọc?",
+                message: viewModel.passageToDelete.map { "Bài đọc \"\($0.title)\" sẽ bị xóa. Không thể hoàn tác." } ?? "",
+                destructiveTitle: "Xóa",
+                cancelTitle: "Huỷ",
+                isPresented: Binding(
+                    get: { viewModel.passageToDelete != nil },
+                    set: { if !$0 { viewModel.passageToDelete = nil } }
+                ),
+                onConfirm: {
+                    if let p = viewModel.passageToDelete {
+                        viewModel.passageToDelete = nil
+                        viewModel.deleteReadingPassage(p)
+                        if selectedPassage?.id == p.id {
+                            selectedPassage = topic.readings.first(where: { $0.id != p.id })
+                        }
                     }
                 }
-            }
-            Button("Huỷ", role: .cancel) {
-                viewModel.passageToDelete = nil
-            }
-        } message: {
-            if let p = viewModel.passageToDelete {
-                Text("Bài đọc \"\(p.title)\" sẽ bị xóa. Không thể hoàn tác.")
-            }
+            )
         }
     }
 }
@@ -804,17 +879,34 @@ struct ReadingMainView: View {
 struct ReadingDetailView: View {
     let passage: ReadingPassage
     let topicName: String
+    @ObservedObject private var speechManager = SpeechManager.shared
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Toolbar: Smart copy button
+                // Toolbar: Đọc + Ngắt đọc + Sao chép
                 HStack {
                     Text(topicName)
                         .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                     Spacer()
+                    Button(action: {
+                        speechManager.speak(text: passage.content)
+                    }) {
+                        Label("Đọc", systemImage: "speaker.wave.2.fill")
+                            .scaledFont(.sm)
+                            .fontWeight(.medium)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(passage.content.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button(action: { speechManager.stop() }) {
+                        Label("Ngắt đọc", systemImage: "stop.fill")
+                            .scaledFont(.sm)
+                            .fontWeight(.medium)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!speechManager.isSpeaking)
                     Button(action: copyFullContent) {
                         Label("Sao chép", systemImage: "doc.on.doc")
                             .scaledFont(.sm)
@@ -1172,7 +1264,7 @@ struct FlashcardDetailView: View {
                             .fontWeight(.semibold)
                         if let dateStr = nextReviewDateString {
                             Text("Ôn lại vào: \(dateStr)")
-                                .font(.app(.caption))
+                                .font(.app(.subheadline))
                                 .foregroundStyle(.secondary)
                         }
                     }

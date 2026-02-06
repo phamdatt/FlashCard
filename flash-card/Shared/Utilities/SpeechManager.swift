@@ -69,11 +69,7 @@ final class SpeechManager: ObservableObject {
         guard !t.isEmpty else { return }
         synthesizer.stopSpeaking(at: .immediate)
         let lang = language ?? detectLanguage(t)
-        let voice = AVSpeechSynthesisVoice(language: lang)
-            ?? AVSpeechSynthesisVoice(language: preferredEnglishAccent.rawValue)
-            ?? AVSpeechSynthesisVoice(language: "en-US")
-            ?? AVSpeechSynthesisVoice()
-            ?? AVSpeechSynthesisVoice.speechVoices().first
+        let voice = voiceForLanguage(lang)
         guard let voice = voice else {
             ttsUnavailableMessage = "Chưa có giọng đọc. Vào Cài đặt hệ thống → Trợ năng → Nội dung đọc (Spoken Content) để tải giọng."
             return
@@ -84,6 +80,33 @@ final class SpeechManager: ObservableObject {
         utterance.voice = voice
         isSpeaking = true
         synthesizer.speak(utterance)
+    }
+
+    /// Chọn giọng: với Tiếng Trung (zh) ưu tiên giọng nam (Kangkang / male) nếu có.
+    private func voiceForLanguage(_ language: String) -> AVSpeechSynthesisVoice? {
+        if language.hasPrefix("zh") {
+            let voices = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("zh") }
+            guard !voices.isEmpty else {
+                return AVSpeechSynthesisVoice(language: language)
+            }
+            // Ưu tiên giọng nam: Kangkang = Mandarin male (identifier hoặc name)
+            for v in voices {
+                let idLower = v.identifier.lowercased()
+                let nameLower = v.name.lowercased()
+                if idLower.contains("kangkang") || nameLower.contains("kangkang") { return v }
+            }
+            if #available(macOS 10.15, *) {
+                if let male = voices.first(where: { $0.gender == .male }) { return male }
+            }
+            // Fallback: identifier chứa "male" (một số giọng hệ thống)
+            if let male = voices.first(where: { $0.identifier.lowercased().contains("male") }) { return male }
+            return voices.first
+        }
+        return AVSpeechSynthesisVoice(language: language)
+            ?? AVSpeechSynthesisVoice(language: preferredEnglishAccent.rawValue)
+            ?? AVSpeechSynthesisVoice(language: "en-US")
+            ?? AVSpeechSynthesisVoice()
+            ?? AVSpeechSynthesisVoice.speechVoices().first
     }
 
     /// Opens System Settings → Accessibility (user goes to Spoken Content).

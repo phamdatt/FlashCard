@@ -65,6 +65,10 @@ class ContentViewModel: ObservableObject {
     @Published var flashcardToDelete: Flashcard?
     @Published var passageToDelete: ReadingPassage?
 
+    // Rename topic sheet
+    @Published var topicToRename: Topic?
+    @Published var renameTopicName: String = ""
+
     // Error message for DB failures (shown as alert)
     @Published var errorMessage: String?
     /// Message after backup finishes (sheet closed, show alert on main screen).
@@ -380,6 +384,33 @@ class ContentViewModel: ObservableObject {
                 selectedTopic = selectedSubject?.topics.first(where: { $0.id == prevTopicId })
             }
         }
+    }
+
+    func startRenameTopic(_ topic: Topic) {
+        topicToRename = topic
+        renameTopicName = topic.name
+    }
+
+    func renameTopic() {
+        guard let topic = topicToRename else { return }
+        let trimmed = renameTopicName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        do {
+            try database.updateTopicName(id: topic.id, name: trimmed)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        let wasSelected = (selectedTopic?.id == topic.id)
+        loadLearningData()
+        if let subjectId = selectedSubject?.id {
+            selectedSubject = subjects.first(where: { $0.id == subjectId })
+            if wasSelected {
+                selectedTopic = selectedSubject?.topics.first(where: { $0.id == topic.id })
+            }
+        }
+        topicToRename = nil
+        renameTopicName = ""
     }
 
     func addReadingPassage(topicId: Int, title: String, content: String) {

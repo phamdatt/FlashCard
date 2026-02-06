@@ -79,31 +79,33 @@ struct FlashcardMainView: View {
                 .buttonStyle(.plain)
                 
                 Spacer()
-                
+
                 Text(topic.name)
                     .font(.app(.headline))
                 
                 Spacer()
 
-                HStack(spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
                     Button(action: {
                         viewModel.showAddFlashcardSheet = true
                     }) {
                         Label("Thêm từ", systemImage: "plus.circle.fill")
-                            .scaledFont(.sm)
+                            .font(.app(.body))
                             .fontWeight(.medium)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
+                    .frame(height: 28, alignment: .center)
                     Button(action: {
                         viewModel.showImportFlashcardSheet = true
                     }) {
                         Label("Import", systemImage: "square.and.arrow.down")
-                            .scaledFont(.sm)
+                            .font(.app(.body))
                             .fontWeight(.medium)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
+                    .frame(height: 28, alignment: .center)
                 }
             }
             .padding()
@@ -114,22 +116,28 @@ struct FlashcardMainView: View {
             VStack(spacing: 8) {
                 Picker("Chế độ", selection: $selectedMode) {
                     ForEach(ViewMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
+                        Text(mode.rawValue)
+                            .font(.app(.body))
+                            .tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .controlSize(.large)
 
                 if selectedMode == .practice {
                     VStack(spacing: 10) {
                         HStack(spacing: 8) {
                             Picker("Kiểu", selection: $selectedPracticeType) {
                                 ForEach(PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name), id: \.self) { type in
-                                    Text(type.rawValue).tag(type)
+                                    Text(type.rawValue)
+                                        .font(.app(.body))
+                                        .tag(type)
                                 }
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden()
+                            .controlSize(.large)
                             .onChange(of: viewModel.selectedSubject?.name) { _, _ in
                                 let available = PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name)
                                 if !available.contains(selectedPracticeType) {
@@ -139,15 +147,18 @@ struct FlashcardMainView: View {
                             }
                         }
 
-                        HStack(spacing: 8) {
+                        HStack(alignment: .center, spacing: 8) {
                             Picker("Nguồn", selection: $practiceSource) {
                                 ForEach(PracticeSource.allCases, id: \.self) { src in
-                                    Text(src.rawValue).tag(src)
+                                    Text(src.rawValue)
+                                        .font(.app(.body))
+                                        .tag(src)
                                 }
                             }
                             .pickerStyle(.menu)
                             .labelsHidden()
                             .frame(maxWidth: 120)
+                            .controlSize(.large)
                             .onChange(of: practiceSource) { _, _ in resetPractice() }
 
                             Menu {
@@ -160,9 +171,11 @@ struct FlashcardMainView: View {
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: "number.circle.fill")
+                                        .font(.app(.body))
                                     Text("\(min(selectedWordCount, practicePoolCount)) từ")
+                                        .font(.app(.body))
                                     Image(systemName: "chevron.down")
-                                        .font(.app(.caption))
+                                        .font(.app(.subheadline))
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
@@ -174,7 +187,7 @@ struct FlashcardMainView: View {
 
                             if topic.flashcards.count > 60 {
                                 Text("Nên 20–30 từ/phiên")
-                                    .font(.app(.caption2))
+                                    .font(.app(.subheadline))
                                     .foregroundStyle(.secondary)
                             }
 
@@ -235,35 +248,36 @@ struct FlashcardMainView: View {
                 EditFlashcardSheet(flashcard: flashcard, topic: topic, viewModel: viewModel, onDismiss: { showEditFlashcardSheet = false })
             }
         }
-        .confirmationDialog("Xóa từ vựng?", isPresented: Binding(
-            get: { viewModel.flashcardToDelete != nil },
-            set: { if !$0 { viewModel.flashcardToDelete = nil } }
-        ), titleVisibility: .visible) {
-            Button("Xóa", role: .destructive) {
-                if let fc = viewModel.flashcardToDelete {
-                    viewModel.flashcardToDelete = nil
-                    viewModel.deleteFlashcard(fc)
+        .overlay {
+            ConfirmActionOverlay(
+                title: "Xóa từ vựng?",
+                message: viewModel.flashcardToDelete.map { "Từ \"\($0.question)\" sẽ bị xóa. Không thể hoàn tác." } ?? "",
+                destructiveTitle: "Xóa",
+                cancelTitle: "Huỷ",
+                isPresented: Binding(
+                    get: { viewModel.flashcardToDelete != nil },
+                    set: { if !$0 { viewModel.flashcardToDelete = nil } }
+                ),
+                onConfirm: {
+                    if let fc = viewModel.flashcardToDelete {
+                        viewModel.flashcardToDelete = nil
+                        viewModel.deleteFlashcard(fc)
+                    }
                 }
-            }
-            Button("Huỷ", role: .cancel) {
-                viewModel.flashcardToDelete = nil
-            }
-        } message: {
-            if let fc = viewModel.flashcardToDelete {
-                Text("Từ \"\(fc.question)\" sẽ bị xóa. Không thể hoàn tác.")
-            }
+            )
         }
-        .confirmationDialog("Xóa từ vựng đã chọn?", isPresented: $showDeleteMultipleFlashcardsConfirmation, titleVisibility: .visible) {
-            Button("Xóa", role: .destructive) {
-                viewModel.deleteSelectedFlashcards(topicId: topic.id)
-                showDeleteMultipleFlashcardsConfirmation = false
-            }
-            Button("Huỷ", role: .cancel) {
-                showDeleteMultipleFlashcardsConfirmation = false
-            }
-        } message: {
-            let n = viewModel.selectedFlashcardIds.count
-            Text("\(n) từ vựng sẽ bị xóa. Không thể hoàn tác.")
+        .overlay {
+            ConfirmActionOverlay(
+                title: "Xóa từ vựng đã chọn?",
+                message: "\(viewModel.selectedFlashcardIds.count) từ vựng sẽ bị xóa. Không thể hoàn tác.",
+                destructiveTitle: "Xóa",
+                cancelTitle: "Huỷ",
+                isPresented: $showDeleteMultipleFlashcardsConfirmation,
+                onConfirm: {
+                    viewModel.deleteSelectedFlashcards(topicId: topic.id)
+                    showDeleteMultipleFlashcardsConfirmation = false
+                }
+            )
         }
     }
     

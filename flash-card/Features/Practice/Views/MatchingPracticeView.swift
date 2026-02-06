@@ -85,7 +85,8 @@ Image(systemName: "checkmark.circle.fill")
                         Text("Câu hỏi")
                             .font(.app(.headline))
                             .foregroundStyle(.blue)
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, minHeight: 22)
+                            .multilineTextAlignment(.center)
 
                         ForEach(currentBatch) { flashcard in
                             questionCard(flashcard: flashcard)
@@ -98,7 +99,8 @@ Image(systemName: "checkmark.circle.fill")
                         Text("Đáp án")
                             .font(.app(.headline))
                             .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, minHeight: 22)
+                            .multilineTextAlignment(.center)
 
                         ForEach(shuffledAnswers, id: \.self) { answer in
                             answerCard(answer: answer)

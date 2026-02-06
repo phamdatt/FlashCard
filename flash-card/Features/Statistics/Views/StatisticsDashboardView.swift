@@ -83,10 +83,13 @@ struct StatisticsDashboardView: View {
             Spacer()
             Picker("", selection: $selectedTimeRange) {
                 ForEach(TimeRange.allCases, id: \.self) { range in
-                    Text(range.rawValue).tag(range)
+                    Text(range.rawValue)
+                        .font(.app(.body))
+                        .tag(range)
                 }
             }
             .pickerStyle(.segmented)
+            .controlSize(.large)
             .frame(width: 200)
         }
         .padding(sectionPadding)
