@@ -32,108 +32,108 @@ class DatabaseManager {
         let needsMigration = savedVersion < currentSeedVersion
         let dbExists = fileManager.fileExists(atPath: destURL.path)
 
-        if !dbExists || needsMigration {
-            guard let bundleURL = Bundle.main.url(forResource: "flashcards", withExtension: "sqlite") else {
-                print("❌ flashcards.sqlite not found in bundle")
-                return
-            }
+        // if !dbExists || needsMigration {
+        //     guard let bundleURL = Bundle.main.url(forResource: "flashcards", withExtension: "sqlite") else {
+        //         print("❌ flashcards.sqlite not found in bundle")
+        //         return
+        //     }
 
-            var userTopics: [(name: String, subjectId: Int, sortOrder: Int)] = []
-            var userFlashcards: [(topicName: String, subjectId: Int, question: String, answer: String, hint: String, exerciseType: String)] = []
+        //     var userTopics: [(name: String, subjectId: Int, sortOrder: Int)] = []
+        //     var userFlashcards: [(topicName: String, subjectId: Int, question: String, answer: String, hint: String, exerciseType: String)] = []
 
-            if dbExists {
-                var oldDb: OpaquePointer?
-                if sqlite3_open(destURL.path, &oldDb) == SQLITE_OK {
-                    var stmt: OpaquePointer?
-                    let topicSQL = "SELECT name, subject_id, sort_order FROM topics WHERE is_user_created = 1"
-                    if sqlite3_prepare_v2(oldDb, topicSQL, -1, &stmt, nil) == SQLITE_OK {
-                        while sqlite3_step(stmt) == SQLITE_ROW {
-                            let name = String(cString: sqlite3_column_text(stmt, 0))
-                            let subjectId = Int(sqlite3_column_int(stmt, 1))
-                            let sortOrder = Int(sqlite3_column_int(stmt, 2))
-                            userTopics.append((name, subjectId, sortOrder))
-                        }
-                    }
-                    sqlite3_finalize(stmt)
+        //     if dbExists {
+        //         var oldDb: OpaquePointer?
+        //         if sqlite3_open(destURL.path, &oldDb) == SQLITE_OK {
+        //             var stmt: OpaquePointer?
+        //             let topicSQL = "SELECT name, subject_id, sort_order FROM topics WHERE is_user_created = 1"
+        //             if sqlite3_prepare_v2(oldDb, topicSQL, -1, &stmt, nil) == SQLITE_OK {
+        //                 while sqlite3_step(stmt) == SQLITE_ROW {
+        //                     let name = String(cString: sqlite3_column_text(stmt, 0))
+        //                     let subjectId = Int(sqlite3_column_int(stmt, 1))
+        //                     let sortOrder = Int(sqlite3_column_int(stmt, 2))
+        //                     userTopics.append((name, subjectId, sortOrder))
+        //                 }
+        //             }
+        //             sqlite3_finalize(stmt)
 
-                    let cardSQL = """
-                        SELECT t.name, t.subject_id, f.question, f.answer, COALESCE(f.hint, ''), f.exercise_type
-                        FROM vocabularies f
-                        JOIN topics t ON f.topic_id = t.id
-                        WHERE t.is_user_created = 1
-                    """
-                    if sqlite3_prepare_v2(oldDb, cardSQL, -1, &stmt, nil) == SQLITE_OK {
-                        while sqlite3_step(stmt) == SQLITE_ROW {
-                            let topicName = String(cString: sqlite3_column_text(stmt, 0))
-                            let subjectId = Int(sqlite3_column_int(stmt, 1))
-                            let question = String(cString: sqlite3_column_text(stmt, 2))
-                            let answer = String(cString: sqlite3_column_text(stmt, 3))
-                            let hint = String(cString: sqlite3_column_text(stmt, 4))
-                            let exerciseType = String(cString: sqlite3_column_text(stmt, 5))
-                            userFlashcards.append((topicName, subjectId, question, answer, hint, exerciseType))
-                        }
-                    }
-                    sqlite3_finalize(stmt)
-                }
-                sqlite3_close(oldDb)
-                print("💾 Backed up \(userTopics.count) user topics, \(userFlashcards.count) user flashcards")
-            }
+        //             let cardSQL = """
+        //                 SELECT t.name, t.subject_id, f.question, f.answer, COALESCE(f.hint, ''), f.exercise_type
+        //                 FROM vocabularies f
+        //                 JOIN topics t ON f.topic_id = t.id
+        //                 WHERE t.is_user_created = 1
+        //             """
+        //             if sqlite3_prepare_v2(oldDb, cardSQL, -1, &stmt, nil) == SQLITE_OK {
+        //                 while sqlite3_step(stmt) == SQLITE_ROW {
+        //                     let topicName = String(cString: sqlite3_column_text(stmt, 0))
+        //                     let subjectId = Int(sqlite3_column_int(stmt, 1))
+        //                     let question = String(cString: sqlite3_column_text(stmt, 2))
+        //                     let answer = String(cString: sqlite3_column_text(stmt, 3))
+        //                     let hint = String(cString: sqlite3_column_text(stmt, 4))
+        //                     let exerciseType = String(cString: sqlite3_column_text(stmt, 5))
+        //                     userFlashcards.append((topicName, subjectId, question, answer, hint, exerciseType))
+        //                 }
+        //             }
+        //             sqlite3_finalize(stmt)
+        //         }
+        //         sqlite3_close(oldDb)
+        //         print("💾 Backed up \(userTopics.count) user topics, \(userFlashcards.count) user flashcards")
+        //     }
 
-            do {
-                if dbExists {
-                    try fileManager.removeItem(at: destURL)
-                }
-                try fileManager.copyItem(at: bundleURL, to: destURL)
-                UserDefaults.standard.set(currentSeedVersion, forKey: "db_seed_version")
-                print("✅ Database copied from bundle to \(destURL.path)")
-            } catch {
-                print("❌ Error copying database: \(error)")
-                return
-            }
+        //     do {
+        //         if dbExists {
+        //             try fileManager.removeItem(at: destURL)
+        //         }
+        //         try fileManager.copyItem(at: bundleURL, to: destURL)
+        //         UserDefaults.standard.set(currentSeedVersion, forKey: "db_seed_version")
+        //         print("✅ Database copied from bundle to \(destURL.path)")
+        //     } catch {
+        //         print("❌ Error copying database: \(error)")
+        //         return
+        //     }
 
-            if !userTopics.isEmpty {
-                var newDb: OpaquePointer?
-                if sqlite3_open(destURL.path, &newDb) == SQLITE_OK {
-                    sqlite3_exec(newDb, "BEGIN TRANSACTION", nil, nil, nil)
+        //     if !userTopics.isEmpty {
+        //         var newDb: OpaquePointer?
+        //         if sqlite3_open(destURL.path, &newDb) == SQLITE_OK {
+        //             sqlite3_exec(newDb, "BEGIN TRANSACTION", nil, nil, nil)
 
-                    // Insert topics
-                    let insertTopicSQL = "INSERT OR IGNORE INTO topics (name, subject_id, sort_order, is_user_created) VALUES (?, ?, ?, 1)"
-                    var stmt: OpaquePointer?
-                    if sqlite3_prepare_v2(newDb, insertTopicSQL, -1, &stmt, nil) == SQLITE_OK {
-                        for t in userTopics {
-                            sqlite3_reset(stmt)
-                            sqlite3_bind_text(stmt, 1, (t.name as NSString).utf8String, -1, nil)
-                            sqlite3_bind_int(stmt, 2, Int32(t.subjectId))
-                            sqlite3_bind_int(stmt, 3, Int32(t.sortOrder))
-                            sqlite3_step(stmt)
-                        }
-                    }
-                    sqlite3_finalize(stmt)
+        //             // Insert topics
+        //             let insertTopicSQL = "INSERT OR IGNORE INTO topics (name, subject_id, sort_order, is_user_created) VALUES (?, ?, ?, 1)"
+        //             var stmt: OpaquePointer?
+        //             if sqlite3_prepare_v2(newDb, insertTopicSQL, -1, &stmt, nil) == SQLITE_OK {
+        //                 for t in userTopics {
+        //                     sqlite3_reset(stmt)
+        //                     sqlite3_bind_text(stmt, 1, (t.name as NSString).utf8String, -1, nil)
+        //                     sqlite3_bind_int(stmt, 2, Int32(t.subjectId))
+        //                     sqlite3_bind_int(stmt, 3, Int32(t.sortOrder))
+        //                     sqlite3_step(stmt)
+        //                 }
+        //             }
+        //             sqlite3_finalize(stmt)
 
-                    let insertCardSQL = """
-                        INSERT OR IGNORE INTO vocabularies (topic_id, question, answer, hint, exercise_type)
-                        VALUES ((SELECT id FROM topics WHERE name = ? AND subject_id = ?), ?, ?, ?, ?)
-                    """
-                    if sqlite3_prepare_v2(newDb, insertCardSQL, -1, &stmt, nil) == SQLITE_OK {
-                        for c in userFlashcards {
-                            sqlite3_reset(stmt)
-                            sqlite3_bind_text(stmt, 1, (c.topicName as NSString).utf8String, -1, nil)
-                            sqlite3_bind_int(stmt, 2, Int32(c.subjectId))
-                            sqlite3_bind_text(stmt, 3, (c.question as NSString).utf8String, -1, nil)
-                            sqlite3_bind_text(stmt, 4, (c.answer as NSString).utf8String, -1, nil)
-                            sqlite3_bind_text(stmt, 5, (c.hint as NSString).utf8String, -1, nil)
-                            sqlite3_bind_text(stmt, 6, (c.exerciseType as NSString).utf8String, -1, nil)
-                            sqlite3_step(stmt)
-                        }
-                    }
-                    sqlite3_finalize(stmt)
+        //             let insertCardSQL = """
+        //                 INSERT OR IGNORE INTO vocabularies (topic_id, question, answer, hint, exercise_type)
+        //                 VALUES ((SELECT id FROM topics WHERE name = ? AND subject_id = ?), ?, ?, ?, ?)
+        //             """
+        //             if sqlite3_prepare_v2(newDb, insertCardSQL, -1, &stmt, nil) == SQLITE_OK {
+        //                 for c in userFlashcards {
+        //                     sqlite3_reset(stmt)
+        //                     sqlite3_bind_text(stmt, 1, (c.topicName as NSString).utf8String, -1, nil)
+        //                     sqlite3_bind_int(stmt, 2, Int32(c.subjectId))
+        //                     sqlite3_bind_text(stmt, 3, (c.question as NSString).utf8String, -1, nil)
+        //                     sqlite3_bind_text(stmt, 4, (c.answer as NSString).utf8String, -1, nil)
+        //                     sqlite3_bind_text(stmt, 5, (c.hint as NSString).utf8String, -1, nil)
+        //                     sqlite3_bind_text(stmt, 6, (c.exerciseType as NSString).utf8String, -1, nil)
+        //                     sqlite3_step(stmt)
+        //                 }
+        //             }
+        //             sqlite3_finalize(stmt)
 
-                    sqlite3_exec(newDb, "COMMIT", nil, nil, nil)
-                    print("✅ Restored \(userTopics.count) user topics, \(userFlashcards.count) user flashcards")
-                }
-                sqlite3_close(newDb)
-            }
-        }
+        //             sqlite3_exec(newDb, "COMMIT", nil, nil, nil)
+        //             print("✅ Restored \(userTopics.count) user topics, \(userFlashcards.count) user flashcards")
+        //         }
+        //         sqlite3_close(newDb)
+        //     }
+        // }
     }
 
     private func openDatabase() {

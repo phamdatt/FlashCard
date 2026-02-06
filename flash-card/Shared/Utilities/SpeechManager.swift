@@ -10,6 +10,27 @@ import AVFoundation
 import Combine
 import AppKit
 
+/// Mã giọng tiếng Anh có thể chọn (accent).
+enum EnglishAccent: String, CaseIterable, Identifiable {
+    case us = "en-US"
+    case gb = "en-GB"
+    case au = "en-AU"
+    case ie = "en-IE"
+    case za = "en-ZA"
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .us: return "English (US)"
+        case .gb: return "English (UK)"
+        case .au: return "English (Australia)"
+        case .ie: return "English (Ireland)"
+        case .za: return "English (South Africa)"
+        }
+    }
+}
+
+private let ttsEnglishAccentKey = "tts_english_accent"
+
 /// Shared TTS: phải giữ synthesizer trong instance, không tạo local.
 @MainActor
 final class SpeechManager: ObservableObject {
@@ -21,6 +42,17 @@ final class SpeechManager: ObservableObject {
     @Published private(set) var isSpeaking = false
     /// Khi TTS không dùng được (không có giọng), set message để UI hiện hướng dẫn.
     @Published var ttsUnavailableMessage: String?
+
+    /// Accent tiếng Anh dùng cho TTS (lưu UserDefaults).
+    var preferredEnglishAccent: EnglishAccent {
+        get {
+            let raw = UserDefaults.standard.string(forKey: ttsEnglishAccentKey) ?? EnglishAccent.gb.rawValue
+            return EnglishAccent(rawValue: raw) ?? .gb
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: ttsEnglishAccentKey)
+        }
+    }
 
     private init() {
         let holder = SpeechDelegateHolder()
@@ -38,6 +70,7 @@ final class SpeechManager: ObservableObject {
         synthesizer.stopSpeaking(at: .immediate)
         let lang = language ?? detectLanguage(t)
         let voice = AVSpeechSynthesisVoice(language: lang)
+            ?? AVSpeechSynthesisVoice(language: preferredEnglishAccent.rawValue)
             ?? AVSpeechSynthesisVoice(language: "en-US")
             ?? AVSpeechSynthesisVoice()
             ?? AVSpeechSynthesisVoice.speechVoices().first
@@ -67,7 +100,14 @@ final class SpeechManager: ObservableObject {
     private func detectLanguage(_ text: String) -> String {
         let cjk = text.unicodeScalars.contains { s in (s.value >= 0x4E00 && s.value <= 0x9FFF) }
         if cjk { return "zh-CN" }
-        return "vi-VN"
+        if looksLikeVietnamese(text) { return "vi-VN" }
+        return preferredEnglishAccent.rawValue
+    }
+
+    /// Phát hiện text có phải tiếng Việt (có ký tự đặc trưng: ă, â, đ, ê, ô, ơ, ư, dấu thanh).
+    private func looksLikeVietnamese(_ text: String) -> Bool {
+        let vietnameseChars = CharacterSet(charactersIn: "ăâđêôơưĂÂĐÊÔƠƯàáảãạèéẻẽệìíỉĩịòóỏõọùúủũụỳýỷỹỵằắẳẵặầấẩẫậờớởỡợừứửữự")
+        return text.unicodeScalars.contains { vietnameseChars.contains($0) }
     }
 }
 

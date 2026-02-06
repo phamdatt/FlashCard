@@ -50,6 +50,8 @@ class ContentViewModel: ObservableObject {
 
     // Error message for DB failures (shown as alert)
     @Published var errorMessage: String?
+    /// Thông báo sau khi sao lưu xong (sheet đã đóng, hiện alert trên màn chính).
+    @Published var backupSaveResultMessage: String?
 
     // Loading state (initial load / reload)
     @Published var isLoading = false
@@ -68,6 +70,9 @@ class ContentViewModel: ObservableObject {
 
     // Backup / Restore sheet (sidebar)
     @Published var showBackupRestoreSheet = false
+
+    // Giọng đọc tiếng Anh (TTS accent) sheet (sidebar)
+    @Published var showSpeechAccentSheet = false
 
     // Import flashcards sheet (from CSV/JSON)
     @Published var showImportFlashcardSheet = false

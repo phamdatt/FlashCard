@@ -95,28 +95,39 @@ struct BackupRestoreView: View {
 
     private func runExport() {
         isExporting = true
-        statusMessage = nil
-        guard let data = DatabaseManager.shared.exportUserData() else {
-            viewModel.errorMessage = "Không thể tạo bản sao lưu."
-            isExporting = false
-            return
+        statusMessage = "Đang tạo dữ liệu..."
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let data = DatabaseManager.shared.exportUserData() else {
+                DispatchQueue.main.async {
+                    viewModel.errorMessage = "Không thể tạo bản sao lưu."
+                    isExporting = false
+                    statusMessage = nil
+                }
+                return
+            }
+            DispatchQueue.main.async {
+                statusMessage = nil
+                // Đóng sheet trước, sau đó mới mở hộp thoại lưu (tránh runModal() từ trong sheet bị trả về Cancel).
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    showSavePanelAfterDismiss(data: data)
+                }
+            }
         }
+    }
+
+    private func showSavePanelAfterDismiss(data: Data) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = "flashcard-backup-\(dateString()).json"
         panel.title = "Lưu bản sao lưu"
-        panel.begin { response in
-            isExporting = false
-            guard response == .OK, let url = panel.url else {
-                statusMessage = "Đã huỷ."
-                return
-            }
-            do {
-                try data.write(to: url)
-                statusMessage = "Đã lưu: \(url.lastPathComponent)"
-            } catch {
-                viewModel.errorMessage = "Không thể ghi file: \(error.localizedDescription)"
-            }
+        let response = panel.runModal()
+        guard response == .OK, let url = panel.url else { return }
+        do {
+            try data.write(to: url)
+            viewModel.backupSaveResultMessage = "Đã lưu: \(url.lastPathComponent)"
+        } catch {
+            viewModel.errorMessage = "Không thể ghi file: \(error.localizedDescription)"
         }
     }
 
@@ -125,11 +136,10 @@ struct BackupRestoreView: View {
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
         panel.title = "Chọn file sao lưu"
-        panel.begin { response in
-            guard response == .OK, let url = panel.url else { return }
-            pendingImportURL = url
-            showImportConfirmation = true
-        }
+        let response = panel.runModal()
+        guard response == .OK, let url = panel.url else { return }
+        pendingImportURL = url
+        showImportConfirmation = true
     }
 
     private func performImport(from url: URL) {

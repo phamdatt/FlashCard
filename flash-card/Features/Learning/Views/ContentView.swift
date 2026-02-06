@@ -213,6 +213,39 @@ struct SidebarView: View {
                 }
                 .buttonStyle(.plain)
 
+                // Giọng đọc tiếng Anh
+                Button(action: {
+                    viewModel.showSpeechAccentSheet = true
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .scaledFont(22)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
+                        Text("Giọng đọc tiếng Anh")
+                            .scaledFont(14)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .scaledFont(10)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.tertiary)
+                            .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(nsColor: .controlBackgroundColor))
+                    )
+                }
+                .buttonStyle(.plain)
+
                 // Backup / Restore
                 Button(action: {
                     viewModel.showBackupRestoreSheet = true
@@ -1098,7 +1131,7 @@ struct FlashcardDetailView: View {
                     .font(.app(.headline))
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.green)
+                    .background(Color.blue)
                     .foregroundStyle(.white)
                     .cornerRadius(12)
             }
@@ -1128,10 +1161,14 @@ struct FlashcardDetailView: View {
         VStack(spacing: 25) {
             // Question card
             VStack(spacing: 16) {
-                Text("Câu hỏi")
-                    .font(.app(.body))
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                HStack {
+                    Text("Câu hỏi")
+                        .font(.app(.body))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    SpeakButton(text: flashcard.question, fontSize: 18)
+                }
 
                 SmartCopyDefineText(text: flashcard.question, flashcards: topic.flashcards)
                     .scaledFont(28) // title size
@@ -1447,6 +1484,16 @@ struct ContentView: View {
                 Text(msg)
             }
         }
+        .alert("Sao lưu", isPresented: Binding(
+            get: { viewModel.backupSaveResultMessage != nil },
+            set: { if !$0 { viewModel.backupSaveResultMessage = nil } }
+        )) {
+            Button("OK") { viewModel.backupSaveResultMessage = nil }
+        } message: {
+            if let msg = viewModel.backupSaveResultMessage {
+                Text(msg)
+            }
+        }
         .alert("Không thể phát âm", isPresented: Binding(
             get: { speechManager.ttsUnavailableMessage != nil },
             set: { if !$0 { speechManager.ttsUnavailableMessage = nil } }
@@ -1481,6 +1528,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $viewModel.showBackupRestoreSheet) {
             BackupRestoreView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $viewModel.showSpeechAccentSheet) {
+            SpeechAccentSheetView(onDismiss: { viewModel.showSpeechAccentSheet = false })
         }
         .onReceive(NotificationCenter.default.publisher(for: .openKeyboardShortcuts)) { _ in
             viewModel.showKeyboardShortcutsSheet = true
@@ -1565,6 +1615,48 @@ struct ContentView: View {
             }
         } else {
             columnVisibility = newVisibility
+        }
+    }
+}
+
+// MARK: - Speech Accent Sheet
+struct SpeechAccentSheetView: View {
+    var onDismiss: () -> Void
+    @ObservedObject private var speechManager = SpeechManager.shared
+    @State private var selectedAccent: EnglishAccent = .gb
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Text("Giọng đọc tiếng Anh")
+                .font(.app(.title2))
+                .fontWeight(.semibold)
+            Text("Chọn accent cho phát âm (TTS) khi nội dung là tiếng Anh.")
+                .font(.app(.subheadline))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Picker("Accent", selection: $selectedAccent) {
+                ForEach(EnglishAccent.allCases) { accent in
+                    Text(accent.displayName).tag(accent)
+                }
+            }
+            .pickerStyle(.radioGroup)
+            .labelsHidden()
+            .onChange(of: selectedAccent) { _, newValue in
+                speechManager.preferredEnglishAccent = newValue
+            }
+
+            HStack {
+                Spacer()
+                Button("Xong", action: onDismiss)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(28)
+        .frame(minWidth: 320)
+        .onAppear {
+            selectedAccent = speechManager.preferredEnglishAccent
         }
     }
 }
