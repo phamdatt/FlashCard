@@ -15,6 +15,7 @@ struct SpeedCardsPracticeView: View {
     let onReset: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var fontSizeManager: FontSizeManager
     @State private var currentIndex: Int = 0
     @State private var srsAlgorithm = SRSAlgorithm()
     @State private var isFlipped: Bool = false
@@ -121,10 +122,11 @@ struct SpeedCardsPracticeView: View {
                                 .foregroundStyle(.secondary)
 
                             SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.questionDisplayText, flashcards: flashcards)
-                                .font(.app(.title2))
+                                .scaledFont(.display)
                                 .fontWeight(.bold)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
+                                .environmentObject(fontSizeManager)
 
                             if !isFlipped, let hint = flashcard.hint, !hint.isEmpty {
                                 Button(action: {

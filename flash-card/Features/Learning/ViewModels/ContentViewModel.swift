@@ -555,6 +555,13 @@ class ContentViewModel: ObservableObject {
         }
     }
 
+    /// Gọi khi user chọn topic từ list: luôn set topic + active item = từ đầu tiên (kể cả khi chọn lại cùng topic).
+    func setSelectedTopic(_ topic: Topic?) {
+        selectedTopic = topic
+        selectedFlashcard = topic?.flashcards.first
+        selectedFlashcardIds = []
+    }
+
     func selectFlashcard(_ flashcard: Flashcard) {
         selectedFlashcard = flashcard
     }

@@ -53,15 +53,14 @@ struct SpeakingPracticeView: View {
             VStack(spacing: 8) {
                 HStack {
                     Text("Câu \(currentIndex + 1)/\(flashcards.count)")
-                        .scaledFont(.lg)
-                        .fontWeight(.semibold)
+                        .font(.app(.headline))
                     Spacer()
                     if totalAnswered > 0 {
                         HStack(spacing: 6) {
 Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.secondary)
                             Text("\(score)/\(totalAnswered)")
-                                .scaledFont(.sm)
+                                .font(.app(.subheadline))
                         }
                     }
                 }
@@ -80,11 +79,11 @@ Image(systemName: "checkmark.circle.fill")
                     .symbolEffect(.pulse, isActive: isRecording)
 
                 Text("Đọc to câu sau:")
-                    .scaledFont(.sm)
+                    .font(.app(.subheadline))
                     .foregroundStyle(.secondary)
 
                 Text(flashcard.questionDisplayText)
-                    .scaledFont(.xl3)
+                    .scaledFont(.display)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
                     .padding()
@@ -100,10 +99,10 @@ Image(systemName: "checkmark.circle.fill")
                     VStack(spacing: 12) {
                         HStack {
                             Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .scaledFont(.xl2)
+                                .font(.app(.title2))
                                 .foregroundStyle(isCorrect ? .green : .red)
                             Text(isCorrect ? "Chính xác!" : "Chưa đúng")
-                                .scaledFont(.lg)
+                                .font(.app(.title2))
                                 .fontWeight(.semibold)
                                 .foregroundStyle(isCorrect ? .green : .red)
                         }
@@ -111,10 +110,10 @@ Image(systemName: "checkmark.circle.fill")
                         if !recognizedText.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Bạn đã nói:")
-                                    .scaledFont(.xs)
+                                    .font(.app(.subheadline))
                                     .foregroundStyle(.secondary)
                                 Text(recognizedText)
-                                    .scaledFont(.sm)
+                                    .font(.app(.body))
                                     .foregroundStyle(.primary)
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -124,7 +123,7 @@ Image(systemName: "checkmark.circle.fill")
                         }
 
                         Text("Đáp án đúng: \(flashcard.answer)")
-                            .scaledFont(.sm)
+                            .font(.app(.body))
                             .foregroundStyle(.blue)
                             .padding()
                             .frame(maxWidth: .infinity)
@@ -151,7 +150,7 @@ Image(systemName: "checkmark.circle.fill")
                         Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
                             .scaledFont(.xl2)
                         Text(isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm")
-                            .scaledFont(.lg)
+                            .font(.app(.headline))
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -167,7 +166,7 @@ Image(systemName: "checkmark.circle.fill")
                     nextCard()
                 }) {
                     Label("Tiếp theo", systemImage: "arrow.right.circle.fill")
-                        .scaledFont(.lg)
+                        .font(.app(.headline))
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)

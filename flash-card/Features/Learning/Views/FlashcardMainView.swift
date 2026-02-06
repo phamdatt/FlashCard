@@ -23,19 +23,26 @@ struct FlashcardMainView: View {
     enum PracticeType: String, CaseIterable {
         case multipleChoice = "Trắc nghiệm"
         case matching = "Nối cặp"
-        case trueFalse = "Đúng/Sai"
         case speedCards = "Thẻ nhớ nhanh"
         case speaking = "Luyện nói"
         case fillInTheBlank = "Điền từ"
+        case fillInPinyin = "Điền pinyin"
+
+        /// Chỉ Tiếng Trung mới có mode Điền pinyin
+        static func availableTypes(subjectName: String?) -> [PracticeType] {
+            let all: [PracticeType] = [.multipleChoice, .matching, .speedCards, .speaking, .fillInTheBlank]
+            guard subjectName == "Tiếng Trung" else { return all }
+            return all + [.fillInPinyin]
+        }
 
         var icon: String {
             switch self {
             case .multipleChoice: return "list.bullet.circle.fill"
             case .matching: return "arrow.left.arrow.right"
-            case .trueFalse: return "checkmark.circle"
             case .speedCards: return "bolt.fill"
             case .speaking: return "mic.fill"
             case .fillInTheBlank: return "pencil.and.list.clipboard"
+            case .fillInPinyin: return "character.bubble"
             }
         }
     }
@@ -117,12 +124,19 @@ struct FlashcardMainView: View {
                     VStack(spacing: 10) {
                         HStack(spacing: 8) {
                             Picker("Kiểu", selection: $selectedPracticeType) {
-                                ForEach(PracticeType.allCases, id: \.self) { type in
+                                ForEach(PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name), id: \.self) { type in
                                     Text(type.rawValue).tag(type)
                                 }
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden()
+                            .onChange(of: viewModel.selectedSubject?.name) { _, _ in
+                                let available = PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name)
+                                if !available.contains(selectedPracticeType) {
+                                    selectedPracticeType = .multipleChoice
+                                    resetPractice()
+                                }
+                            }
                         }
 
                         HStack(spacing: 8) {
@@ -196,8 +210,12 @@ struct FlashcardMainView: View {
             }
         }
         .onChange(of: topic.id) { _, _ in
-            // Reset when topic changes
+            // Reset when topic changes; nếu không phải Tiếng Trung thì bỏ chọn Điền pinyin
             if selectedMode == .practice {
+                let available = PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name)
+                if !available.contains(selectedPracticeType) {
+                    selectedPracticeType = .multipleChoice
+                }
                 resetPractice()
             }
         }
@@ -305,7 +323,7 @@ struct FlashcardMainView: View {
                                         .foregroundStyle(.secondary)
                                 }
                                 Text(radical)
-                                    .font(.app(.subheadline))
+                                    .font(.app(.callout))
                                     .foregroundStyle(.secondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -320,7 +338,7 @@ struct FlashcardMainView: View {
                                         .foregroundStyle(.secondary)
                                 }
                                 Text(notes)
-                                    .font(.app(.subheadline))
+                                    .font(.app(.callout))
                                     .foregroundStyle(.secondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -393,7 +411,14 @@ struct FlashcardMainView: View {
                     .background(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
                     Divider()
                 }
-                if let flashcard = viewModel.selectedFlashcard {
+                if topic.flashcards.isEmpty {
+                    ContentUnavailableView(
+                        "Chưa có từ vựng",
+                        systemImage: "text.badge.plus",
+                        description: Text("Nhấn \"Thêm từ\" hoặc \"Import\" ở góc phải để thêm từ vựng vào chủ đề này.")
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let flashcard = viewModel.selectedFlashcard {
                     let radicalText: String? = viewModel.selectedSubject?.name == "Tiếng Trung" ? (flashcard.radical.flatMap { $0.isEmpty ? nil : $0 } ?? viewModel.radicalForCharacter(flashcard.questionDisplayText)) : nil
                     FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", radicalText: radicalText, onEdit: { showEditFlashcardSheet = true }, onAnswered: nil)
                 } else {
@@ -402,6 +427,7 @@ struct FlashcardMainView: View {
                         systemImage: "rectangle.portrait.on.rectangle.portrait",
                         description: Text("Chọn một hoặc nhiều flashcard để xem chi tiết hoặc xóa")
                     )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .frame(minWidth: 400)
@@ -442,19 +468,6 @@ struct FlashcardMainView: View {
                         resetPractice()
                     }
                 )
-            case .trueFalse:
-                TrueFalsePracticeView(
-                    flashcards: shuffledFlashcards,
-                    topicId: topic.id,
-                    onComplete: { correctCount, total in
-                        score = correctCount
-                        totalAnswered = total
-                    },
-                    onReset: {
-                        recordPracticeIfNeeded()
-                        resetPractice()
-                    }
-                )
             case .speedCards:
                 SpeedCardsPracticeView(
                     flashcards: shuffledFlashcards,
@@ -483,6 +496,19 @@ struct FlashcardMainView: View {
                 )
             case .fillInTheBlank:
                 FillInTheBlankView(
+                    flashcards: shuffledFlashcards,
+                    topicId: topic.id,
+                    onComplete: { correctCount, total in
+                        score = correctCount
+                        totalAnswered = total
+                    },
+                    onReset: {
+                        recordPracticeIfNeeded()
+                        resetPractice()
+                    }
+                )
+            case .fillInPinyin:
+                PinyinPracticeView(
                     flashcards: shuffledFlashcards,
                     topicId: topic.id,
                     onComplete: { correctCount, total in
@@ -564,9 +590,13 @@ struct FlashcardMainView: View {
         totalAnswered > 0 ? Int((Double(score) / Double(totalAnswered)) * 100) : 0
     }
 
-    /// Count of cards to review for selected source
+    /// Count of cards to review for selected source (for Điền pinyin: only cards that have pinyin)
     private var practicePoolCount: Int {
-        practicePool().count
+        let pool = practicePool()
+        if selectedPracticeType == .fillInPinyin {
+            return pool.filter(\.hasPinyin).count
+        }
+        return pool.count
     }
 
     /// Suggested review counts by topic size
@@ -598,7 +628,10 @@ struct FlashcardMainView: View {
     }
 
     private func startPractice() {
-        let pool = practicePool()
+        var pool = practicePool()
+        if selectedPracticeType == .fillInPinyin {
+            pool = pool.filter(\.hasPinyin)
+        }
         let countToUse = min(selectedWordCount, pool.count)
 
         shuffledFlashcards = Array(pool.shuffled().prefix(countToUse))

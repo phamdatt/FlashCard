@@ -85,6 +85,19 @@ struct Flashcard: Identifiable, Hashable, Codable {
         return beforeParen
     }
 
+    /// Pinyin extracted from question if present, e.g. "你好 (nǐ hǎo)" → "nǐ hǎo". Nil if no parenthesized suffix.
+    var pinyinFromQuestion: String? {
+        let s = question.trimmingCharacters(in: .whitespaces)
+        guard let lastClose = s.lastIndex(of: ")") else { return nil }
+        let beforeClose = s[..<lastClose]
+        guard let lastOpen = beforeClose.lastIndex(of: "(") else { return nil }
+        let pinyin = String(s[s.index(after: lastOpen)..<lastClose]).trimmingCharacters(in: .whitespaces)
+        return pinyin.isEmpty ? nil : pinyin
+    }
+
+    /// True if this flashcard has pinyin in question (for Điền pinyin mode).
+    var hasPinyin: Bool { pinyinFromQuestion != nil }
+
     init(id: Int = 0, question: String, answer: String, hint: String? = nil, options: [String]? = nil, correctAnswer: String? = nil, exerciseType: String = Flashcard.exerciseTypeLabel, notes: String? = nil, radical: String? = nil) {
         self.id = id
         self.question = question

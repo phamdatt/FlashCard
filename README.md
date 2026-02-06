@@ -46,8 +46,7 @@ flash-card/
 │   │   │   └── Views/
 │   │   │       ├── MatchingPracticeView.swift
 │   │   │       ├── PracticeCompletedView.swift
-│   │   │       ├── SpeedCardsPracticeView.swift
-│   │   │       └── TrueFalsePracticeView.swift
+│   │   │       └── SpeedCardsPracticeView.swift
 │   │   ├── FillInTheBlank/
 │   │   │   └── Views/
 │   │   │       └── FillInTheBlankView.swift

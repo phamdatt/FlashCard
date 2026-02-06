@@ -125,7 +125,7 @@ Image(systemName: "checkmark.circle.fill")
             }
         }) {
             SmartCopyDefineText(text: flashcard.questionDisplayText, flashcards: flashcards)
-                .scaledFont(.sm)
+                .scaledFont(.xl2)
                 .fontWeight(.medium)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
@@ -160,7 +160,7 @@ Image(systemName: "checkmark.circle.fill")
             }
         }) {
             SmartCopyDefineText(text: answer, flashcards: flashcards)
-                .scaledFont(.sm)
+                .scaledFont(.xl2)
                 .fontWeight(.medium)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)

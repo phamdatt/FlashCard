@@ -439,9 +439,16 @@ struct TopicsListView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List(filteredTopics, selection: $viewModel.selectedTopic) { topic in
+            List(filteredTopics, selection: Binding(
+                get: { viewModel.selectedTopic },
+                set: { viewModel.setSelectedTopic($0) }
+            )) { topic in
                 TopicRowView(topic: topic, subject: subject, practiceCount: viewModel.topicPracticeCounts[topic.id] ?? 0, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light) {
                     viewModel.topicToDelete = topic
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    viewModel.setSelectedTopic(topic)
                 }
             }
             .listStyle(.plain)
@@ -1064,7 +1071,7 @@ struct HintExpandableBox: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                         SmartCopyDefineText(text: fromGoc, flashcards: flashcards)
-                            .font(.app(.body))
+                            .font(.app(.callout))
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .environmentObject(fontSizeManager)
                         if let radical = radicalText, !radical.isEmpty {
@@ -1073,7 +1080,7 @@ struct HintExpandableBox: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
                             Text(radical)
-                                .font(.app(.body))
+                                .font(.app(.callout))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -1083,7 +1090,7 @@ struct HintExpandableBox: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.green)
                             SmartCopyDefineText(text: hint, flashcards: flashcards)
-                                .font(.app(.body))
+                                .font(.app(.callout))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .environmentObject(fontSizeManager)
@@ -1094,7 +1101,7 @@ struct HintExpandableBox: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
                             SmartCopyDefineText(text: notes, flashcards: flashcards)
-                                .font(.app(.body))
+                                .font(.app(.callout))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .environmentObject(fontSizeManager)
@@ -1550,7 +1557,7 @@ struct FlashcardDetailView: View {
                 .fontWeight(.medium)
                 .foregroundStyle(.tertiary)
             Text(value)
-                .scaledFont(.sm)
+                .scaledFont(.base)
                 .foregroundStyle(.secondary)
         }
     }
