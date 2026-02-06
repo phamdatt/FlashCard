@@ -427,8 +427,7 @@ class DatabaseManager {
             let answer = String(cString: sqlite3_column_text(stmt, 2))
             let hint: String? = sqlite3_column_text(stmt, 3).map { String(cString: $0) }
             let exerciseTypeStr = String(cString: sqlite3_column_text(stmt, 4))
-
-            let exerciseType = ExerciseType(rawValue: exerciseTypeStr) ?? .englishToVietnamese
+            let exerciseType = exerciseTypeStr.isEmpty ? Flashcard.exerciseTypeLabel : exerciseTypeStr
 
             flashcards.append(Flashcard(
                 id: id,
@@ -516,7 +515,7 @@ class DatabaseManager {
         sqlite3_bind_text(stmt, 2, (card.question as NSString).utf8String, -1, nil)
         sqlite3_bind_text(stmt, 3, (card.answer as NSString).utf8String, -1, nil)
         sqlite3_bind_text(stmt, 4, ((card.hint ?? "") as NSString).utf8String, -1, nil)
-        sqlite3_bind_text(stmt, 5, (card.exerciseType.rawValue as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 5, (card.exerciseType as NSString).utf8String, -1, nil)
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
@@ -635,7 +634,7 @@ class DatabaseManager {
         while sqlite3_step(stmt) == SQLITE_ROW {
             let topicId = Int(sqlite3_column_int(stmt, 0))
             let name = String(cString: sqlite3_column_text(stmt, 1))
-            let flashcards = loadFlashcards(for: topicId).map { ExportFlashcard(question: $0.question, answer: $0.answer, hint: $0.hint, exerciseType: $0.exerciseType.rawValue) }
+            let flashcards = loadFlashcards(for: topicId).map { ExportFlashcard(question: $0.question, answer: $0.answer, hint: $0.hint, exerciseType: $0.exerciseType) }
             let readings: [ExportReading] = isReading ? loadReadings(for: topicId).map { ExportReading(title: $0.title, content: $0.content) } : []
             result.append(ExportTopic(name: name, flashcards: flashcards, readings: readings))
         }
@@ -654,9 +653,8 @@ class DatabaseManager {
                 let newTopic = Topic(name: exportTopic.name, subjectId: exportSubj.id, flashcards: [], readings: [])
                 let newTopicId = try insertTopic(newTopic)
                 for card in exportTopic.flashcards {
-                    let ex = ExerciseType(rawValue: card.exerciseType) ?? .chineseToVietnamese
                     let hintVal = (card.hint ?? "").isEmpty ? nil : card.hint
-                    let f = Flashcard(question: card.question, answer: card.answer, hint: hintVal, exerciseType: ex)
+                    let f = Flashcard(question: card.question, answer: card.answer, hint: hintVal, exerciseType: Flashcard.exerciseTypeLabel)
                     try insertFlashcard(f, topicId: newTopicId)
                 }
                 for reading in exportTopic.readings {
@@ -731,6 +729,20 @@ class DatabaseManager {
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
+    }
+
+    /// Number of practice sessions recorded for a topic. Used for "Đã làm" / "Chưa làm" status.
+    func getPracticeSessionCount(topicId: Int) -> Int {
+        guard db != nil else { return 0 }
+        let sql = "SELECT COUNT(*) FROM practice_sessions WHERE topic_id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return 0 }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int(stmt, 1, Int32(topicId))
+        if sqlite3_step(stmt) == SQLITE_ROW {
+            return Int(sqlite3_column_int(stmt, 0))
+        }
+        return 0
     }
 
     /// Streak info (consecutive days, record, studied today) from practice_sessions.

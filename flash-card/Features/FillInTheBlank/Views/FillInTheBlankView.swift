@@ -210,9 +210,9 @@ Image(systemName: "checkmark.circle.fill")
     }
 
     private func createQuestionWithBlank(flashcard: Flashcard) -> String {
-        // Replace answer with blank
+        // Replace answer with blank (display 汉字 only)
         let answer = flashcard.answer
-        let question = flashcard.question
+        let question = flashcard.questionDisplayText
         
         // Try to find answer in question and replace with blank
         if let range = question.range(of: answer, options: .caseInsensitive) {

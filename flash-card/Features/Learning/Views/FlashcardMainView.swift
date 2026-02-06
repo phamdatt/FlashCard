@@ -52,6 +52,7 @@ struct FlashcardMainView: View {
     /// Source: all cards or only unlearned (for large topics)
     @State private var practiceSource: PracticeSource = .all
     @State private var showEditFlashcardSheet: Bool = false
+    @State private var showDeleteMultipleFlashcardsConfirmation: Bool = false
 
     enum PracticeSource: String, CaseIterable {
         case all = "Tất cả"
@@ -229,17 +230,36 @@ struct FlashcardMainView: View {
                 Text("Từ \"\(fc.question)\" sẽ bị xóa. Không thể hoàn tác.")
             }
         }
+        .confirmationDialog("Xóa từ vựng đã chọn?", isPresented: $showDeleteMultipleFlashcardsConfirmation, titleVisibility: .visible) {
+            Button("Xóa", role: .destructive) {
+                viewModel.deleteSelectedFlashcards(topicId: topic.id)
+                showDeleteMultipleFlashcardsConfirmation = false
+            }
+            Button("Huỷ", role: .cancel) {
+                showDeleteMultipleFlashcardsConfirmation = false
+            }
+        } message: {
+            let n = viewModel.selectedFlashcardIds.count
+            Text("\(n) từ vựng sẽ bị xóa. Không thể hoàn tác.")
+        }
+    }
+    
+    private var flashcardListSelection: Binding<Set<Flashcard>> {
+        Binding(
+            get: { Set(topic.flashcards.filter { viewModel.selectedFlashcardIds.contains($0.id) }) },
+            set: { viewModel.setSelectedFlashcards($0) }
+        )
     }
     
     // List mode view
     private var listView: some View {
         HSplitView {
-            List(topic.flashcards, selection: $viewModel.selectedFlashcard) { flashcard in
+            List(topic.flashcards, selection: flashcardListSelection) { flashcard in
                 ZStack(alignment: .topTrailing) {
                     // Main content
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 4) {
-                            Text(flashcard.exerciseType.rawValue)
+                            Text(Flashcard.exerciseTypeLabel)
                                 .scaledFont(.xs)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
@@ -260,11 +280,22 @@ struct FlashcardMainView: View {
                             .padding(.trailing, 32) // Space for icons
 
                         if let hint = flashcard.hint, !hint.isEmpty {
-                            Text("💡 \(hint)")
-                                .font(.app(.footnote))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .padding(.trailing, 32) // Space for icons
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "lightbulb.fill")
+                                        .font(.app(.footnote))
+                                        .foregroundStyle(.green)
+                                    Text("Gợi ý")
+                                        .font(.app(.footnote))
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text(hint)
+                                    .font(.app(.footnote))
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.trailing, 32)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -311,15 +342,37 @@ struct FlashcardMainView: View {
             .listStyle(.plain)
             .tint(.green)
             
-            if let flashcard = viewModel.selectedFlashcard {
-                FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", onEdit: { showEditFlashcardSheet = true }, onAnswered: nil)
-            } else {
-                ContentUnavailableView(
-                    "Chọn một flashcard",
-                    systemImage: "rectangle.portrait.on.rectangle.portrait",
-                    description: Text("Chọn một flashcard để xem chi tiết")
-                )
+            VStack(spacing: 0) {
+                if !viewModel.selectedFlashcardIds.isEmpty {
+                    HStack {
+                        Text("\(viewModel.selectedFlashcardIds.count) thẻ đã chọn")
+                            .scaledFont(.sm)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button(role: .destructive) {
+                            showDeleteMultipleFlashcardsConfirmation = true
+                        } label: {
+                            Label("Xóa \(viewModel.selectedFlashcardIds.count) thẻ", systemImage: "trash")
+                                .scaledFont(.sm)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
+                    Divider()
+                }
+                if let flashcard = viewModel.selectedFlashcard {
+                    FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", radicalText: viewModel.selectedSubject?.name == "Tiếng Trung" ? viewModel.radicalForCharacter(flashcard.questionDisplayText) : nil, onEdit: { showEditFlashcardSheet = true }, onAnswered: nil)
+                } else {
+                    ContentUnavailableView(
+                        "Chọn một flashcard",
+                        systemImage: "rectangle.portrait.on.rectangle.portrait",
+                        description: Text("Chọn một hoặc nhiều flashcard để xem chi tiết hoặc xóa")
+                    )
+                }
             }
+            .frame(minWidth: 400)
         }
     }
     
@@ -427,7 +480,7 @@ struct FlashcardMainView: View {
 
                         Spacer()
 
-                        Text(flashcard.exerciseType.rawValue)
+                        Text(Flashcard.exerciseTypeLabel)
                             .font(.app(.subheadline))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
@@ -445,6 +498,7 @@ struct FlashcardMainView: View {
                     flashcard: flashcard,
                     topic: topic,
                     subjectName: viewModel.selectedSubject?.name ?? "",
+                    radicalText: viewModel.selectedSubject?.name == "Tiếng Trung" ? viewModel.radicalForCharacter(flashcard.questionDisplayText) : nil,
                     onEdit: nil,
                     onAnswered: { isCorrect in
                         handleAnswer(isCorrect: isCorrect)

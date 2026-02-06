@@ -56,19 +56,34 @@ struct ReadingPassage: Identifiable, Hashable, Codable {
 }
 
 struct Flashcard: Identifiable, Hashable, Codable {
+    static let exerciseTypeLabel = "Từ vựng"
+
     let id: Int
     let question: String
     let answer: String
     let hint: String?
     let options: [String]?
     let correctAnswer: String?
-    let exerciseType: ExerciseType
+    let exerciseType: String
 
     var isMultipleChoice: Bool {
         options != nil && correctAnswer != nil
     }
 
-    init(id: Int = 0, question: String, answer: String, hint: String? = nil, options: [String]? = nil, correctAnswer: String? = nil, exerciseType: ExerciseType) {
+    /// Question text for display: only 汉字 (hán tự), with trailing "(pinyin)" removed.
+    var questionDisplayText: String {
+        let s = question.trimmingCharacters(in: .whitespaces)
+        guard let lastClose = s.lastIndex(of: ")") else { return s }
+        let beforeClose = s[..<lastClose]
+        guard let lastOpen = beforeClose.lastIndex(of: "(") else { return s }
+        let beforeParen = s[..<lastOpen].trimmingCharacters(in: .whitespaces)
+        if beforeParen.hasSuffix(" ") {
+            return beforeParen.trimmingCharacters(in: .whitespaces)
+        }
+        return beforeParen
+    }
+
+    init(id: Int = 0, question: String, answer: String, hint: String? = nil, options: [String]? = nil, correctAnswer: String? = nil, exerciseType: String = Flashcard.exerciseTypeLabel) {
         self.id = id
         self.question = question
         self.answer = answer
@@ -77,13 +92,4 @@ struct Flashcard: Identifiable, Hashable, Codable {
         self.correctAnswer = correctAnswer
         self.exerciseType = exerciseType
     }
-}
-
-enum ExerciseType: String, Hashable, Codable {
-    case englishToVietnamese = "Dịch Anh → Việt"
-    case chineseToVietnamese = "Dịch Trung → Việt"
-    case vietnameseToEnglish = "Dịch Việt → Anh"
-    case fillInTheBlank = "Điền từ vào chỗ trống"
-    case chooseCorrectWord = "Chọn từ đúng"
-    case matchMeaning = "Ghép nghĩa"
 }

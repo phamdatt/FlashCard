@@ -31,6 +31,8 @@ class ContentViewModel: ObservableObject {
     @Published var selectedSubject: Subject?
     @Published var selectedTopic: Topic?
     @Published var selectedFlashcard: Flashcard?
+    /// Multiple selection in flashcard list (IDs). Syncs to selectedFlashcard = first when set.
+    @Published var selectedFlashcardIds: Set<Int> = []
 
     // Search
     @Published var searchText = ""
@@ -70,6 +72,11 @@ class ContentViewModel: ObservableObject {
 
     // Loading state (initial load / reload)
     @Published var isLoading = false
+
+    /// Practice session count per topic id (for "Đã làm" / "Chưa làm" badge).
+    @Published var topicPracticeCounts: [Int: Int] = [:]
+    /// Radical (部首) lookup for Tiếng Trung: character (汉字) -> bộ thủ. Built from topic "部首" under subject "Tiếng Trung".
+    @Published var radicalLookup: [String: String] = [:]
 
     // Undo delete: show banner and allow restore within a few seconds
     enum UndoableItem {
@@ -251,7 +258,7 @@ class ContentViewModel: ObservableObject {
                 hint: trimmedHint.isEmpty ? nil : trimmedHint,
                 options: nil,
                 correctAnswer: nil,
-                exerciseType: .chineseToVietnamese
+                exerciseType: Flashcard.exerciseTypeLabel
             )
             
             do {
@@ -441,6 +448,7 @@ class ContentViewModel: ObservableObject {
             selectedTopic = selectedSubject?.topics.first(where: { $0.id == tId })
         }
 
+        selectedFlashcardIds.remove(flashcard.id)
         if selectedFlashcard?.id == flashcard.id {
             selectedFlashcard = selectedTopic?.flashcards.first
         }
@@ -482,9 +490,30 @@ class ContentViewModel: ObservableObject {
 
     func loadLearningData() {
         subjects = database.loadAllSubjects()
+        var counts: [Int: Int] = [:]
+        var radicals: [String: String] = [:]
+        for subject in subjects {
+            for topic in subject.topics {
+                counts[topic.id] = database.getPracticeSessionCount(topicId: topic.id)
+                if subject.name == "Tiếng Trung" && (topic.name == "部首" || topic.name == "Bộ thủ") {
+                    for fc in topic.flashcards {
+                        radicals[fc.questionDisplayText] = fc.answer
+                    }
+                }
+            }
+        }
+        topicPracticeCounts = counts
+        radicalLookup = radicals
         if selectedSubject == nil, let first = subjects.first {
             selectSubject(first)
         }
+    }
+
+    /// Bộ thủ (部首) for character when subject is Tiếng Trung and topic 部首 exists. Returns nil otherwise.
+    func radicalForCharacter(_ character: String) -> String? {
+        let key = character.trimmingCharacters(in: .whitespaces)
+        if key.isEmpty { return nil }
+        return radicalLookup[key]
     }
 
     func selectSubject(_ subject: Subject) {
@@ -509,9 +538,11 @@ class ContentViewModel: ObservableObject {
             // Select first topic only if current topic not in new subject
             selectedTopic = firstTopic
             selectedFlashcard = firstTopic.flashcards.first
+            selectedFlashcardIds = []
         } else {
             selectedTopic = nil
             selectedFlashcard = nil
+            selectedFlashcardIds = []
         }
     }
 
@@ -520,11 +551,38 @@ class ContentViewModel: ObservableObject {
         if selectedTopic?.id != topic.id {
             selectedTopic = topic
             selectedFlashcard = topic.flashcards.first
+            selectedFlashcardIds = []
         }
     }
 
     func selectFlashcard(_ flashcard: Flashcard) {
         selectedFlashcard = flashcard
+    }
+
+    /// Updates multi-selection from list; also sets selectedFlashcard to first.
+    func setSelectedFlashcards(_ flashcards: Set<Flashcard>) {
+        selectedFlashcardIds = Set(flashcards.map(\.id))
+        selectedFlashcard = flashcards.first
+    }
+
+    /// Deletes all flashcards whose ids are in selectedFlashcardIds (call from current topic). Clears selection after.
+    func deleteSelectedFlashcards(topicId: Int) {
+        let ids = selectedFlashcardIds
+        guard !ids.isEmpty else { return }
+        do {
+            for id in ids {
+                try database.deleteFlashcard(id: id)
+            }
+            selectedFlashcardIds = []
+            selectedFlashcard = nil
+            loadLearningData()
+            if let topic = selectedSubject?.topics.first(where: { $0.id == topicId }) {
+                selectedTopic = topic
+                selectedFlashcard = topic.flashcards.first
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     // MARK: - Streak
@@ -545,6 +603,7 @@ class ContentViewModel: ObservableObject {
             correct: correct,
             total: total
         )
+        topicPracticeCounts[topicId] = (topicPracticeCounts[topicId] ?? 0) + 1
         loadStreakInfo()
     }
 }

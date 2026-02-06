@@ -184,7 +184,7 @@ struct ImportFlashcardSheet: View {
                 question: q,
                 answer: a,
                 hint: row.hint?.isEmpty == false ? row.hint : nil,
-                exerciseType: .chineseToVietnamese
+                exerciseType: Flashcard.exerciseTypeLabel
             )
             do {
                 try DatabaseManager.shared.insertFlashcard(card, topicId: topic.id)

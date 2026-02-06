@@ -468,7 +468,7 @@ struct FlashcardReviewView: View {
 
     private func questionSide(flashcard: Flashcard) -> some View {
         VStack(spacing: 16) {
-            Text(flashcard.question)
+            Text(flashcard.questionDisplayText)
                 .scaledFont(.xl3)
                 .fontWeight(.medium)
                 .multilineTextAlignment(.center)

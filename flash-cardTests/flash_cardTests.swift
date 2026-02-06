@@ -25,7 +25,7 @@ struct DatabaseManagerTests {
             hint: nil,
             options: nil,
             correctAnswer: nil,
-            exerciseType: .englishToVietnamese
+            exerciseType: Flashcard.exerciseTypeLabel
         )
         try db.insertFlashcard(card, topicId: topicId)
 
@@ -43,7 +43,7 @@ struct DatabaseManagerTests {
         let db = DatabaseManager(inMemoryForTesting: true)
         let topic = Topic(name: "T", subjectId: 1, flashcards: [], readings: [])
         let topicId = try db.insertTopic(topic)
-        let card = Flashcard(question: "Q", answer: "A", hint: nil, options: nil, correctAnswer: nil, exerciseType: .chineseToVietnamese)
+        let card = Flashcard(question: "Q", answer: "A", hint: nil, options: nil, correctAnswer: nil, exerciseType: Flashcard.exerciseTypeLabel)
         try db.insertFlashcard(card, topicId: topicId)
 
         let subjectsBefore = db.loadAllSubjects()

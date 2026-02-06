@@ -83,7 +83,7 @@ Image(systemName: "checkmark.circle.fill")
                     .scaledFont(.sm)
                     .foregroundStyle(.secondary)
 
-                Text(flashcard.question)
+                Text(flashcard.questionDisplayText)
                     .scaledFont(.xl3)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)

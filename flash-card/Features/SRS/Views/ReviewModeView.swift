@@ -132,7 +132,7 @@ struct ReviewModeView: View {
                     VStack(spacing: 0) {
                         // Question Section
                         VStack(spacing: 20) {
-                            Text(flashcard.question)
+                            Text(flashcard.questionDisplayText)
                                 .scaledFont(.xl3)
                                 .fontWeight(.medium)
                                 .multilineTextAlignment(.center)

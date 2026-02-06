@@ -23,6 +23,7 @@ struct SpeedCardsPracticeView: View {
     @State private var timeRemaining: Double = 10
     @State private var timer: Timer?
     @State private var showSummary: Bool = false
+    @State private var hintExpanded: Bool = false
 
     private let totalTime: Double = 10
 
@@ -38,6 +39,7 @@ struct SpeedCardsPracticeView: View {
         } else if currentIndex < flashcards.count {
             cardView
                 .id(currentIndex)
+                .onChange(of: currentIndex) { _, _ in hintExpanded = false }
         } else {
             summaryView
                 .onAppear {
@@ -118,18 +120,42 @@ struct SpeedCardsPracticeView: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
 
-                            SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.question, flashcards: flashcards)
+                            SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.questionDisplayText, flashcards: flashcards)
                                 .font(.app(.title2))
                                 .fontWeight(.bold)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
 
-                            if !isFlipped, let hint = flashcard.hint {
-                                SmartCopyDefineText(text: hint, flashcards: flashcards)
-                                    .font(.app(.subheadline))
-                                    .foregroundStyle(.secondary)
-                                    .italic()
-                                    .padding(.horizontal)
+                            if !isFlipped, let hint = flashcard.hint, !hint.isEmpty {
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.2)) { hintExpanded.toggle() }
+                                }) {
+                                    VStack(alignment: .leading, spacing: hintExpanded ? 8 : 0) {
+                                        if hintExpanded {
+                                            Text("Từ gốc: \(flashcard.question)")
+                                                .font(.app(.subheadline))
+                                                .foregroundStyle(.secondary)
+                                            Text("Gợi ý: \(hint)")
+                                                .font(.app(.subheadline))
+                                                .foregroundStyle(.secondary)
+                                                .italic()
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        } else {
+                                            HStack(spacing: 6) {
+                                                Image(systemName: "lightbulb.fill")
+                                                    .foregroundStyle(.green)
+                                                Text("Gợi ý")
+                                                    .font(.app(.subheadline))
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(12)
+                                    .background(Color.green.opacity(colorScheme == .light ? 0.1 : 0.15))
+                                    .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding(30)

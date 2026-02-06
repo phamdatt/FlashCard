@@ -110,7 +110,7 @@ struct TrueFalsePracticeView: View {
                                 .tracking(0.5)
                         }
                         
-                        SmartCopyDefineText(text: flashcard.question, flashcards: flashcards)
+                        SmartCopyDefineText(text: flashcard.questionDisplayText, flashcards: flashcards)
                             .scaledFont(.xl3)
                             .fontWeight(.semibold)
                             .multilineTextAlignment(.center)

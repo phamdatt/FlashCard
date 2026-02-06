@@ -392,7 +392,7 @@ struct TopicsListView: View {
                                     Text(pair.topic.name)
                                         .scaledFont(.xs)
                                         .foregroundStyle(.secondary)
-                                    Text(pair.flashcard.question)
+                                    Text(pair.flashcard.questionDisplayText)
                                         .scaledFont(.sm)
                                         .fontWeight(.medium)
                                         .foregroundStyle(.primary)
@@ -424,7 +424,7 @@ struct TopicsListView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List(filteredTopics, selection: $viewModel.selectedTopic) { topic in
-                TopicRowView(topic: topic, subject: subject, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light) {
+                TopicRowView(topic: topic, subject: subject, practiceCount: viewModel.topicPracticeCounts[topic.id] ?? 0, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light) {
                     viewModel.topicToDelete = topic
                 }
             }
@@ -512,11 +512,13 @@ Label("Thêm chủ đề", systemImage: "plus.circle.fill")
 private struct TopicRowView: View {
     let topic: Topic
     let subject: Subject
+    let practiceCount: Int
     let isSelected: Bool
     let isLight: Bool
     let onDelete: () -> Void
 
     private var isReadingSubject: Bool { subject.name == "Bài đọc" }
+    private var hasPracticed: Bool { practiceCount > 0 }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -539,6 +541,12 @@ private struct TopicRowView: View {
                         .scaledFont(.xs)
                     Text(isReadingSubject ? "\(topic.readings.count) bài đọc" : "\(topic.flashcards.count) flashcards")
                         .scaledFont(.sm)
+                    Text("•")
+                        .scaledFont(.xs)
+                        .foregroundStyle(.secondary)
+                    Text(hasPracticed ? "Đã làm" : "Chưa làm")
+                        .scaledFont(.xs)
+                        .foregroundStyle(hasPracticed ? .green : .secondary)
                 }
                 .foregroundStyle(.secondary)
             }
@@ -1015,11 +1023,82 @@ struct EditFlashcardSheet: View {
     }
 }
 
+// Hint box: tap box to expand/collapse, no disclosure button. Shows từ gốc + gợi ý (+ bộ thủ when Tiếng Trung) when expanded.
+struct HintExpandableBox: View {
+    @Binding var expanded: Bool
+    let fromGoc: String
+    let hint: String
+    let flashcards: [Flashcard]
+    var radicalText: String? = nil
+    var compact: Bool = false
+    @EnvironmentObject var fontSizeManager: FontSizeManager
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let isLight = colorScheme == .light
+        Button(action: {
+            withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() }
+        }) {
+            VStack(alignment: .leading, spacing: expanded ? 12 : 0) {
+                if expanded {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Từ gốc")
+                            .font(.app(.caption))
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                        SmartCopyDefineText(text: fromGoc, flashcards: flashcards)
+                            .font(compact ? .app(.body) : .app(.body))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .environmentObject(fontSizeManager)
+                        if let radical = radicalText, !radical.isEmpty {
+                            Text("Bộ thủ")
+                                .font(.app(.caption))
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
+                            Text(radical)
+                                .font(compact ? .app(.subheadline) : .app(.body))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if !hint.isEmpty {
+                            Text("Gợi ý")
+                                .font(.app(.caption))
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.green)
+                            SmartCopyDefineText(text: hint, flashcards: flashcards)
+                                .font(compact ? .app(.subheadline) : .app(.body))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .environmentObject(fontSizeManager)
+                        }
+                    }
+                    .padding()
+                } else {
+                    HStack(spacing: 8) {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundStyle(.green)
+                        Text("Gợi ý")
+                            .font(.app(.headline))
+                            .foregroundStyle(.green)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.green.opacity(isLight ? 0.1 : 0.15))
+            .cornerRadius(8)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // Flashcard Detail View
 struct FlashcardDetailView: View {
     let flashcard: Flashcard
     let topic: Topic
     let subjectName: String
+    var radicalText: String? = nil
     var onEdit: (() -> Void)? = nil
     let onAnswered: ((Bool) -> Void)?  // Callback for practice mode
 
@@ -1029,6 +1108,7 @@ struct FlashcardDetailView: View {
     @State private var selectedAnswer: String? = nil
     @State private var showResult = false
     @State private var nextReviewDateString: String? = nil
+    @State private var hintExpanded = false
 
     private static var nextReviewFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -1118,7 +1198,7 @@ struct FlashcardDetailView: View {
                         SpeakButton(text: isFlipped ? flashcard.answer : flashcard.question, fontSize: 18)
                     }
 
-                    SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.question, flashcards: topic.flashcards)
+                    SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.questionDisplayText, flashcards: topic.flashcards)
                         .scaledFont(.xl3)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
@@ -1129,6 +1209,11 @@ struct FlashcardDetailView: View {
             }
             .frame(minHeight: 250)
             .padding()
+            
+            // Hint box: tap to expand/collapse (từ gốc + bộ thủ + gợi ý). Hiện khi có hint hoặc có bộ thủ (Tiếng Trung).
+            if (flashcard.hint != nil && !(flashcard.hint?.isEmpty ?? true)) || (radicalText != nil && !(radicalText?.isEmpty ?? true)) {
+                HintExpandableBox(expanded: $hintExpanded, fromGoc: flashcard.question, hint: flashcard.hint ?? "", flashcards: topic.flashcards, radicalText: radicalText)
+            }
             
             // Flip button
             Button(action: {
@@ -1147,22 +1232,6 @@ struct FlashcardDetailView: View {
             .buttonStyle(.plain)
             .padding(.horizontal)
             .accessibilityHint(isFlipped ? "Lật thẻ để xem lại câu hỏi" : "Lật thẻ để xem đáp án")
-            
-            // Hint section
-            if let hint = flashcard.hint {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Gợi ý", systemImage: "lightbulb.fill")
-                        .font(.app(.headline))
-                        .foregroundStyle(.orange)
-                    
-                    SmartCopyDefineText(text: hint, flashcards: topic.flashcards)
-                        .font(.app(.body))
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.orange.opacity(0.1))
-                        .cornerRadius(8)
-                }
-            }
         }
     }
     
@@ -1180,7 +1249,7 @@ struct FlashcardDetailView: View {
                     SpeakButton(text: flashcard.question, fontSize: 24)
                 }
 
-                SmartCopyDefineText(text: flashcard.question, flashcards: topic.flashcards)
+                SmartCopyDefineText(text: flashcard.questionDisplayText, flashcards: topic.flashcards)
                     .scaledFont(.display)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
@@ -1196,20 +1265,9 @@ struct FlashcardDetailView: View {
             )
             .cornerRadius(16)
             
-            // Hint section
-            if let hint = flashcard.hint, !showResult {
-                HStack(spacing: 8) {
-                    Image(systemName: "lightbulb.fill")
-                        .scaledFont(.xl2)
-                        .foregroundStyle(.orange)
-                    SmartCopyDefineText(text: hint, flashcards: topic.flashcards)
-                        .scaledFont(.base)
-                        .foregroundStyle(.secondary)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color.orange.opacity(0.1))
-                .cornerRadius(8)
+            // Hint box: tap to expand/collapse (từ gốc + bộ thủ + gợi ý). Hiện khi có hint hoặc có bộ thủ (Tiếng Trung).
+            if ((flashcard.hint != nil && !(flashcard.hint?.isEmpty ?? true)) || (radicalText != nil && !(radicalText?.isEmpty ?? true))) && !showResult {
+                HintExpandableBox(expanded: $hintExpanded, fromGoc: flashcard.question, hint: flashcard.hint ?? "", flashcards: topic.flashcards, radicalText: radicalText, compact: true)
             }
             
             // Options
@@ -1378,6 +1436,25 @@ struct FlashcardDetailView: View {
                         .scaledFont(.lg)
                         .foregroundStyle(.secondary)
                         .environmentObject(fontSizeManager)
+                    
+                    if (flashcard.hint != nil && !(flashcard.hint?.isEmpty ?? true)) || (radicalText != nil && !(radicalText?.isEmpty ?? true)) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Từ gốc: \(flashcard.question)")
+                                .scaledFont(.sm)
+                                .foregroundStyle(.secondary)
+                            if let radical = radicalText, !radical.isEmpty {
+                                Text("Bộ thủ: \(radical)")
+                                    .scaledFont(.sm)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let hint = flashcard.hint, !hint.isEmpty {
+                                Text("Gợi ý: \(hint)")
+                                    .scaledFont(.sm)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
                 }
                 
                 Spacer()

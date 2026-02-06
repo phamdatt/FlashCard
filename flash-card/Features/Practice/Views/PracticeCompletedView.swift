@@ -145,7 +145,7 @@ struct PracticeCompletedView: View {
                         ForEach(unknownCards) { card in
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(card.question)
+                                    Text(card.questionDisplayText)
                                         .font(.app(.subheadline))
                                         .fontWeight(.semibold)
                                     Text(card.answer)
@@ -170,28 +170,21 @@ struct PracticeCompletedView: View {
 
                 VStack(spacing: 12) {
                     Button(action: onContinue) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .scaledFont(.xl2)
                             Text("Tiếp tục học tập")
-                                .fontWeight(.bold)
-                            Image(systemName: "arrow.right")
+                                .scaledFont(.lg)
                                 .fontWeight(.semibold)
                         }
-                        .font(.app(.title3))
+                        .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .padding(.horizontal, 32)
-                        .frame(maxWidth: 280)
-                        .background(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .background(Color.blue)
                         .foregroundStyle(.white)
-                        .cornerRadius(16)
-                        .shadow(color: .blue.opacity(0.4), radius: 12, x: 0, y: 6)
+                        .cornerRadius(12)
                     }
-                    .buttonStyle(PracticeGrowingButton())
+                    .buttonStyle(ScaleButtonStyle())
+                    .frame(maxWidth: 280)
                 }
                 .padding(.top, 20)
                 .padding(.bottom, 30)
