@@ -31,6 +31,8 @@ struct ExportFlashcard: Codable {
     let answer: String
     let hint: String?
     let exerciseType: String
+    let notes: String?
+    let radical: String?
 }
 
 struct ExportReading: Codable {

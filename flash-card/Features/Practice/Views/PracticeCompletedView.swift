@@ -184,6 +184,7 @@ struct PracticeCompletedView: View {
                         .cornerRadius(12)
                     }
                     .buttonStyle(ScaleButtonStyle())
+                    .cursor(.pointingHand)
                     .frame(maxWidth: 280)
                 }
                 .padding(.top, 20)

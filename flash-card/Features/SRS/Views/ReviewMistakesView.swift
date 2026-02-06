@@ -24,6 +24,8 @@ struct ReviewMistakesView: View {
                     flashcards: section.flashcards,
                     sectionName: section.topicName,
                     topicId: section.topicId,
+                    subjectId: section.subjectId,
+                    subjectName: section.subjectName,
                     viewModel: viewModel,
                     onBack: {
                         selectedSection = nil
@@ -153,9 +155,12 @@ struct ReviewMistakesView: View {
         }
 
         mistakeSections = sectionsDict.map { (topicId, data) in
-            MistakeSection(
+            let subject = viewModel.subjects.first(where: { $0.id == data.topic.subjectId })
+            return MistakeSection(
                 topicId: topicId,
                 topicName: data.topic.name,
+                subjectId: data.topic.subjectId,
+                subjectName: subject?.name ?? "",
                 flashcards: data.flashcards.shuffled()
             )
         }.sorted { $0.topicName < $1.topicName }
@@ -291,47 +296,57 @@ struct MistakeSection: Identifiable {
     let id: Int
     let topicId: Int
     let topicName: String
+    let subjectId: Int
+    let subjectName: String
     let flashcards: [Flashcard]
 
-    init(topicId: Int, topicName: String, flashcards: [Flashcard]) {
+    init(topicId: Int, topicName: String, subjectId: Int, subjectName: String, flashcards: [Flashcard]) {
         self.id = topicId
         self.topicId = topicId
         self.topicName = topicName
+        self.subjectId = subjectId
+        self.subjectName = subjectName
         self.flashcards = flashcards
     }
 }
 
-// MARK: - Flashcard Review View (refined)
+// MARK: - Flashcard Review View (multiple choice UI, same as practice)
 struct FlashcardReviewView: View {
     let flashcards: [Flashcard]
     let sectionName: String
     let topicId: Int
+    let subjectId: Int
+    let subjectName: String
     let viewModel: ContentViewModel
     let onBack: () -> Void
 
+    @State private var flashcardsWithOptions: [Flashcard] = []
     @State private var currentIndex: Int = 0
-    @State private var isFlipped: Bool = false
     @State private var completedCount: Int = 0
     @State private var correctCount: Int = 0
     @State private var showCompletion: Bool = false
     @EnvironmentObject var fontSizeManager: FontSizeManager
     @Environment(\.colorScheme) private var colorScheme
 
+    private var topic: Topic {
+        Topic(id: topicId, name: sectionName, subjectId: subjectId, flashcards: flashcardsWithOptions, readings: [])
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             reviewHeaderView
-            if showCompletion {
+            if showCompletion || currentIndex >= flashcardsWithOptions.count {
                 reviewCompletionView
-            } else if currentIndex < flashcards.count {
-                reviewFlashcardView
             } else {
-                reviewCompletionView
-                    .onAppear { showCompletion = true }
+                multipleChoiceReviewView
             }
         }
-        .onKeyPress(.space) {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { isFlipped.toggle() }
-            return .handled
+        .onAppear {
+            if flashcardsWithOptions.isEmpty {
+                flashcardsWithOptions = flashcards.count >= 4
+                    ? DatabaseManager.makeFlashcardsWithOptions(flashcards)
+                    : flashcards
+            }
         }
     }
 
@@ -347,12 +362,10 @@ struct FlashcardReviewView: View {
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                )
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
             }
             .buttonStyle(.plain)
+            .cursor(.pointingHand)
 
             Spacer()
             Text(sectionName)
@@ -365,183 +378,63 @@ struct FlashcardReviewView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .scaledFont(.sm)
                     .foregroundStyle(.secondary)
-                Text("\(currentIndex + 1) / \(flashcards.count)")
+                Text("\(min(currentIndex + 1, flashcardsWithOptions.count)) / \(flashcardsWithOptions.count)")
                     .scaledFont(.sm)
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.gray.opacity(colorScheme == .light ? 0.08 : 0.12))
-            )
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(colorScheme == .light ? 0.08 : 0.12)))
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    private var reviewFlashcardView: some View {
-        let flashcard = flashcards[currentIndex]
-        let progress = Double(currentIndex) / Double(max(flashcards.count, 1))
-
-        return VStack(spacing: 0) {
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 5)
-                    Capsule()
-                        .fill(Color.gray.opacity(0.6))
-                        .frame(width: max(0, geometry.size.width * progress), height: 5)
-                        .animation(.easeOut(duration: 0.3), value: progress)
-                }
-            }
-            .frame(height: 5)
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-
-            ScrollView {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 60)
-                    reviewCard(flashcard: flashcard)
-                    Spacer(minLength: 100)
-                }
-            }
-            .background(Color(nsColor: .windowBackgroundColor))
-        }
-    }
-
-    private func reviewCard(flashcard: Flashcard) -> some View {
-        VStack(spacing: 24) {
-            ZStack {
-                if isFlipped {
-                    answerSide(flashcard: flashcard)
-                } else {
-                    questionSide(flashcard: flashcard)
-                }
-            }
-            .frame(minHeight: 260)
-            .padding(.horizontal, 32)
-            .onTapGesture {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { isFlipped.toggle() }
-            }
-
-            if !isFlipped {
-                HStack(spacing: 6) {
-                    Image(systemName: "space")
-                        .scaledFont(.xs)
-                    Text("Nhấn Space hoặc chạm để lật thẻ")
-                        .scaledFont(.sm)
-                }
-                .foregroundStyle(.secondary)
-            }
-
-            if isFlipped {
-                VStack(spacing: 16) {
-                    Text("Bạn đã nhớ chưa?")
-                        .scaledFont(.xs)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                        .tracking(0.6)
-                    HStack(spacing: 16) {
-                        reviewActionButton(
-                            icon: "xmark",
-                            label: "Sai",
-                            color: .orange,
-                            action: { submitAnswer(false) }
-                        )
-                        reviewActionButton(
-                            icon: "checkmark",
-                            label: "Đúng",
-                            color: .green,
-                            action: { submitAnswer(true) }
-                        )
+    private var multipleChoiceReviewView: some View {
+        VStack(spacing: 0) {
+            if currentIndex < flashcardsWithOptions.count {
+                let flashcard = flashcardsWithOptions[currentIndex]
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Câu \(currentIndex + 1)/\(flashcardsWithOptions.count)")
+                            .font(.app(.headline))
+                        Spacer()
+                        Text(Flashcard.exerciseTypeLabel)
+                            .font(.app(.subheadline))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.green.opacity(colorScheme == .light ? 0.14 : 0.2))
+                            .cornerRadius(6)
                     }
-                    .padding(.horizontal, 24)
+                    ProgressView(value: Double(currentIndex), total: Double(max(flashcardsWithOptions.count, 1)))
                 }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .padding()
+
+                FlashcardDetailView(
+                    flashcard: flashcard,
+                    topic: topic,
+                    subjectName: subjectName,
+                    radicalText: subjectName == "Tiếng Trung" ? (flashcard.radical.flatMap { $0.isEmpty ? nil : $0 } ?? viewModel.radicalForCharacter(flashcard.questionDisplayText)) : nil,
+                    onEdit: nil,
+                    onAnswered: { isCorrect in recordAnswer(isCorrect) },
+                    onContinueToNext: {
+                        withAnimation {
+                            currentIndex += 1
+                            if currentIndex >= flashcardsWithOptions.count {
+                                showCompletion = true
+                            }
+                        }
+                    }
+                )
+                .id(flashcard.id)
             }
         }
-    }
-
-    private func questionSide(flashcard: Flashcard) -> some View {
-        VStack(spacing: 16) {
-            Text(flashcard.questionDisplayText)
-                .scaledFont(.xl3)
-                .fontWeight(.medium)
-                .multilineTextAlignment(.center)
-                .lineSpacing(6)
-                .foregroundStyle(.primary)
-                .frame(maxWidth: 560)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 40)
-        .padding(.vertical, 44)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(nsColor: .controlBackgroundColor))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1.5)
-                )
-        )
-    }
-
-    private func answerSide(flashcard: Flashcard) -> some View {
-        VStack(spacing: 16) {
-            Text(flashcard.answer)
-                .scaledFont(.xl3)
-                .fontWeight(.medium)
-                .multilineTextAlignment(.center)
-                .lineSpacing(6)
-                .foregroundStyle(.primary)
-                .frame(maxWidth: 560)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 40)
-        .padding(.vertical, 44)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(nsColor: .controlBackgroundColor))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(Color.gray.opacity(0.35), lineWidth: 1.5)
-                )
-        )
-    }
-
-    private func reviewActionButton(icon: String, label: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 10) {
-                Image(systemName: icon == "checkmark" ? "checkmark.circle.fill" : icon)
-                    .scaledFont(.xl2)
-                    .foregroundStyle(color)
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(color.opacity(0.12)))
-                Text(label)
-                    .scaledFont(.sm)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(color.opacity(0.25), lineWidth: 1.5)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     private var reviewCompletionView: some View {
         let accuracy = completedCount > 0 ? Int((Double(correctCount) / Double(completedCount)) * 100) : 0
-
         return VStack(spacing: 36) {
             Spacer()
             ZStack {
@@ -575,21 +468,21 @@ struct FlashcardReviewView: View {
                 .padding(.vertical, 20)
             }
             Button(action: onBack) {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .scaledFont(.sm)
-                        .foregroundStyle(.white)
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.right.circle.fill")
+                        .scaledFont(.xl2)
                     Text("Quay lại danh sách")
-                        .scaledFont(.sm)
+                        .scaledFont(.lg)
                         .fontWeight(.semibold)
-                        .foregroundStyle(.white)
                 }
-                .frame(width: 220)
-                .padding(.vertical, 14)
-                .background(Color.green)
+                .frame(maxWidth: 280)
+                .padding(.vertical, 16)
+                .background(Color.blue)
+                .foregroundStyle(.white)
                 .cornerRadius(12)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(ScaleButtonStyle())
+            .cursor(.pointingHand)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -597,35 +490,18 @@ struct FlashcardReviewView: View {
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    private func submitAnswer(_ correct: Bool) {
-        guard currentIndex < flashcards.count else { return }
-        let flashcard = flashcards[currentIndex]
-
+    private func recordAnswer(_ isCorrect: Bool) {
+        guard currentIndex < flashcardsWithOptions.count else { return }
+        let flashcard = flashcardsWithOptions[currentIndex]
         var progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id) ?? FlashcardProgress(flashcardId: flashcard.id)
-        let quality: Double = correct ? 1.0 : 0.0
+        let quality: Double = isCorrect ? 1.0 : 0.0
         progress = SRSAlgorithm().calculateNextReview(progress: progress, quality: quality)
         DatabaseManager.shared.saveFlashcardProgress(progress)
-
-        if !correct, let topic = findTopic(for: flashcard) {
-            DatabaseManager.shared.recordMistake(flashcardId: flashcard.id, practiceType: "Review Mistakes", topicId: topic.id)
+        if !isCorrect {
+            DatabaseManager.shared.recordMistake(flashcardId: flashcard.id, practiceType: "Review Mistakes", topicId: topicId)
         }
-
         completedCount += 1
-        if correct { correctCount += 1 }
-        if correct { SoundManager.shared.playCorrectWithHaptic() } else { SoundManager.shared.playIncorrectWithHaptic() }
-
-        withAnimation(.easeInOut(duration: 0.2)) {
-            isFlipped = false
-            currentIndex += 1
-        }
-    }
-
-    private func findTopic(for flashcard: Flashcard) -> Topic? {
-        for subject in viewModel.subjects {
-            for topic in subject.topics where topic.id == topicId {
-                if topic.flashcards.contains(where: { $0.id == flashcard.id }) { return topic }
-            }
-        }
-        return nil
+        if isCorrect { correctCount += 1 }
+        if isCorrect { SoundManager.shared.playCorrectWithHaptic() } else { SoundManager.shared.playIncorrectWithHaptic() }
     }
 }

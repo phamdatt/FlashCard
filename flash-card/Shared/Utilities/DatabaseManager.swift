@@ -75,7 +75,8 @@ class DatabaseManager {
                 question TEXT NOT NULL,
                 answer TEXT NOT NULL,
                 hint TEXT,
-                exercise_type TEXT NOT NULL,
+                notes TEXT,
+                radical TEXT,
                 FOREIGN KEY (topic_id) REFERENCES topics(id)
             )
             """, nil, nil, nil)
@@ -212,11 +213,130 @@ class DatabaseManager {
         }
         db = pointer
         sqlite3_exec(db, "PRAGMA foreign_keys = ON", nil, nil, nil)
+        dropVocabulariesExerciseTypeAndPassageIdIfNeeded()
+        addNotesAndRadicalToVocabulariesIfNeeded()
         createPracticeSessionsTable()
         createSRSTables()
         dropOldReadingTablesIfNeeded()
         createReadingPassagesTable()
         ensureReadingSubjectExists()
+    }
+
+    /// One-time migration: remove exercise_type and passage_id from vocabularies by recreating the table.
+    private func dropVocabulariesExerciseTypeAndPassageIdIfNeeded() {
+        let key = "vocabularies_dropped_exercise_type_passage_id"
+        guard let db = db, !UserDefaults.standard.bool(forKey: key) else { return }
+        let hasColumn: (String, String) -> Bool = { table, column in
+            var stmt: OpaquePointer?
+            defer { sqlite3_finalize(stmt) }
+            guard sqlite3_prepare_v2(db, "PRAGMA table_info(\(table))", -1, &stmt, nil) == SQLITE_OK else { return false }
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                let name = String(cString: sqlite3_column_text(stmt, 1))
+                if name == column { return true }
+            }
+            return false
+        }
+        let hasExerciseType = hasColumn("vocabularies", "exercise_type")
+        let hasPassageId = hasColumn("vocabularies", "passage_id")
+        guard hasExerciseType || hasPassageId else {
+            UserDefaults.standard.set(true, forKey: key)
+            return
+        }
+        let createSQL = """
+            CREATE TABLE IF NOT EXISTS vocabularies_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic_id INTEGER NOT NULL,
+                question TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                hint TEXT,
+                FOREIGN KEY (topic_id) REFERENCES topics(id)
+            )
+            """
+        guard sqlite3_exec(db, createSQL, nil, nil, nil) == SQLITE_OK else { return }
+        guard sqlite3_exec(db, "INSERT INTO vocabularies_new (id, topic_id, question, answer, hint) SELECT id, topic_id, question, answer, hint FROM vocabularies", nil, nil, nil) == SQLITE_OK else { return }
+        guard sqlite3_exec(db, "DROP TABLE vocabularies", nil, nil, nil) == SQLITE_OK else { return }
+        guard sqlite3_exec(db, "ALTER TABLE vocabularies_new RENAME TO vocabularies", nil, nil, nil) == SQLITE_OK else { return }
+        UserDefaults.standard.set(true, forKey: key)
+    }
+
+    /// One-time migration: add notes and radical columns to vocabularies, then backfill 部首 for Tiếng Trung.
+    private func addNotesAndRadicalToVocabulariesIfNeeded() {
+        guard let db = db else { return }
+        if !hasColumn(table: "vocabularies", column: "notes") {
+            sqlite3_exec(db, "ALTER TABLE vocabularies ADD COLUMN notes TEXT", nil, nil, nil)
+        }
+        if !hasColumn(table: "vocabularies", column: "radical") {
+            sqlite3_exec(db, "ALTER TABLE vocabularies ADD COLUMN radical TEXT", nil, nil, nil)
+        }
+        backfillRadicalsInVocabularies(radicalLookup: Self.builtInRadicalMap)
+    }
+
+    private func hasColumn(table: String, column: String) -> Bool {
+        guard let db = db else { return false }
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, "PRAGMA table_info(\(table))", -1, &stmt, nil) == SQLITE_OK else { return false }
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let name = String(cString: sqlite3_column_text(stmt, 1))
+            if name == column { return true }
+        }
+        return false
+    }
+
+    /// Built-in 部首 (radical) for Chinese characters. Used to backfill vocabularies.radical for Tiếng Trung.
+    private static let builtInRadicalMap: [String: String] = [
+        "想": "心", "怎": "心", "意": "心", "思": "心", "息": "心", "您": "心", "心": "心", "总": "心", "感": "心", "愿": "心", "急": "心", "忘": "心", "忽": "心", "忍": "心", "恩": "心", "怒": "心", "情": "忄", "性": "忄",
+        "你": "亻", "他": "亻", "们": "亻", "住": "亻", "作": "亻", "但": "亻", "位": "亻", "什": "亻", "件": "亻", "休": "亻", "体": "亻", "何": "亻", "信": "亻", "候": "亻", "借": "亻", "做": "亻", "像": "亻", "代": "亻", "价": "亻", "使": "亻", "例": "亻", "便": "亻", "保": "亻", "化": "亻",
+        "好": "女", "要": "女", "她": "女", "妈": "女", "姐": "女", "妹": "女", "姓": "女", "始": "女", "奶": "女", "婚": "女", "如": "女",
+        "安": "宀", "定": "宀", "字": "宀", "家": "宀", "实": "宀", "室": "宀", "客": "宀", "宿": "宀",
+        "对": "寸", "得": "彳", "很": "彳", "行": "彳", "往": "彳", "后": "彳", "将": "寸", "复": "夂", "习": "习", "能": "月", "有": "月", "服": "月", "期": "月", "朋": "月", "明": "月", "朝": "月",
+        "不": "一", "下": "一", "上": "一", "三": "一", "七": "一", "事": "一", "两": "一", "考": "耂", "老": "耂", "试": "讠", "说": "讠", "话": "讠", "请": "讠", "认": "讠", "识": "讠", "读": "讠", "谢": "讠", "谁": "讠", "课": "讠", "该": "讠", "让": "讠", "讲": "讠",
+        "没": "氵", "法": "氵", "洗": "氵", "流": "氵", "海": "氵", "漂": "氵", "清": "氵", "温": "氵", "渴": "氵", "河": "氵", "油": "氵", "注": "氵", "泳": "氵", "酒": "氵", "消": "氵", "深": "氵", "满": "氵", "汉": "氵",
+        "关": "丷", "系": "系", "舒": "人", "医": "匚", "院": "阝", "起": "走", "超": "走", "赶": "走", "越": "走", "趣": "走",
+        "大": "大", "天": "大", "太": "大", "头": "大", "买": "乛", "卖": "十", "书": "乛", "会": "人", "人": "人", "个": "人", "今": "人", "从": "人", "以": "人", "先": "儿", "儿": "儿", "元": "儿", "兄": "儿", "克": "儿", "光": "儿", "免": "儿", "党": "儿",
+        "学": "子", "子": "子", "孩": "子", "季": "子", "存": "子", "孝": "子", "孙": "子", "李": "木", "林": "木", "果": "木", "校": "木", "桌": "木", "概": "木", "机": "木", "杯": "木", "板": "木", "楼": "木", "样": "木", "根": "木", "桥": "木", "椅": "木", "本": "木", "来": "木", "业": "业",
+        "步": "止", "正": "止", "此": "止", "武": "止", "岁": "止", "吃": "口", "叫": "口", "听": "口", "和": "口", "哪": "口", "唱": "口", "喝": "口", "啊": "口", "喂": "口", "右": "口", "号": "口", "名": "口", "告": "口", "味": "口", "呢": "口", "吧": "口", "员": "口", "响": "口", "喜": "口", "嘴": "口", "只": "口", "可": "口", "吗": "口",
+        "回": "囗", "国": "囗", "因": "囗", "图": "囗", "园": "囗", "困": "囗", "爱": "爫", "看": "目", "着": "目", "眼": "目", "相": "目", "知": "矢", "短": "矢", "矮": "矢",
+        "错": "钅", "钱": "钅", "钟": "钅", "锻": "钅", "铁": "钅", "门": "门", "问": "门", "间": "门", "闻": "门", "开": "廾", "发": "又", "友": "又", "反": "又", "叔": "又", "取": "又", "受": "又", "难": "隹", "离": "隹",
+        "别": "刂", "到": "刂", "前": "刂", "力": "力", "办": "力", "加": "力", "动": "力", "助": "力", "努": "力", "功": "力", "劳": "力", "男": "力",
+        "边": "辶", "这": "辶", "进": "辶", "还": "辶", "远": "辶", "近": "辶", "道": "辶", "那": "辶", "送": "辶", "通": "辶", "过": "辶", "选": "辶", "遇": "辶",
+        "里": "里", "重": "里", "量": "里", "颗": "页", "题": "页", "页": "页", "顾": "页", "预": "页", "领": "页",
+        "长": "长", "张": "弓", "强": "弓", "引": "弓", "弟": "弓", "第": "竹", "笑": "竹", "答": "竹", "笔": "竹", "等": "竹", "简": "竹", "算": "竹", "筷": "竹", "篮": "竹",
+        "米": "米", "料": "米", "粉": "米", "糖": "米", "粗": "米", "精": "米", "类": "米", "菜": "艹", "茶": "艹", "英": "艹", "草": "艹", "花": "艹", "苦": "艹", "药": "艹", "蓝": "艹", "落": "艹", "薄": "艹", "藏": "艹",
+        "在": "土", "地": "土", "是": "日", "时": "日", "的": "白", "了": "亅", "也": "亅", "我": "戈", "成": "戈", "就": "尢", "都": "者", "去": "厶", "生": "生", "而": "而", "出": "凵", "多": "夕", "外": "夕", "自": "自", "年": "干", "平": "干", "把": "扌", "见": "见", "手": "手", "真": "十", "十": "十", "用": "用", "打": "扌", "才": "扌", "接": "扌", "比": "比", "方": "方", "些": "二", "所": "户", "经": "纟", "又": "又", "高": "高", "点": "灬", "无": "无", "已": "己", "理": "王", "之": "丶", "主": "丶", "民": "氏", "表": "衣", "被": "衤", "内": "冂", "同": "冂", "西": "西", "马": "马", "数": "攵", "白": "白",
+    ]
+
+    /// Backfill vocabularies.radical for Tiếng Trung (subject name) using built-in map. Only updates rows with empty radical.
+    private func backfillRadicalsInVocabularies(radicalLookup: [String: String]) {
+        guard let db = db, hasColumn(table: "vocabularies", column: "radical"), !radicalLookup.isEmpty else { return }
+        let sql = "SELECT v.id, v.question FROM vocabularies v JOIN topics t ON v.topic_id = t.id JOIN subjects s ON t.subject_id = s.id WHERE s.name = 'Tiếng Trung' AND (v.radical IS NULL OR v.radical = '')"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        var updateStmt: OpaquePointer?
+        let updateSQL = "UPDATE vocabularies SET radical = ? WHERE id = ?"
+        guard sqlite3_prepare_v2(db, updateSQL, -1, &updateStmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(updateStmt) }
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let id = Int(sqlite3_column_int(stmt, 0))
+            let question = String(cString: sqlite3_column_text(stmt, 1))
+            let raw = Self.characterFromQuestion(question)
+            let radical: String? = radicalLookup[raw] ?? raw.first.flatMap { radicalLookup[String($0)] }
+            if let r = radical, !r.isEmpty {
+                sqlite3_bind_text(updateStmt, 1, (r as NSString).utf8String, -1, nil)
+                sqlite3_bind_int(updateStmt, 2, Int32(id))
+                sqlite3_step(updateStmt)
+                sqlite3_reset(updateStmt)
+            }
+        }
+    }
+
+    private static func characterFromQuestion(_ question: String) -> String {
+        let s = question.trimmingCharacters(in: .whitespaces)
+        guard let lastClose = s.lastIndex(of: ")") else { return s }
+        let beforeClose = s[..<lastClose]
+        guard let lastOpen = beforeClose.lastIndex(of: "(") else { return s }
+        return String(s[..<lastOpen]).trimmingCharacters(in: .whitespaces)
     }
 
     /// One-time migration: drop old reading_questions/reading_passages, create new reading_passages (FK topic_id).
@@ -412,22 +532,28 @@ class DatabaseManager {
     /// Loads flashcards for a topic; generates multiple-choice options if at least 4 cards. Returns [] on error.
     func loadFlashcards(for topicId: Int) -> [Flashcard] {
         guard db != nil else { return [] }
-        var flashcards: [Flashcard] = []
-
-        let querySQL = "SELECT id, question, answer, hint, exercise_type FROM vocabularies WHERE topic_id = ?"
+        let hasNotes = hasColumn(table: "vocabularies", column: "notes")
+        let hasRadical = hasColumn(table: "vocabularies", column: "radical")
+        var cols = "id, question, answer, hint"
+        if hasNotes { cols += ", notes" }
+        if hasRadical { cols += ", radical" }
+        let querySQL = "SELECT \(cols) FROM vocabularies WHERE topic_id = ?"
         var stmt: OpaquePointer?
-
         guard sqlite3_prepare_v2(db, querySQL, -1, &stmt, nil) == SQLITE_OK else { return [] }
-
+        defer { sqlite3_finalize(stmt) }
         sqlite3_bind_int(stmt, 1, Int32(topicId))
 
+        var flashcards: [Flashcard] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
             let id = Int(sqlite3_column_int(stmt, 0))
             let question = String(cString: sqlite3_column_text(stmt, 1))
             let answer = String(cString: sqlite3_column_text(stmt, 2))
             let hint: String? = sqlite3_column_text(stmt, 3).map { String(cString: $0) }
-            let exerciseTypeStr = String(cString: sqlite3_column_text(stmt, 4))
-            let exerciseType = exerciseTypeStr.isEmpty ? Flashcard.exerciseTypeLabel : exerciseTypeStr
+            var notes: String? = nil
+            var radical: String? = nil
+            var idx: Int32 = 4
+            if hasNotes { notes = sqlite3_column_text(stmt, idx).map { String(cString: $0) }; idx += 1 }
+            if hasRadical { radical = sqlite3_column_text(stmt, idx).map { String(cString: $0) } }
 
             flashcards.append(Flashcard(
                 id: id,
@@ -436,15 +562,45 @@ class DatabaseManager {
                 hint: hint,
                 options: nil,
                 correctAnswer: nil,
-                exerciseType: exerciseType
+                exerciseType: Flashcard.exerciseTypeLabel,
+                notes: notes,
+                radical: radical
             ))
         }
-        sqlite3_finalize(stmt)
-
         return generateOptions(for: flashcards)
     }
 
     // MARK: - Helpers
+
+    /// Generates multiple-choice options for a list of flashcards (for use outside loadFlashcards, e.g. review mistakes).
+    static func makeFlashcardsWithOptions(_ flashcards: [Flashcard]) -> [Flashcard] {
+        guard flashcards.count >= 4 else { return flashcards }
+        let allAnswers = flashcards.map { $0.answer }
+        return flashcards.map { card in
+            let wrongPool = allAnswers.filter { $0 != card.answer }.shuffled()
+            let wrongAnswers = Array(wrongPool.prefix(3))
+            var allChoices = wrongAnswers + [card.answer]
+            allChoices.shuffle()
+            let labels = ["A", "B", "C", "D"]
+            var options: [String] = []
+            var correctLabel = "A"
+            for (i, ans) in allChoices.prefix(4).enumerated() {
+                options.append("\(labels[i]). \(ans)")
+                if ans == card.answer { correctLabel = labels[i] }
+            }
+            return Flashcard(
+                id: card.id,
+                question: card.question,
+                answer: card.answer,
+                hint: card.hint,
+                options: options,
+                correctAnswer: correctLabel,
+                exerciseType: card.exerciseType,
+                notes: card.notes,
+                radical: card.radical
+            )
+        }
+    }
 
     private func generateOptions(for flashcards: [Flashcard]) -> [Flashcard] {
         guard flashcards.count >= 4 else { return flashcards }
@@ -476,7 +632,9 @@ class DatabaseManager {
                 hint: card.hint,
                 options: options,
                 correctAnswer: correctLabel,
-                exerciseType: card.exerciseType
+                exerciseType: card.exerciseType,
+                notes: card.notes,
+                radical: card.radical
             )
         }
     }
@@ -505,36 +663,51 @@ class DatabaseManager {
     /// Inserts flashcard into topic. Throws on error.
     func insertFlashcard(_ card: Flashcard, topicId: Int) throws {
         let db = try requireDB()
-        let insertSQL = "INSERT INTO vocabularies (topic_id, question, answer, hint, exercise_type) VALUES (?, ?, ?, ?, ?)"
+        let hasNotes = hasColumn(table: "vocabularies", column: "notes")
+        let hasRadical = hasColumn(table: "vocabularies", column: "radical")
+        var cols = "topic_id, question, answer, hint"
+        var placeholders = "?, ?, ?, ?"
+        if hasNotes { cols += ", notes"; placeholders += ", ?" }
+        if hasRadical { cols += ", radical"; placeholders += ", ?" }
+        let insertSQL = "INSERT INTO vocabularies (\(cols)) VALUES (\(placeholders))"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nil) == SQLITE_OK else {
             throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
         defer { sqlite3_finalize(stmt) }
-        sqlite3_bind_int(stmt, 1, Int32(topicId))
-        sqlite3_bind_text(stmt, 2, (card.question as NSString).utf8String, -1, nil)
-        sqlite3_bind_text(stmt, 3, (card.answer as NSString).utf8String, -1, nil)
-        sqlite3_bind_text(stmt, 4, ((card.hint ?? "") as NSString).utf8String, -1, nil)
-        sqlite3_bind_text(stmt, 5, (card.exerciseType as NSString).utf8String, -1, nil)
+        var idx: Int32 = 1
+        sqlite3_bind_int(stmt, idx, Int32(topicId)); idx += 1
+        sqlite3_bind_text(stmt, idx, (card.question as NSString).utf8String, -1, nil); idx += 1
+        sqlite3_bind_text(stmt, idx, (card.answer as NSString).utf8String, -1, nil); idx += 1
+        sqlite3_bind_text(stmt, idx, ((card.hint ?? "") as NSString).utf8String, -1, nil); idx += 1
+        if hasNotes { sqlite3_bind_text(stmt, idx, ((card.notes ?? "") as NSString).utf8String, -1, nil); idx += 1 }
+        if hasRadical { sqlite3_bind_text(stmt, idx, ((card.radical ?? "") as NSString).utf8String, -1, nil) }
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
     }
 
     /// Updates flashcard content. Throws on error.
-    func updateFlashcard(id: Int, question: String, answer: String, hint: String?) throws {
+    func updateFlashcard(id: Int, question: String, answer: String, hint: String?, notes: String? = nil, radical: String? = nil) throws {
         let db = try requireDB()
+        let hasNotes = hasColumn(table: "vocabularies", column: "notes")
+        let hasRadical = hasColumn(table: "vocabularies", column: "radical")
+        var setClause = "question = ?, answer = ?, hint = ?"
+        if hasNotes { setClause += ", notes = ?" }
+        if hasRadical { setClause += ", radical = ?" }
+        let sql = "UPDATE vocabularies SET \(setClause) WHERE id = ?"
         var stmt: OpaquePointer?
-        let sql = "UPDATE vocabularies SET question = ?, answer = ?, hint = ? WHERE id = ?"
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
         defer { sqlite3_finalize(stmt) }
-        let hintVal = hint ?? ""
-        sqlite3_bind_text(stmt, 1, (question as NSString).utf8String, -1, nil)
-        sqlite3_bind_text(stmt, 2, (answer as NSString).utf8String, -1, nil)
-        sqlite3_bind_text(stmt, 3, (hintVal as NSString).utf8String, -1, nil)
-        sqlite3_bind_int(stmt, 4, Int32(id))
+        var idx: Int32 = 1
+        sqlite3_bind_text(stmt, idx, (question as NSString).utf8String, -1, nil); idx += 1
+        sqlite3_bind_text(stmt, idx, (answer as NSString).utf8String, -1, nil); idx += 1
+        sqlite3_bind_text(stmt, idx, ((hint ?? "") as NSString).utf8String, -1, nil); idx += 1
+        if hasNotes { sqlite3_bind_text(stmt, idx, ((notes ?? "") as NSString).utf8String, -1, nil); idx += 1 }
+        if hasRadical { sqlite3_bind_text(stmt, idx, ((radical ?? "") as NSString).utf8String, -1, nil); idx += 1 }
+        sqlite3_bind_int(stmt, idx, Int32(id))
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
@@ -634,7 +807,7 @@ class DatabaseManager {
         while sqlite3_step(stmt) == SQLITE_ROW {
             let topicId = Int(sqlite3_column_int(stmt, 0))
             let name = String(cString: sqlite3_column_text(stmt, 1))
-            let flashcards = loadFlashcards(for: topicId).map { ExportFlashcard(question: $0.question, answer: $0.answer, hint: $0.hint, exerciseType: $0.exerciseType) }
+            let flashcards = loadFlashcards(for: topicId).map { ExportFlashcard(question: $0.question, answer: $0.answer, hint: $0.hint, exerciseType: $0.exerciseType, notes: $0.notes, radical: $0.radical) }
             let readings: [ExportReading] = isReading ? loadReadings(for: topicId).map { ExportReading(title: $0.title, content: $0.content) } : []
             result.append(ExportTopic(name: name, flashcards: flashcards, readings: readings))
         }
@@ -654,7 +827,7 @@ class DatabaseManager {
                 let newTopicId = try insertTopic(newTopic)
                 for card in exportTopic.flashcards {
                     let hintVal = (card.hint ?? "").isEmpty ? nil : card.hint
-                    let f = Flashcard(question: card.question, answer: card.answer, hint: hintVal, exerciseType: Flashcard.exerciseTypeLabel)
+                    let f = Flashcard(question: card.question, answer: card.answer, hint: hintVal, exerciseType: Flashcard.exerciseTypeLabel, notes: card.notes, radical: card.radical)
                     try insertFlashcard(f, topicId: newTopicId)
                 }
                 for reading in exportTopic.readings {

@@ -65,6 +65,8 @@ struct Flashcard: Identifiable, Hashable, Codable {
     let options: [String]?
     let correctAnswer: String?
     let exerciseType: String
+    let notes: String?
+    let radical: String?
 
     var isMultipleChoice: Bool {
         options != nil && correctAnswer != nil
@@ -83,7 +85,7 @@ struct Flashcard: Identifiable, Hashable, Codable {
         return beforeParen
     }
 
-    init(id: Int = 0, question: String, answer: String, hint: String? = nil, options: [String]? = nil, correctAnswer: String? = nil, exerciseType: String = Flashcard.exerciseTypeLabel) {
+    init(id: Int = 0, question: String, answer: String, hint: String? = nil, options: [String]? = nil, correctAnswer: String? = nil, exerciseType: String = Flashcard.exerciseTypeLabel, notes: String? = nil, radical: String? = nil) {
         self.id = id
         self.question = question
         self.answer = answer
@@ -91,5 +93,7 @@ struct Flashcard: Identifiable, Hashable, Codable {
         self.options = options
         self.correctAnswer = correctAnswer
         self.exerciseType = exerciseType
+        self.notes = notes
+        self.radical = radical
     }
 }

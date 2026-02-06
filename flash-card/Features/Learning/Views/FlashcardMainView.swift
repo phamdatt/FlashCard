@@ -260,7 +260,7 @@ struct FlashcardMainView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 4) {
                             Text(Flashcard.exerciseTypeLabel)
-                                .scaledFont(.xs)
+                                .scaledFont(.sm)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 5)
@@ -273,7 +273,7 @@ struct FlashcardMainView: View {
                         }
                         
                         Text(flashcard.question)
-                            .scaledFont(.sm)
+                            .scaledFont(.base)
                             .fontWeight(.medium)
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
@@ -283,14 +283,44 @@ struct FlashcardMainView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 4) {
                                     Image(systemName: "lightbulb.fill")
-                                        .font(.app(.footnote))
+                                        .font(.app(.subheadline))
                                         .foregroundStyle(.green)
                                     Text("Gợi ý")
-                                        .font(.app(.footnote))
+                                        .font(.app(.subheadline))
                                         .foregroundStyle(.secondary)
                                 }
                                 Text(hint)
-                                    .font(.app(.footnote))
+                                    .font(.app(.subheadline))
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.trailing, 32)
+                        }
+                        if viewModel.selectedSubject?.name == "Tiếng Trung", let radical = flashcard.radical, !radical.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 4) {
+                                    Text("Bộ thủ")
+                                        .font(.app(.subheadline))
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text(radical)
+                                    .font(.app(.subheadline))
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.trailing, 32)
+                        }
+                        if let notes = flashcard.notes, !notes.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 4) {
+                                    Text("Ghi chú")
+                                        .font(.app(.subheadline))
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text(notes)
+                                    .font(.app(.subheadline))
                                     .foregroundStyle(.secondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -304,7 +334,7 @@ struct FlashcardMainView: View {
                     HStack(spacing: 4) {
                         if isFlashcardLearned(flashcard) {
                             Image(systemName: "checkmark.circle.fill")
-                                .scaledFont(.xs)
+                                .scaledFont(.sm)
                                 .foregroundStyle(.secondary)
                                 .help("Đã học")
                                 .accessibilityLabel("Đã học")
@@ -312,7 +342,7 @@ struct FlashcardMainView: View {
                         
                         if needsImprovement(flashcard) {
                             Image(systemName: "arrow.clockwise.circle.fill")
-                                .scaledFont(.xs)
+                                .scaledFont(.sm)
                                 .foregroundStyle(.teal)
                                 .help("Cần ôn lại")
                                 .accessibilityLabel("Cần ôn lại")
@@ -321,6 +351,7 @@ struct FlashcardMainView: View {
                     .padding(.top, 2)
                     .padding(.trailing, 4)
                 }
+                .cursor(.pointingHand)
                 .tag(flashcard)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 4)
@@ -363,7 +394,8 @@ struct FlashcardMainView: View {
                     Divider()
                 }
                 if let flashcard = viewModel.selectedFlashcard {
-                    FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", radicalText: viewModel.selectedSubject?.name == "Tiếng Trung" ? viewModel.radicalForCharacter(flashcard.questionDisplayText) : nil, onEdit: { showEditFlashcardSheet = true }, onAnswered: nil)
+                    let radicalText: String? = viewModel.selectedSubject?.name == "Tiếng Trung" ? (flashcard.radical.flatMap { $0.isEmpty ? nil : $0 } ?? viewModel.radicalForCharacter(flashcard.questionDisplayText)) : nil
+                    FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", radicalText: radicalText, onEdit: { showEditFlashcardSheet = true }, onAnswered: nil)
                 } else {
                     ContentUnavailableView(
                         "Chọn một flashcard",
@@ -498,10 +530,15 @@ struct FlashcardMainView: View {
                     flashcard: flashcard,
                     topic: topic,
                     subjectName: viewModel.selectedSubject?.name ?? "",
-                    radicalText: viewModel.selectedSubject?.name == "Tiếng Trung" ? viewModel.radicalForCharacter(flashcard.questionDisplayText) : nil,
+                    radicalText: viewModel.selectedSubject?.name == "Tiếng Trung" ? (flashcard.radical.flatMap { $0.isEmpty ? nil : $0 } ?? viewModel.radicalForCharacter(flashcard.questionDisplayText)) : nil,
                     onEdit: nil,
                     onAnswered: { isCorrect in
                         handleAnswer(isCorrect: isCorrect)
+                    },
+                    onContinueToNext: {
+                        withAnimation {
+                            currentIndex += 1
+                        }
                     }
                 )
                 .id(flashcard.id)
@@ -602,12 +639,7 @@ struct FlashcardMainView: View {
             }
         }
 
-        // Auto advance after 1.5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation {
-                currentIndex += 1
-            }
-        }
+        // User taps "Tiếp tục" to advance (no auto-advance)
     }
 
     private func recordPracticeIfNeeded() {

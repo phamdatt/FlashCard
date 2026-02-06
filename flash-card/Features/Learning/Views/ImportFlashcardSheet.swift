@@ -14,7 +14,7 @@ struct ImportFlashcardSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedFileURL: URL?
     @State private var selectedTopicId: Int?
-    @State private var parsedRows: [(question: String, answer: String, hint: String?)] = []
+    @State private var parsedRows: [(question: String, answer: String, hint: String?, notes: String?, radical: String?)] = []
     @State private var parseError: String?
     @State private var isImporting = false
     @State private var importResult: String?
@@ -134,7 +134,7 @@ struct ImportFlashcardSheet: View {
             let ext = url.pathExtension.lowercased()
             if ext == "json" {
                 let decoded = try JSONDecoder().decode([ImportFlashcardRow].self, from: data)
-                parsedRows = decoded.map { ($0.question, $0.answer, $0.hint) }
+                parsedRows = decoded.map { ($0.question, $0.answer, $0.hint, $0.notes, $0.radical) }
             } else {
                 guard let content = String(data: data, encoding: .utf8) else {
                     parseError = "Không đọc được file (encoding)."
@@ -144,23 +144,15 @@ struct ImportFlashcardSheet: View {
                 for line in lines {
                     let trimmed = line.trimmingCharacters(in: .whitespaces)
                     if trimmed.isEmpty { continue }
-                    let parts = trimmed.split(separator: ";", omittingEmptySubsequences: false)
-                        .map { $0.trimmingCharacters(in: .whitespaces) }
-                    if parts.count < 2 {
-                        let commaParts = trimmed.split(separator: ",", omittingEmptySubsequences: false)
-                            .map { $0.trimmingCharacters(in: .whitespaces) }
-                        if commaParts.count >= 2 {
-                            let q = String(commaParts[0])
-                            let a = String(commaParts[1])
-                            let h = commaParts.count > 2 ? String(commaParts[2]) : nil
-                            parsedRows.append((q, a, (h?.isEmpty ?? true) ? nil : h))
-                        }
-                    } else {
-                        let q = String(parts[0])
-                        let a = String(parts[1])
-                        let h = parts.count > 2 ? String(parts[2]) : nil
-                        parsedRows.append((q, a, (h?.isEmpty ?? true) ? nil : h))
-                    }
+                    let commaParts = trimmed.split(separator: ",", omittingEmptySubsequences: false)
+                        .map { String($0).trimmingCharacters(in: .whitespaces) }
+                    guard commaParts.count >= 2 else { continue }
+                    let q = commaParts[0]
+                    let a = commaParts[1]
+                    let h = commaParts.count > 2 && !commaParts[2].isEmpty ? commaParts[2] : nil
+                    let notes = commaParts.count > 3 && !commaParts[3].isEmpty ? commaParts[3] : nil
+                    let radical = commaParts.count > 4 && !commaParts[4].isEmpty ? commaParts[4] : nil
+                    parsedRows.append((q, a, h, notes, radical))
                 }
             }
             if parsedRows.isEmpty && parseError == nil {
@@ -183,8 +175,10 @@ struct ImportFlashcardSheet: View {
             let card = Flashcard(
                 question: q,
                 answer: a,
-                hint: row.hint?.isEmpty == false ? row.hint : nil,
-                exerciseType: Flashcard.exerciseTypeLabel
+                hint: row.hint.flatMap { $0.isEmpty ? nil : $0 },
+                exerciseType: Flashcard.exerciseTypeLabel,
+                notes: row.notes.flatMap { $0.isEmpty ? nil : $0 },
+                radical: row.radical.flatMap { $0.isEmpty ? nil : $0 }
             )
             do {
                 try DatabaseManager.shared.insertFlashcard(card, topicId: topic.id)
@@ -214,4 +208,6 @@ private struct ImportFlashcardRow: Codable {
     let question: String
     let answer: String
     let hint: String?
+    let notes: String?
+    let radical: String?
 }

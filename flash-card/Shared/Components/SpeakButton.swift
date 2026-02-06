@@ -28,6 +28,12 @@ struct SpeakButton: View {
     }
 
     private func speak() {
-        speechManager.speak(text: text, language: language)
+        let textToSpeak: String
+        if let range = text.range(of: " (") ?? text.range(of: "(") {
+            textToSpeak = String(text[..<range.lowerBound]).trimmingCharacters(in: .whitespaces)
+        } else {
+            textToSpeak = text
+        }
+        speechManager.speak(text: textToSpeak.isEmpty ? text : textToSpeak, language: language)
     }
 }

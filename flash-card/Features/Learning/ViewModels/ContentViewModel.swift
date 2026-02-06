@@ -569,6 +569,7 @@ class ContentViewModel: ObservableObject {
     func deleteSelectedFlashcards(topicId: Int) {
         let ids = selectedFlashcardIds
         guard !ids.isEmpty else { return }
+        let subjectId = selectedSubject?.id
         do {
             for id in ids {
                 try database.deleteFlashcard(id: id)
@@ -576,9 +577,10 @@ class ContentViewModel: ObservableObject {
             selectedFlashcardIds = []
             selectedFlashcard = nil
             loadLearningData()
-            if let topic = selectedSubject?.topics.first(where: { $0.id == topicId }) {
-                selectedTopic = topic
-                selectedFlashcard = topic.flashcards.first
+            if let subId = subjectId {
+                selectedSubject = subjects.first(where: { $0.id == subId })
+                selectedTopic = selectedSubject?.topics.first(where: { $0.id == topicId })
+                selectedFlashcard = selectedTopic?.flashcards.first
             }
         } catch {
             errorMessage = error.localizedDescription
