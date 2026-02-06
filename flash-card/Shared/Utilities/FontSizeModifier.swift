@@ -107,6 +107,11 @@ extension View {
         modifier(ScaledFont(baseSize: size))
     }
 
+    /// Use Font.TailwindSize for semantic size (still scales with font setting).
+    func scaledFont(_ size: Font.TailwindSize) -> some View {
+        modifier(ScaledFont(baseSize: size.pointSize))
+    }
+
     func applyFontSizeScaling(multiplier: CGFloat) -> some View {
         environment(\.fontSizeMultiplier, multiplier)
     }
@@ -114,9 +119,9 @@ extension View {
 
 // MARK: - Semantic Tailwind font sizes
 extension Font {
-    /// Tailwind-style text sizes (xs, sm, base, lg, xl, 2xl–5xl). Use with scaledFont or apply multiplier.
+    /// Tailwind-style text sizes (xs … xl5, display). Use with .scaledFont(.xl2) instead of numeric size.
     enum TailwindSize {
-        case xs, sm, base, lg, xl, xl2, xl3, xl4, xl5
+        case xs, sm, base, lg, xl, xl2, xl3, xl4, xl5, display, hero
         var pointSize: CGFloat {
             switch self {
             case .xs: return TailwindTypeScale.xs
@@ -128,6 +133,8 @@ extension Font {
             case .xl3: return TailwindTypeScale.xl3
             case .xl4: return TailwindTypeScale.xl4
             case .xl5: return TailwindTypeScale.xl5
+            case .display: return 52
+            case .hero: return 64
             }
         }
     }

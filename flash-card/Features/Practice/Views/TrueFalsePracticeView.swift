@@ -48,7 +48,7 @@ struct TrueFalsePracticeView: View {
             VStack(spacing: 0) {
                 HStack {
                     Text("Câu \(currentIndex + 1) / \(flashcards.count)")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .fontWeight(.semibold)
                     
                     Spacer()
@@ -56,10 +56,10 @@ struct TrueFalsePracticeView: View {
                     if totalAnswered > 0 {
                         HStack(spacing: 6) {
                             Image(systemName: "checkmark.circle.fill")
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                                 .foregroundStyle(.secondary)
                             Text("\(score)/\(totalAnswered)")
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                                 .fontWeight(.medium)
                         }
                     }
@@ -100,10 +100,10 @@ struct TrueFalsePracticeView: View {
                     VStack(spacing: 16) {
                         HStack {
                             Image(systemName: "questionmark.circle.fill")
-                                .scaledFont(20)
+                                .scaledFont(.xl)
                                 .foregroundStyle(.secondary)
                             Text("Câu hỏi")
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
                                 .textCase(.uppercase)
@@ -111,7 +111,7 @@ struct TrueFalsePracticeView: View {
                         }
                         
                         SmartCopyDefineText(text: flashcard.question, flashcards: flashcards)
-                            .scaledFont(28)
+                            .scaledFont(.xl3)
                             .fontWeight(.semibold)
                             .multilineTextAlignment(.center)
                             .lineSpacing(6)
@@ -133,7 +133,7 @@ struct TrueFalsePracticeView: View {
                     
                     // Arrow with animation
                     Image(systemName: "arrow.down")
-                        .scaledFont(24)
+                        .scaledFont(.xl2)
                         .foregroundStyle(.secondary)
                         .padding(.vertical, 20)
                         .symbolEffect(.pulse, options: .repeat(2))
@@ -142,10 +142,10 @@ struct TrueFalsePracticeView: View {
                     VStack(spacing: 16) {
                         HStack {
                             Image(systemName: "text.bubble.fill")
-                                .scaledFont(20)
+                                .scaledFont(.xl)
                                 .foregroundStyle(answerCardIconColor)
                             Text("Đáp án")
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
                                 .textCase(.uppercase)
@@ -153,7 +153,7 @@ struct TrueFalsePracticeView: View {
                         }
                         
                         SmartCopyDefineText(text: displayedAnswer, flashcards: flashcards)
-                            .scaledFont(28)
+                            .scaledFont(.xl3)
                             .fontWeight(.semibold)
                             .multilineTextAlignment(.center)
                             .lineSpacing(6)
@@ -177,7 +177,7 @@ struct TrueFalsePracticeView: View {
                     if !showResult {
                         VStack(spacing: 16) {
                             Text("Đánh giá")
-                                .scaledFont(13)
+                                .scaledFont(.sm)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
                                 .textCase(.uppercase)
@@ -236,13 +236,13 @@ struct TrueFalsePracticeView: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .scaledFont(24)
+                    .scaledFont(.xl2)
                     .fontWeight(.semibold)
                     .foregroundStyle(color)
                     .frame(width: 40, height: 40)
                 
                 Text(label)
-                    .scaledFont(18)
+                    .scaledFont(.lg)
                     .fontWeight(.bold)
                     .foregroundStyle(.primary)
                 
@@ -327,24 +327,24 @@ struct TrueFalsePracticeView: View {
                         .frame(width: 64, height: 64)
                     
                     Image(systemName: userCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .scaledFont(32)
+                        .scaledFont(.xl3)
                         .foregroundStyle(userCorrect ? .green : .orange)
                         .symbolEffect(.bounce.up, value: showResult)
                 }
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(userCorrect ? "Chính xác! 🎉" : "Chưa đúng")
-                        .scaledFont(20)
+                        .scaledFont(.xl)
                         .fontWeight(.bold)
                         .foregroundStyle(userCorrect ? .green : .orange)
 
                     if !currentIsTrue {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Đáp án đúng:")
-                                .scaledFont(13)
+                                .scaledFont(.sm)
                                 .foregroundStyle(.secondary)
                             SmartCopyDefineText(text: flashcard.answer, flashcards: flashcards)
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                                 .foregroundStyle(.primary)
                         }
                     }

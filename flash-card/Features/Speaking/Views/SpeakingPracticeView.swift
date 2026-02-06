@@ -53,7 +53,7 @@ struct SpeakingPracticeView: View {
             VStack(spacing: 8) {
                 HStack {
                     Text("Câu \(currentIndex + 1)/\(flashcards.count)")
-                        .scaledFont(18)
+                        .scaledFont(.lg)
                         .fontWeight(.semibold)
                     Spacer()
                     if totalAnswered > 0 {
@@ -61,7 +61,7 @@ struct SpeakingPracticeView: View {
 Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.secondary)
                             Text("\(score)/\(totalAnswered)")
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                         }
                     }
                 }
@@ -75,16 +75,16 @@ Image(systemName: "checkmark.circle.fill")
             // Question card
             VStack(spacing: 20) {
                 Image(systemName: "mic.fill")
-                    .scaledFont(40)
+                    .scaledFont(.xl4)
                     .foregroundStyle(.blue)
                     .symbolEffect(.pulse, isActive: isRecording)
 
                 Text("Đọc to câu sau:")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
 
                 Text(flashcard.question)
-                    .scaledFont(32)
+                    .scaledFont(.xl3)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
                     .padding()
@@ -100,10 +100,10 @@ Image(systemName: "checkmark.circle.fill")
                     VStack(spacing: 12) {
                         HStack {
                             Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .scaledFont(24)
+                                .scaledFont(.xl2)
                                 .foregroundStyle(isCorrect ? .green : .red)
                             Text(isCorrect ? "Chính xác!" : "Chưa đúng")
-                                .scaledFont(18)
+                                .scaledFont(.lg)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(isCorrect ? .green : .red)
                         }
@@ -111,10 +111,10 @@ Image(systemName: "checkmark.circle.fill")
                         if !recognizedText.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Bạn đã nói:")
-                                    .scaledFont(12)
+                                    .scaledFont(.xs)
                                     .foregroundStyle(.secondary)
                                 Text(recognizedText)
-                                    .scaledFont(14)
+                                    .scaledFont(.sm)
                                     .foregroundStyle(.primary)
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -124,7 +124,7 @@ Image(systemName: "checkmark.circle.fill")
                         }
 
                         Text("Đáp án đúng: \(flashcard.answer)")
-                            .scaledFont(14)
+                            .scaledFont(.sm)
                             .foregroundStyle(.blue)
                             .padding()
                             .frame(maxWidth: .infinity)
@@ -149,9 +149,9 @@ Image(systemName: "checkmark.circle.fill")
                 }) {
                     HStack(spacing: 12) {
                         Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                            .scaledFont(24)
+                            .scaledFont(.xl2)
                         Text(isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm")
-                            .scaledFont(18)
+                            .scaledFont(.lg)
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -167,7 +167,7 @@ Image(systemName: "checkmark.circle.fill")
                     nextCard()
                 }) {
                     Label("Tiếp theo", systemImage: "arrow.right.circle.fill")
-                        .scaledFont(18)
+                        .scaledFont(.lg)
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
@@ -223,7 +223,7 @@ Image(systemName: "checkmark.circle.fill")
         let userAnswer = recognizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let correctAnswer = flashcard.answer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         
-        // Simple comparison (có thể cải thiện với fuzzy matching)
+        // Simple comparison (could improve with fuzzy matching)
         isCorrect = userAnswer == correctAnswer || 
                    userAnswer.contains(correctAnswer) || 
                    correctAnswer.contains(userAnswer)

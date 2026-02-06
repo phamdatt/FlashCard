@@ -40,7 +40,7 @@ struct PracticeCompletedView: View {
                             .frame(width: 110, height: 110)
 
                         Image(systemName: "trophy.fill")
-                            .scaledFont(50)
+                            .scaledFont(.display)
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [.yellow, .orange],
@@ -54,7 +54,7 @@ struct PracticeCompletedView: View {
                     .padding(.top, 30)
 
                     Text(customTitle)
-                        .scaledFont(32)
+                        .scaledFont(.xl3)
                         .fontWeight(.black)
                         .foregroundStyle(
                             LinearGradient(
@@ -77,7 +77,7 @@ struct PracticeCompletedView: View {
                         Circle()
                             .stroke(Color.gray.opacity(0.15), lineWidth: 12)
                         
-                        // Progress circle với gradient
+                        // Progress circle with gradient
                         Circle()
                             .trim(from: 0, to: Double(percentage) / 100)
                             .stroke(
@@ -95,17 +95,17 @@ struct PracticeCompletedView: View {
 
                         VStack(spacing: 4) {
                             Text("\(percentage)%")
-                                .scaledFont(28)
+                                .scaledFont(.xl3)
                                 .fontWeight(.black)
                                 .foregroundStyle(percentage >= 70 ? .green : .orange)
                             Text(knownLabel)
-                                .scaledFont(12)
+                                .scaledFont(.xs)
                                 .foregroundStyle(.secondary)
                         }
                     }
                     .frame(width: 120, height: 120)
 
-                    // Stats cards với design đẹp hơn
+                    // Stats cards
                     HStack(spacing: 12) {
                         StatItemView(title: knownLabel, value: "\(score)", color: .green, icon: "checkmark.circle.fill")
                         StatItemView(title: unknownLabel, value: "\(totalAnswered - score)", color: .red, icon: "xmark.circle.fill")
@@ -220,17 +220,17 @@ struct StatItemView: View {
                     .frame(width: 50 * fontSizeManager.fontSizeMultiplier, height: 50 * fontSizeManager.fontSizeMultiplier)
                 
                 Image(systemName: icon)
-                    .scaledFont(22)
+                    .scaledFont(.xl2)
                     .foregroundStyle(color)
             }
             
             Text(value)
-                .scaledFont(24)
+                .scaledFont(.xl2)
                 .fontWeight(.bold)
                 .foregroundStyle(color)
             
             Text(title)
-                .scaledFont(13)
+                .scaledFont(.sm)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)

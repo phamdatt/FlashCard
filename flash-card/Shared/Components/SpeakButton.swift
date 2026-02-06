@@ -2,7 +2,7 @@
 //  SpeakButton.swift
 //  flash-card
 //
-//  TTS button: dùng SpeechManager.shared (giữ synthesizer để phát âm không bị cắt).
+//  TTS button: uses SpeechManager.shared (keeps synthesizer so playback is not cut).
 //
 
 import SwiftUI

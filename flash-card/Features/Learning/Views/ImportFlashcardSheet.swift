@@ -186,8 +186,14 @@ struct ImportFlashcardSheet: View {
                 hint: row.hint?.isEmpty == false ? row.hint : nil,
                 exerciseType: .chineseToVietnamese
             )
-            DatabaseManager.shared.insertFlashcard(card, topicId: topic.id)
-            added += 1
+            do {
+                try DatabaseManager.shared.insertFlashcard(card, topicId: topic.id)
+                added += 1
+            } catch {
+                viewModel.errorMessage = error.localizedDescription
+                isImporting = false
+                return
+            }
         }
         isImporting = false
         importResult = "Đã thêm \(added) thẻ."

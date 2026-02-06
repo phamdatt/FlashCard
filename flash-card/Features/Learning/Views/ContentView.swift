@@ -45,7 +45,7 @@ struct SidebarView: View {
                     viewModel.switchToLearningMode()
                 }) {
                     Label(subject.name, systemImage: subject.icon)
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                 }
                 .buttonStyle(.plain)
             }
@@ -58,17 +58,21 @@ struct SidebarView: View {
                 viewModel.switchToReviewMode()
             }) {
                 Label("Ôn tập SRS", systemImage: "repeat.circle.fill")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
             }
             .buttonStyle(.plain)
-            
+            .accessibilityLabel("Ôn tập SRS")
+            .accessibilityHint("Mở màn ôn từ theo thuật toán lặp lại ngắt quãng")
+
             Button(action: {
                 viewModel.switchToReviewMistakes()
             }) {
                 Label("Ôn lại từ sai", systemImage: "xmark.circle.fill")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Ôn lại từ sai")
+            .accessibilityHint("Mở danh sách từ đã trả lời sai để ôn lại")
         }
     }
     
@@ -78,9 +82,11 @@ struct SidebarView: View {
                 viewModel.switchToStatistics()
             }) {
                 Label("Thống kê", systemImage: "chart.line.uptrend.xyaxis")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Thống kê")
+            .accessibilityHint("Xem thống kê học tập và streak")
         }
     }
     
@@ -91,16 +97,16 @@ struct SidebarView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "flame.fill")
                         .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .orange : .secondary)
-                        .scaledFont(22)
+                        .scaledFont(.xl2)
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
                             Text("\(viewModel.streakInfo.currentStreak)")
-                                .scaledFont(18)
+                                .scaledFont(.lg)
                                 .fontWeight(.bold)
                                 .lineLimit(1)
                             Text("ngày")
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
@@ -108,7 +114,7 @@ struct SidebarView: View {
 
                         if viewModel.streakInfo.longestStreak > 0 {
                             Text("Kỷ lục: \(viewModel.streakInfo.longestStreak) ngày")
-                                .scaledFont(11)
+                                .scaledFont(.xs)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
@@ -120,11 +126,11 @@ struct SidebarView: View {
                     if viewModel.streakInfo.didPracticeToday {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .green : .secondary)
-                            .scaledFont(14)
+                            .scaledFont(.sm)
                             .frame(minWidth: 16 * fontSizeManager.fontSizeMultiplier)
                     } else {
                         Text("Chưa học")
-                            .scaledFont(11)
+                            .scaledFont(.xs)
                             .fontWeight(.medium)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)
@@ -149,14 +155,14 @@ struct SidebarView: View {
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: appearanceManager.mode.icon)
-.scaledFont(22)
+.scaledFont(.xl2)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
                             .contentTransition(.symbolEffect(.replace))
                             .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
 
                         Text(appearanceManager.mode.rawValue)
-                            .scaledFont(14)
+                            .scaledFont(.sm)
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
@@ -165,7 +171,7 @@ struct SidebarView: View {
                         Spacer()
 
                         Image(systemName: "chevron.right")
-                            .scaledFont(10)
+                            .scaledFont(.xs)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
                             .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
@@ -186,19 +192,19 @@ struct SidebarView: View {
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "keyboard")
-                            .scaledFont(22)
+                            .scaledFont(.xl2)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                             .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
                         Text("Phím tắt")
-                            .scaledFont(14)
+                            .scaledFont(.sm)
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .scaledFont(10)
+                            .scaledFont(.xs)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
                             .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
@@ -213,25 +219,25 @@ struct SidebarView: View {
                 }
                 .buttonStyle(.plain)
 
-                // Giọng đọc tiếng Anh
+                // English TTS accent
                 Button(action: {
                     viewModel.showSpeechAccentSheet = true
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "speaker.wave.2.fill")
-                            .scaledFont(22)
+                            .scaledFont(.xl2)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                             .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
                         Text("Giọng đọc tiếng Anh")
-                            .scaledFont(14)
+                            .scaledFont(.sm)
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .scaledFont(10)
+                            .scaledFont(.xs)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
                             .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
@@ -245,6 +251,8 @@ struct SidebarView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Giọng đọc tiếng Anh")
+                .accessibilityHint("Chọn accent cho phát âm tiếng Anh (US, UK, Úc, …)")
 
                 // Backup / Restore
                 Button(action: {
@@ -252,19 +260,19 @@ struct SidebarView: View {
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "externaldrive.fill")
-                            .scaledFont(22)
+                            .scaledFont(.xl2)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                             .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
                         Text("Sao lưu / Phục hồi")
-                            .scaledFont(14)
+                            .scaledFont(.sm)
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .scaledFont(10)
+                            .scaledFont(.xs)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
                             .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
@@ -278,6 +286,8 @@ struct SidebarView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Sao lưu và Phục hồi")
+                .accessibilityHint("Mở màn sao lưu dữ liệu ra file JSON hoặc phục hồi từ file")
             }
             
         }
@@ -312,11 +322,11 @@ struct TopicsListView: View {
         HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .fontWeight(.medium)
             TextField("Tìm kiếm chủ đề...", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .focused($isSearchFocused)
             if !viewModel.searchText.isEmpty {
                 Button(action: {
@@ -326,7 +336,7 @@ struct TopicsListView: View {
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                 }
                 .buttonStyle(.plain)
                 .transition(.scale.combined(with: .opacity))
@@ -380,10 +390,10 @@ struct TopicsListView: View {
                             }) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(pair.topic.name)
-                                        .scaledFont(12)
+                                        .scaledFont(.xs)
                                         .foregroundStyle(.secondary)
                                     Text(pair.flashcard.question)
-                                        .scaledFont(14)
+                                        .scaledFont(.sm)
                                         .fontWeight(.medium)
                                         .foregroundStyle(.primary)
                                         .lineLimit(1)
@@ -443,7 +453,7 @@ struct TopicsListView: View {
                 viewModel.showAddTopicSheet = true
             }) {
 Label("Thêm chủ đề", systemImage: "plus.circle.fill")
-                        .scaledFont(13)
+                        .scaledFont(.sm)
                         .fontWeight(.medium)
                         .foregroundStyle(.secondary)
             }
@@ -515,26 +525,26 @@ private struct TopicRowView: View {
                     .fill(isSelected ? Color.gray.opacity(isLight ? 0.2 : 0.25) : Color.gray.opacity(isLight ? 0.1 : 0.15))
                     .frame(width: 40, height: 40)
                 Image(systemName: isReadingSubject ? "doc.text.fill" : "book.fill")
-                    .scaledFont(18)
+                    .scaledFont(.lg)
                     .foregroundStyle(.secondary)
             }
             .frame(width: 40)
             VStack(alignment: .leading, spacing: 4) {
                 Text(topic.name)
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .fontWeight(isSelected ? .semibold : .medium)
                     .foregroundStyle(.primary)
                 HStack(spacing: 6) {
                     Image(systemName: isReadingSubject ? "doc.richtext" : "rectangle.stack.fill")
-                        .scaledFont(11)
+                        .scaledFont(.xs)
                     Text(isReadingSubject ? "\(topic.readings.count) bài đọc" : "\(topic.flashcards.count) flashcards")
-                        .scaledFont(13)
+                        .scaledFont(.sm)
                 }
                 .foregroundStyle(.secondary)
             }
             Spacer()
             Image(systemName: "chevron.right")
-                .scaledFont(11)
+                .scaledFont(.xs)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
         }
@@ -626,7 +636,7 @@ Image(systemName: subject.icon)
     }
 }
 
-// MARK: - Reading Main View (subject Bài đọc)
+// MARK: - Reading Main View
 struct ReadingMainView: View {
     @ObservedObject var viewModel: ContentViewModel
     let topic: Topic
@@ -642,13 +652,13 @@ struct ReadingMainView: View {
                     viewModel.selectedFlashcard = nil
                 }) {
                     Label("Quay lại", systemImage: "chevron.left")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                 }
                 .buttonStyle(.plain)
 
                 Spacer()
                 Text(topic.name)
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .fontWeight(.semibold)
                 Spacer()
 
@@ -658,7 +668,7 @@ struct ReadingMainView: View {
                     viewModel.showAddReadingSheet = true
                 }) {
                     Label("Tạo bài đọc", systemImage: "plus.circle.fill")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .fontWeight(.medium)
                 }
                 .buttonStyle(.plain)
@@ -673,20 +683,20 @@ struct ReadingMainView: View {
                     Label("Chưa có bài đọc", systemImage: "doc.richtext")
                 } description: {
                     Text("Nhấn \"Tạo bài đọc\" để thêm bài đọc mới")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 HSplitView {
-                    // Danh sách bài đọc
+                    // Reading list
                     List(topic.readings, selection: $selectedPassage) { passage in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(passage.title)
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                                 .fontWeight(.semibold)
                                 .lineLimit(2)
                             Text(passage.content)
-                                .scaledFont(12)
+                                .scaledFont(.xs)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
                         }
@@ -706,7 +716,7 @@ struct ReadingMainView: View {
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
 
-                    // Nội dung bài đọc
+                    // Reading content
                     if let passage = selectedPassage {
                         ReadingDetailView(passage: passage, topicName: topic.name)
                     } else {
@@ -759,7 +769,7 @@ struct ReadingMainView: View {
     }
 }
 
-// MARK: - Reading Detail View (nội dung + smart copy)
+// MARK: - Reading Detail View
 struct ReadingDetailView: View {
     let passage: ReadingPassage
     let topicName: String
@@ -771,26 +781,25 @@ struct ReadingDetailView: View {
                 // Toolbar: Smart copy button
                 HStack {
                     Text(topicName)
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Button(action: copyFullContent) {
                         Label("Sao chép", systemImage: "doc.on.doc")
-                            .scaledFont(14)
+                            .scaledFont(.sm)
                             .fontWeight(.medium)
                     }
                     .buttonStyle(.bordered)
                 }
 
                 Text(passage.title)
-                    .scaledFont(22)
+                    .scaledFont(.xl2)
                     .fontWeight(.bold)
 
                 Divider()
 
-                // Nội dung với smart copy (chọn đoạn -> context menu Sao chép / Tìm nghĩa)
                 SmartCopyDefineText(text: passage.content, flashcards: nil)
-                    .scaledFont(14)
+                    .scaledFont(.xl3)
                     .lineSpacing(6)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -821,7 +830,7 @@ struct AddReadingSheet: View {
         VStack(spacing: 20) {
             HStack {
                 Text("Tạo bài đọc")
-                    .scaledFont(22)
+                    .scaledFont(.xl2)
                     .fontWeight(.bold)
                 Spacer()
                 Button(action: {
@@ -830,7 +839,7 @@ struct AddReadingSheet: View {
                     viewModel.showAddReadingSheet = false
                 }) {
                     Image(systemName: "xmark.circle.fill")
-                        .scaledFont(22)
+                        .scaledFont(.xl2)
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -838,10 +847,10 @@ struct AddReadingSheet: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "folder.fill")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
                 Text(topic.name)
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
                 Spacer()
             }
@@ -850,20 +859,20 @@ struct AddReadingSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Tiêu đề")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .fontWeight(.semibold)
                 TextField("Nhập tiêu đề bài đọc", text: $viewModel.newReadingTitle)
                     .textFieldStyle(.roundedBorder)
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .focused($focusedField, equals: .title)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Nội dung")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .fontWeight(.semibold)
                 TextEditor(text: $viewModel.newReadingContent)
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .frame(minHeight: 200, maxHeight: 360)
                     .scrollContentBackground(.hidden)
                     .padding(8)
@@ -884,7 +893,7 @@ struct AddReadingSheet: View {
                     viewModel.newReadingContent = ""
                     viewModel.showAddReadingSheet = false
                 }
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .keyboardShortcut(.escape)
 
                 Spacer()
@@ -893,7 +902,7 @@ struct AddReadingSheet: View {
                     viewModel.addReadingPassage(topicId: topic.id, title: viewModel.newReadingTitle, content: viewModel.newReadingContent)
                 }) {
                     Text("Lưu bài đọc")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .fontWeight(.semibold)
                 }
                 .keyboardShortcut(.return)
@@ -906,7 +915,7 @@ struct AddReadingSheet: View {
     }
 }
 
-// MARK: - Edit Flashcard Sheet (Sửa từ gốc, nghĩa, gợi ý)
+// MARK: - Edit Flashcard Sheet
 struct EditFlashcardSheet: View {
     let flashcard: Flashcard
     let topic: Topic
@@ -926,12 +935,12 @@ struct EditFlashcardSheet: View {
         VStack(spacing: 20) {
             HStack {
                 Text("Sửa từ vựng")
-                    .scaledFont(22)
+                    .scaledFont(.xl2)
                     .fontWeight(.bold)
                 Spacer()
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
-                        .scaledFont(22)
+                        .scaledFont(.xl2)
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -939,34 +948,34 @@ struct EditFlashcardSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Từ gốc")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                 TextField("Từ gốc", text: $editQuestion)
                     .textFieldStyle(.roundedBorder)
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .focused($focusedField, equals: .question)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Nghĩa")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                 TextField("Nghĩa", text: $editAnswer)
                     .textFieldStyle(.roundedBorder)
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .focused($focusedField, equals: .answer)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Gợi ý (không bắt buộc)")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                 TextField("Gợi ý", text: $editHint)
                     .textFieldStyle(.roundedBorder)
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .focused($focusedField, equals: .hint)
             }
 
@@ -976,14 +985,14 @@ struct EditFlashcardSheet: View {
                 Button("Huỷ") {
                     onDismiss()
                 }
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .keyboardShortcut(.escape)
 
                 Spacer()
 
                 Button(action: save) {
                     Text("Lưu")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .fontWeight(.semibold)
                 }
                 .keyboardShortcut(.return)
@@ -1056,7 +1065,7 @@ struct FlashcardDetailView: View {
                     if onEdit != nil {
                         Button(action: { onEdit?() }) {
                             Label("Sửa", systemImage: "pencil")
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                         }
                         .buttonStyle(.bordered)
                     }
@@ -1110,7 +1119,7 @@ struct FlashcardDetailView: View {
                     }
 
                     SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.question, flashcards: topic.flashcards)
-                        .scaledFont(28)
+                        .scaledFont(.xl3)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
                         .padding()
@@ -1137,6 +1146,7 @@ struct FlashcardDetailView: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal)
+            .accessibilityHint(isFlipped ? "Lật thẻ để xem lại câu hỏi" : "Lật thẻ để xem đáp án")
             
             // Hint section
             if let hint = flashcard.hint {
@@ -1163,15 +1173,15 @@ struct FlashcardDetailView: View {
             VStack(spacing: 16) {
                 HStack {
                     Text("Câu hỏi")
-                        .font(.app(.body))
+                        .scaledFont(.xl)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    SpeakButton(text: flashcard.question, fontSize: 18)
+                    SpeakButton(text: flashcard.question, fontSize: 24)
                 }
 
                 SmartCopyDefineText(text: flashcard.question, flashcards: topic.flashcards)
-                    .scaledFont(28) // title size
+                    .scaledFont(.display)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
                     .padding()
@@ -1190,9 +1200,10 @@ struct FlashcardDetailView: View {
             if let hint = flashcard.hint, !showResult {
                 HStack(spacing: 8) {
                     Image(systemName: "lightbulb.fill")
+                        .scaledFont(.xl2)
                         .foregroundStyle(.orange)
                     SmartCopyDefineText(text: hint, flashcards: topic.flashcards)
-                        .font(.app(.subheadline))
+                        .scaledFont(.base)
                         .foregroundStyle(.secondary)
                 }
                 .padding()
@@ -1202,7 +1213,7 @@ struct FlashcardDetailView: View {
             }
             
             // Options
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 ForEach(flashcard.options ?? [], id: \.self) { option in
                     multipleChoiceButton(option: option)
                 }
@@ -1289,8 +1300,8 @@ struct FlashcardDetailView: View {
         }) {
             HStack {
                 Text(option)
-                    .font(.app(.body))
-                    .fontWeight(.medium)
+                    .scaledFont(.base)
+                    .fontWeight(.regular)
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                 
@@ -1299,34 +1310,33 @@ struct FlashcardDetailView: View {
                 if showResult {
                     if isCorrect {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.app(.title3))
+                            .scaledFont(.lg)
                             .foregroundStyle(.green)
                             .symbolEffect(.bounce.up, value: showResult)
                             .shadow(color: .green.opacity(0.5), radius: 4)
                     } else if isSelected && !isCorrect {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.app(.title3))
+                            .scaledFont(.lg)
                             .foregroundStyle(.red)
                             .symbolEffect(.bounce.down, value: showResult)
                             .shadow(color: .red.opacity(0.5), radius: 4)
                     }
                 }
             }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 20)
+            .padding(16)
             .background(
                 ZStack {
                     // Bottom shadow layer (depth effect)
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(shadowColor)
                         .offset(y: isPressed ? 2 : 4)
                     
                     // Main button layer
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(backgroundColor)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(borderColor, lineWidth: 3)
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(borderColor, lineWidth: 2)
                         )
                 }
             )
@@ -1334,9 +1344,9 @@ struct FlashcardDetailView: View {
         }
         .buttonStyle(CoreButtonStyle(isPressed: $isPressed, isDisabled: showResult))
         .keyboardShortcut(shortcutKey, modifiers: [])
-        // Sử dụng opacity và border thay vì scale để tránh tràn
+        // Use opacity and border to avoid overflow
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(
                     showResult && isCorrect ? Color.green.opacity(0.6) : 
                     (showResult && isSelected && !isCorrect ? Color.red.opacity(0.6) : Color.clear),
@@ -1360,12 +1370,12 @@ struct FlashcardDetailView: View {
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(isCorrect ? "Chính xác! 🎉" : "Chưa đúng")
-                        .font(.app(.title3))
+                        .scaledFont(.xl2)
                         .fontWeight(.bold)
                         .foregroundStyle(isCorrect ? .green : .red)
                     
                     SmartCopyDefineText(text: flashcard.answer, flashcards: topic.flashcards)
-                        .scaledFont(14) // body size
+                        .scaledFont(.lg)
                         .foregroundStyle(.secondary)
                         .environmentObject(fontSizeManager)
                 }
@@ -1414,10 +1424,10 @@ private struct UndoBannerView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "trash.slash")
-                .scaledFont(16)
+                .scaledFont(.base)
                 .foregroundStyle(.secondary)
             Text("Đã xóa.")
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .fontWeight(.medium)
             Spacer()
             Button("Hoàn tác") {
@@ -1425,10 +1435,10 @@ private struct UndoBannerView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(.green)
-            .scaledFont(13)
+            .scaledFont(.sm)
             Button(action: onDismiss) {
                 Image(systemName: "xmark.circle.fill")
-                    .scaledFont(18)
+                    .scaledFont(.lg)
                     .foregroundStyle(.secondary)
                     .symbolRenderingMode(.hierarchical)
             }
@@ -1551,7 +1561,7 @@ struct ContentView: View {
                 ProgressView()
                     .scaleEffect(1.2)
                 Text("Đang tải...")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1572,29 +1582,30 @@ struct ContentView: View {
     @ViewBuilder
     private var detailColumn: some View {
         Group {
-            if viewModel.showReviewMode {
+            switch viewModel.detailRoute {
+            case .review:
                 ReviewModeView(viewModel: viewModel)
                     .id("review-mode")
-            } else if viewModel.showReviewMistakes {
+            case .reviewMistakes:
                 ReviewMistakesView(viewModel: viewModel)
                     .id("review-mistakes")
-            } else if viewModel.showStatistics {
+            case .statistics:
                 StatisticsDashboardView(viewModel: viewModel)
                     .id("statistics")
-            } else if let topic = viewModel.selectedTopic {
-                if viewModel.selectedSubject?.name == "Bài đọc" {
-                    ReadingMainView(viewModel: viewModel, topic: topic)
-                        .id("reading-\(topic.id)")
-                } else {
+            case .reading(let topic):
+                ReadingMainView(viewModel: viewModel, topic: topic)
+                    .id("reading-\(topic.id)")
+            case .learning(let topic):
+                if let topic = topic {
                     FlashcardMainView(viewModel: viewModel, topic: topic)
                         .id("topic-\(topic.id)")
+                } else {
+                    ContentUnavailableView(
+                        "Chọn chủ đề",
+                        systemImage: "text.book.closed.fill",
+                        description: Text("Chọn một chủ đề để xem flashcards")
+                    )
                 }
-            } else {
-                ContentUnavailableView(
-                    "Chọn chủ đề",
-                    systemImage: "text.book.closed.fill",
-                    description: Text("Chọn một chủ đề để xem flashcards")
-                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

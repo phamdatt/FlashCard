@@ -49,7 +49,7 @@ struct FlashcardMainView: View {
     @State private var selectedWordCount: Int = 20
     @State private var showingWordCountPicker: Bool = false
     @State private var practiceRecorded: Bool = false
-    /// Nguồn từ: tất cả hay chỉ từ chưa thuộc (phù hợp topic nhiều từ)
+    /// Source: all cards or only unlearned (for large topics)
     @State private var practiceSource: PracticeSource = .all
     @State private var showEditFlashcardSheet: Bool = false
 
@@ -82,7 +82,7 @@ struct FlashcardMainView: View {
                         viewModel.showAddFlashcardSheet = true
                     }) {
                         Label("Thêm từ", systemImage: "plus.circle.fill")
-                            .scaledFont(13)
+                            .scaledFont(.sm)
                             .fontWeight(.medium)
                     }
                     .buttonStyle(.plain)
@@ -91,7 +91,7 @@ struct FlashcardMainView: View {
                         viewModel.showImportFlashcardSheet = true
                     }) {
                         Label("Import", systemImage: "square.and.arrow.down")
-                            .scaledFont(13)
+                            .scaledFont(.sm)
                             .fontWeight(.medium)
                     }
                     .buttonStyle(.plain)
@@ -240,7 +240,7 @@ struct FlashcardMainView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 4) {
                             Text(flashcard.exerciseType.rawValue)
-                                .scaledFont(11)
+                                .scaledFont(.xs)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 5)
@@ -253,7 +253,7 @@ struct FlashcardMainView: View {
                         }
                         
                         Text(flashcard.question)
-                            .scaledFont(14)
+                            .scaledFont(.sm)
                             .fontWeight(.medium)
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
@@ -273,16 +273,18 @@ struct FlashcardMainView: View {
                     HStack(spacing: 4) {
                         if isFlashcardLearned(flashcard) {
                             Image(systemName: "checkmark.circle.fill")
-                                .scaledFont(12)
+                                .scaledFont(.xs)
                                 .foregroundStyle(.secondary)
                                 .help("Đã học")
+                                .accessibilityLabel("Đã học")
                         }
                         
                         if needsImprovement(flashcard) {
                             Image(systemName: "arrow.clockwise.circle.fill")
-                                .scaledFont(12)
+                                .scaledFont(.xs)
                                 .foregroundStyle(.teal)
                                 .help("Cần ôn lại")
+                                .accessibilityLabel("Cần ôn lại")
                         }
                     }
                     .padding(.top, 2)
@@ -466,17 +468,17 @@ struct FlashcardMainView: View {
         )
     }
         
-    /// Phần trăm đúng trong phiên luyện (0–100)
+    /// Correct percentage in session (0–100)
     private var practiceScorePercentage: Int {
         totalAnswered > 0 ? Int((Double(score) / Double(totalAnswered)) * 100) : 0
     }
 
-    /// Số từ có thể ôn theo nguồn đã chọn (tất cả hoặc chưa thuộc)
+    /// Count of cards to review for selected source
     private var practicePoolCount: Int {
         practicePool().count
     }
 
-    /// Các mức số từ gợi ý theo kích thước topic (phù hợp topic nhiều từ)
+    /// Suggested review counts by topic size
     private var practiceSessionSizes: [Int] {
         let total = topic.flashcards.count
         let candidates: [Int]
@@ -491,7 +493,7 @@ struct FlashcardMainView: View {
         return "\(count) từ"
     }
 
-    /// Pool từ theo nguồn: tất cả hoặc chỉ từ chưa thuộc (totalReviews == 0)
+    /// Card pool by source: all or only unlearned (totalReviews == 0)
     private func practicePool() -> [Flashcard] {
         switch practiceSource {
         case .all:

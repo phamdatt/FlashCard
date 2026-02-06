@@ -53,7 +53,7 @@ struct FillInTheBlankView: View {
             VStack(spacing: 8) {
                 HStack {
                     Text("Câu \(currentIndex + 1)/\(flashcards.count)")
-                        .scaledFont(18)
+                        .scaledFont(.lg)
                         .fontWeight(.semibold)
                     Spacer()
                     if totalAnswered > 0 {
@@ -61,7 +61,7 @@ struct FillInTheBlankView: View {
 Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.secondary)
                             Text("\(score)/\(totalAnswered)")
-                                .scaledFont(14)
+                                .scaledFont(.sm)
                         }
                     }
                 }
@@ -75,7 +75,7 @@ Image(systemName: "checkmark.circle.fill")
             // Question with blank
             VStack(spacing: 20) {
                 Text("Điền từ vào chỗ trống:")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
 
                 // Display question with blank
@@ -83,7 +83,7 @@ Image(systemName: "checkmark.circle.fill")
                     ForEach(questionWithBlank.components(separatedBy: "\n"), id: \.self) { line in
                         if !line.isEmpty {
                             Text(line)
-                                .scaledFont(20)
+                                .scaledFont(.xl)
                                 .multilineTextAlignment(.leading)
                         }
                     }
@@ -97,11 +97,11 @@ Image(systemName: "checkmark.circle.fill")
                 // Answer input
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Đáp án của bạn:")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                     
                     TextField("Nhập đáp án...", text: $userAnswer)
-                        .scaledFont(18)
+                        .scaledFont(.lg)
                         .textFieldStyle(.plain)
                         .padding()
                         .background(Color(nsColor: .textBackgroundColor))
@@ -125,10 +125,10 @@ Image(systemName: "checkmark.circle.fill")
                     VStack(spacing: 12) {
                         HStack {
                             Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .scaledFont(24)
+                                .scaledFont(.xl2)
                                 .foregroundStyle(isCorrect ? .green : .red)
                             Text(isCorrect ? "Chính xác! 🎉" : "Chưa đúng")
-                                .scaledFont(18)
+                                .scaledFont(.lg)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(isCorrect ? .green : .red)
                         }
@@ -136,10 +136,10 @@ Image(systemName: "checkmark.circle.fill")
                         if !isCorrect {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Đáp án đúng:")
-                                    .scaledFont(12)
+                                    .scaledFont(.xs)
                                     .foregroundStyle(.secondary)
                                 Text(flashcard.answer)
-                                    .scaledFont(14)
+                                    .scaledFont(.sm)
                                     .foregroundStyle(.blue)
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -161,7 +161,7 @@ Image(systemName: "checkmark.circle.fill")
                     checkAnswer()
                 }) {
                     Label("Kiểm tra", systemImage: "checkmark.circle.fill")
-                        .scaledFont(18)
+                        .scaledFont(.lg)
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
@@ -177,7 +177,7 @@ Image(systemName: "checkmark.circle.fill")
                     nextCard()
                 }) {
                     Label("Tiếp theo", systemImage: "arrow.right.circle.fill")
-                        .scaledFont(18)
+                        .scaledFont(.lg)
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)

@@ -2,7 +2,7 @@
 //  OnboardingView.swift
 //  flash-card
 //
-//  Onboarding shown on first launch: Chọn môn → Chọn chủ đề → Xem thẻ.
+//  Onboarding on first launch: choose subject → topic → view cards.
 //
 
 import SwiftUI

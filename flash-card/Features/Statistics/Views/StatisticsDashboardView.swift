@@ -77,7 +77,7 @@ struct StatisticsDashboardView: View {
     private var headerSection: some View {
         HStack {
             Text("Thống kê học tập")
-                .scaledFont(24)
+                .scaledFont(.xl2)
                 .fontWeight(.bold)
                 .foregroundStyle(.primary)
             Spacer()
@@ -108,7 +108,7 @@ struct StatisticsDashboardView: View {
             ProgressView()
                 .scaleEffect(1.2)
             Text("Đang tải thống kê...")
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -161,7 +161,7 @@ struct StatisticsDashboardView: View {
     private func progressRow(date: Date, accuracy: Double) -> some View {
         HStack(alignment: .center, spacing: 16) {
             Text(date, style: .date)
-                .scaledFont(13)
+                .scaledFont(.sm)
                 .foregroundStyle(.secondary)
                 .frame(width: 100, alignment: .leading)
             GeometryReader { geometry in
@@ -182,7 +182,7 @@ struct StatisticsDashboardView: View {
             }
             .frame(height: barHeight)
             Text("\(Int(accuracy * 100))%")
-                .scaledFont(12)
+                .scaledFont(.xs)
                 .fontWeight(.semibold)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -226,7 +226,7 @@ struct StatisticsDashboardView: View {
         let accent = accuracy >= 0.7 ? Color.green : accuracy >= 0.5 ? Color.orange : Color.red
         return VStack(alignment: .leading, spacing: 12) {
             Text(topicName)
-                .scaledFont(13)
+                .scaledFont(.sm)
                 .fontWeight(.medium)
                 .lineLimit(2)
                 .foregroundStyle(.primary)
@@ -240,7 +240,7 @@ struct StatisticsDashboardView: View {
                 }
                 .frame(height: 8)
                 Text("\(Int(accuracy * 100))%")
-                    .scaledFont(11)
+                    .scaledFont(.xs)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -286,15 +286,15 @@ struct StatisticsDashboardView: View {
         let accent = accuracy >= 0.7 ? Color.green : accuracy >= 0.5 ? Color.orange : Color.red
         return HStack(spacing: 16) {
             Image(systemName: subject.icon)
-                .scaledFont(16)
+                .scaledFont(.base)
                 .foregroundStyle(accent)
                 .frame(width: 28, alignment: .center)
             Text(subject.name)
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .fontWeight(.medium)
             Spacer(minLength: 12)
             Text("\(Int(accuracy * 100))%")
-                .scaledFont(12)
+                .scaledFont(.xs)
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -368,10 +368,10 @@ private struct StatisticsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
                 Text(title)
-                    .scaledFont(17)
+                    .scaledFont(.lg)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
             }
@@ -405,16 +405,16 @@ struct StatCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: icon)
-                    .scaledFont(20)
+                    .scaledFont(.xl)
                     .foregroundStyle(color)
                 Spacer()
             }
             Text(value)
-                .scaledFont(26)
+                .scaledFont(.xl3)
                 .fontWeight(.bold)
                 .foregroundStyle(.primary)
             Text(title)
-                .scaledFont(13)
+                .scaledFont(.sm)
                 .foregroundStyle(.secondary)
         }
         .padding(20)

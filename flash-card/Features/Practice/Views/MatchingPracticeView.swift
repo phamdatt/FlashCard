@@ -125,7 +125,7 @@ Image(systemName: "checkmark.circle.fill")
             }
         }) {
             SmartCopyDefineText(text: flashcard.question, flashcards: flashcards)
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .fontWeight(.medium)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
@@ -140,7 +140,7 @@ Image(systemName: "checkmark.circle.fill")
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(questionBorder(isMatched: isMatched, isSelected: isSelected, isWrong: isWrong), lineWidth: isSelected ? 3 : 2)
                 )
-                // Sử dụng opacity thay vì scale để tránh tràn
+                // Use opacity to avoid overflow
                 .opacity(isMatched ? 0.5 : (isWrong ? 0.7 : 1.0))
         }
         .buttonStyle(.plain)
@@ -160,7 +160,7 @@ Image(systemName: "checkmark.circle.fill")
             }
         }) {
             SmartCopyDefineText(text: answer, flashcards: flashcards)
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .fontWeight(.medium)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
@@ -175,7 +175,7 @@ Image(systemName: "checkmark.circle.fill")
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(answerBorder(isMatched: isMatched, isWrong: isWrong), lineWidth: isMatched ? 3 : 2)
                 )
-                // Sử dụng opacity và shadow thay vì scale để tránh tràn
+                // Use opacity and shadow to avoid overflow
                 .shadow(color: isMatched ? .green.opacity(0.3) : (isWrong ? .red.opacity(0.2) : .clear), radius: isMatched ? 8 : (isWrong ? 4 : 0))
                 .opacity(isMatched ? 0.6 : (isWrong ? 0.7 : 1.0))
         }
@@ -244,7 +244,7 @@ Image(systemName: "checkmark.circle.fill")
 
         if isCorrect {
             totalCorrect += 1
-            // Improved animation với spring effect mượt mà hơn
+            // Spring animation
             withAnimation(.spring(response: 0.4, dampingFraction: 0.6, blendDuration: 0.2)) {
                 matchedPairs.insert(questionId)
                 selectedQuestion = nil
@@ -265,7 +265,7 @@ Image(systemName: "checkmark.circle.fill")
                 }
             }
         } else {
-            // Wrong match với animation rõ ràng hơn
+            // Wrong match animation
             SoundManager.shared.playIncorrectWithHaptic()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
                 wrongPair = (questionId, selectedAnswer)

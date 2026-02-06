@@ -64,17 +64,17 @@ struct ReviewModeView: View {
     private var emptyStateView: some View {
         VStack(spacing: 24) {
             Image(systemName: "checkmark.circle.fill")
-                .scaledFont(64)
+                .scaledFont(.hero)
                 .foregroundStyle(.secondary)
                 .symbolEffect(.pulse)
             
             VStack(spacing: 8) {
                 Text("Không có từ cần ôn")
-                    .scaledFont(24)
+                    .scaledFont(.xl2)
                     .fontWeight(.semibold)
                 
                 Text("Tất cả các từ đã được ôn đầy đủ!")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
             }
         }
@@ -92,13 +92,13 @@ struct ReviewModeView: View {
             VStack(spacing: 0) {
                 HStack {
                     Text("Ôn tập")
-                        .scaledFont(20)
+                        .scaledFont(.xl)
                         .fontWeight(.semibold)
                     
                     Spacer()
                     
                     Text("\(currentIndex + 1) / \(dueFlashcards.count)")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 24)
@@ -133,7 +133,7 @@ struct ReviewModeView: View {
                         // Question Section
                         VStack(spacing: 20) {
                             Text(flashcard.question)
-                                .scaledFont(32)
+                                .scaledFont(.xl3)
                                 .fontWeight(.medium)
                                 .multilineTextAlignment(.center)
                                 .lineSpacing(6)
@@ -160,7 +160,7 @@ struct ReviewModeView: View {
                                     .padding(.vertical, 24)
                                 
                                 Text(flashcard.answer)
-                                    .scaledFont(28)
+                                    .scaledFont(.xl3)
                                     .fontWeight(.medium)
                                     .multilineTextAlignment(.center)
                                     .lineSpacing(6)
@@ -178,9 +178,9 @@ struct ReviewModeView: View {
                     if !showAnswer {
                         HStack(spacing: 6) {
                             Image(systemName: "space")
-                                .scaledFont(12)
+                                .scaledFont(.xs)
                             Text("Nhấn Space để xem đáp án")
-                                .scaledFont(13)
+                                .scaledFont(.sm)
                         }
                         .foregroundStyle(.tertiary)
                         .padding(.top, 24)
@@ -191,7 +191,7 @@ struct ReviewModeView: View {
                     if showAnswer {
                         VStack(spacing: 16) {
                             Text("Đánh giá")
-                                .scaledFont(13)
+                                .scaledFont(.sm)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
                                 .textCase(.uppercase)
@@ -247,7 +247,7 @@ struct ReviewModeView: View {
         Button(action: action) {
             VStack(spacing: 10) {
                 Image(systemName: icon)
-                    .scaledFont(20)
+                    .scaledFont(.xl)
                     .fontWeight(.semibold)
                     .foregroundStyle(color)
                     .frame(width: 44, height: 44)
@@ -257,7 +257,7 @@ struct ReviewModeView: View {
                     )
                 
                 Text(label)
-                    .scaledFont(13)
+                    .scaledFont(.sm)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
             }
@@ -291,18 +291,18 @@ struct ReviewModeView: View {
             
             // Icon
             Image(systemName: "checkmark.circle.fill")
-                .scaledFont(64)
+                .scaledFont(.hero)
                 .foregroundStyle(.secondary)
                 .symbolEffect(.bounce)
             
             // Title
             VStack(spacing: 8) {
                 Text("Hoàn thành ôn tập!")
-                    .scaledFont(28)
+                    .scaledFont(.xl3)
                     .fontWeight(.semibold)
                 
                 Text(String(format: "Đã ôn %d từ", completedCount))
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
             }
             
@@ -310,12 +310,12 @@ struct ReviewModeView: View {
             if completedCount > 0 {
                 VStack(spacing: 12) {
                     Text("\(accuracy)%")
-                        .scaledFont(48)
+                        .scaledFont(.xl5)
                         .fontWeight(.bold)
                         .foregroundStyle(accuracy >= 70 ? .green : .orange)
                     
                     Text("Độ chính xác")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 24)
@@ -330,7 +330,7 @@ struct ReviewModeView: View {
                 correctCount = 0
             }) {
                 Text("Ôn tiếp")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
                     .frame(width: 200)

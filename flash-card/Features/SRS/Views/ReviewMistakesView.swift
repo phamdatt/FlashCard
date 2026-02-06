@@ -43,7 +43,7 @@ struct ReviewMistakesView: View {
     private var headerView: some View {
         HStack(spacing: 16) {
             Text("Ôn lại từ đã sai")
-                .scaledFont(20)
+                .scaledFont(.xl)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
 
@@ -56,14 +56,14 @@ struct ReviewMistakesView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "calendar")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                     Text("\(daysFilter) ngày")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .fontWeight(.medium)
                         .foregroundStyle(.primary)
                     Image(systemName: "chevron.down")
-                        .scaledFont(11)
+                        .scaledFont(.xs)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 14)
@@ -120,17 +120,17 @@ struct ReviewMistakesView: View {
                     .fill(Color.gray.opacity(0.12))
                     .frame(width: 100, height: 100)
                 Image(systemName: "checkmark.circle.fill")
-                    .scaledFont(56)
+                    .scaledFont(.hero)
                     .foregroundStyle(.secondary)
                     .symbolEffect(.pulse)
             }
             VStack(spacing: 10) {
                 Text("Không có từ đã sai")
-                    .scaledFont(24)
+                    .scaledFont(.xl2)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
                 Text(String(format: "Bạn chưa có từ nào sai trong %d ngày qua!", daysFilter))
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -175,15 +175,15 @@ private struct MistakeSummaryCard: View {
                         .fill(Color.gray.opacity(0.12))
                         .frame(width: 48, height: 48)
                     Image(systemName: "text.book.closed.fill")
-                        .scaledFont(22)
+                        .scaledFont(.xl2)
                         .foregroundStyle(.secondary)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Tổng số từ cần ôn")
-                        .scaledFont(13)
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                     Text("\(totalWords)")
-                        .scaledFont(22)
+                        .scaledFont(.xl2)
                         .fontWeight(.bold)
                         .foregroundStyle(.primary)
                 }
@@ -205,15 +205,15 @@ private struct MistakeSummaryCard: View {
                         .fill(Color.gray.opacity(0.12))
                         .frame(width: 48, height: 48)
                     Image(systemName: "folder.fill")
-                        .scaledFont(20)
+                        .scaledFont(.xl)
                         .foregroundStyle(.secondary)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Số chủ đề")
-                        .scaledFont(13)
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                     Text("\(totalTopics)")
-                        .scaledFont(22)
+                        .scaledFont(.xl2)
                         .fontWeight(.bold)
                         .foregroundStyle(.primary)
                 }
@@ -248,22 +248,22 @@ private struct MistakeSectionCard: View {
                         .fill(Color.gray.opacity(isLight ? 0.1 : 0.15))
                         .frame(width: 48, height: 48)
                     Image(systemName: "book.fill")
-                        .scaledFont(20)
+                        .scaledFont(.xl)
                         .foregroundStyle(.secondary)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(section.topicName)
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     Text("\(section.flashcards.count) từ cần ôn")
-                        .scaledFont(13)
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
             }
@@ -340,9 +340,9 @@ struct FlashcardReviewView: View {
             Button(action: onBack) {
                 HStack(spacing: 6) {
                     Image(systemName: "chevron.left")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                     Text("Quay lại")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                 }
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 12)
@@ -356,17 +356,17 @@ struct FlashcardReviewView: View {
 
             Spacer()
             Text(sectionName)
-                .scaledFont(14)
+                .scaledFont(.sm)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
             Spacer()
 
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
                 Text("\(currentIndex + 1) / \(flashcards.count)")
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 12)
@@ -430,9 +430,9 @@ struct FlashcardReviewView: View {
             if !isFlipped {
                 HStack(spacing: 6) {
                     Image(systemName: "space")
-                        .scaledFont(12)
+                        .scaledFont(.xs)
                     Text("Nhấn Space hoặc chạm để lật thẻ")
-                        .scaledFont(13)
+                        .scaledFont(.sm)
                 }
                 .foregroundStyle(.secondary)
             }
@@ -440,7 +440,7 @@ struct FlashcardReviewView: View {
             if isFlipped {
                 VStack(spacing: 16) {
                     Text("Bạn đã nhớ chưa?")
-                        .scaledFont(12)
+                        .scaledFont(.xs)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
@@ -469,7 +469,7 @@ struct FlashcardReviewView: View {
     private func questionSide(flashcard: Flashcard) -> some View {
         VStack(spacing: 16) {
             Text(flashcard.question)
-                .scaledFont(28)
+                .scaledFont(.xl3)
                 .fontWeight(.medium)
                 .multilineTextAlignment(.center)
                 .lineSpacing(6)
@@ -492,7 +492,7 @@ struct FlashcardReviewView: View {
     private func answerSide(flashcard: Flashcard) -> some View {
         VStack(spacing: 16) {
             Text(flashcard.answer)
-                .scaledFont(28)
+                .scaledFont(.xl3)
                 .fontWeight(.medium)
                 .multilineTextAlignment(.center)
                 .lineSpacing(6)
@@ -516,12 +516,12 @@ struct FlashcardReviewView: View {
         Button(action: action) {
             VStack(spacing: 10) {
                 Image(systemName: icon == "checkmark" ? "checkmark.circle.fill" : icon)
-                    .scaledFont(22)
+                    .scaledFont(.xl2)
                     .foregroundStyle(color)
                     .frame(width: 48, height: 48)
                     .background(Circle().fill(color.opacity(0.12)))
                 Text(label)
-                    .scaledFont(13)
+                    .scaledFont(.sm)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
             }
@@ -549,27 +549,27 @@ struct FlashcardReviewView: View {
                     .fill(Color.green.opacity(0.12))
                     .frame(width: 100, height: 100)
                 Image(systemName: "checkmark.circle.fill")
-                    .scaledFont(64)
+                    .scaledFont(.hero)
                     .foregroundStyle(.green)
                     .symbolEffect(.bounce)
             }
             VStack(spacing: 10) {
                 Text("Hoàn thành ôn tập!")
-                    .scaledFont(26)
+                    .scaledFont(.xl3)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
                 Text(String(format: "Đã ôn %d từ", completedCount))
-                    .scaledFont(14)
+                    .scaledFont(.sm)
                     .foregroundStyle(.secondary)
             }
             if completedCount > 0 {
                 VStack(spacing: 8) {
                     Text("\(accuracy)%")
-                        .scaledFont(44)
+                        .scaledFont(.xl5)
                         .fontWeight(.bold)
                         .foregroundStyle(accuracy >= 70 ? .green : .orange)
                     Text("Độ chính xác")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 20)
@@ -577,10 +577,10 @@ struct FlashcardReviewView: View {
             Button(action: onBack) {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .foregroundStyle(.white)
                     Text("Quay lại danh sách")
-                        .scaledFont(14)
+                        .scaledFont(.sm)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
                 }

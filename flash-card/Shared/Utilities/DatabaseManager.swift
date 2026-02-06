@@ -4,10 +4,14 @@
 //
 //  Created by Dat Pham on 4/2/26.
 //
+//  SQLite singleton: subjects, topics, vocabularies (flashcards), reading_passages,
+//  practice_sessions, flashcard_progress, mistake_records. Errors thrown as DBError.
+//
 
 import Foundation
 import SQLite3
 
+/// SQLite manager for flashcard app (subjects, topics, vocab, readings, SRS, stats).
 class DatabaseManager {
     static let shared = DatabaseManager()
 
@@ -19,8 +23,69 @@ class DatabaseManager {
         openDatabase()
     }
 
+    /// In-memory SQLite instance for testing. Schema: subjects, topics, vocabularies + SRS/reading tables.
+    internal init(inMemoryForTesting: Bool) {
+        guard inMemoryForTesting else {
+            copyDatabaseIfNeeded()
+            openDatabase()
+            return
+        }
+        var pointer: OpaquePointer?
+        guard sqlite3_open(":memory:", &pointer) == SQLITE_OK else {
+            db = nil
+            return
+        }
+        db = pointer
+        sqlite3_exec(db, "PRAGMA foreign_keys = ON", nil, nil, nil)
+        createCoreTablesForInMemoryTesting()
+        createPracticeSessionsTable()
+        createSRSTables()
+        createReadingPassagesTable()
+        ensureReadingSubjectExists()
+    }
+
     deinit {
         sqlite3_close(db)
+    }
+
+    /// subjects, topics, vocabularies tables for in-memory test.
+    private func createCoreTablesForInMemoryTesting() {
+        sqlite3_exec(db, """
+            CREATE TABLE IF NOT EXISTS subjects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                icon TEXT NOT NULL,
+                sort_order INTEGER NOT NULL
+            )
+            """, nil, nil, nil)
+        sqlite3_exec(db, """
+            CREATE TABLE IF NOT EXISTS topics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                subject_id INTEGER NOT NULL,
+                sort_order INTEGER NOT NULL,
+                is_user_created INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY (subject_id) REFERENCES subjects(id)
+            )
+            """, nil, nil, nil)
+        sqlite3_exec(db, """
+            CREATE TABLE IF NOT EXISTS vocabularies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic_id INTEGER NOT NULL,
+                question TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                hint TEXT,
+                exercise_type TEXT NOT NULL,
+                FOREIGN KEY (topic_id) REFERENCES topics(id)
+            )
+            """, nil, nil, nil)
+        sqlite3_exec(db, "INSERT OR IGNORE INTO subjects (id, name, icon, sort_order) VALUES (1, 'Test', 'book.fill', 0)", nil, nil, nil)
+    }
+
+    /// Ensures DB is open; throws if not (caller catches and sets errorMessage).
+    private func requireDB() throws -> OpaquePointer {
+        guard let db = db else { throw DBError.databaseNotOpen }
+        return db
     }
 
     // MARK: - Database Setup
@@ -138,21 +203,23 @@ class DatabaseManager {
 
     private func openDatabase() {
         let fileURL = DatabaseManager.databaseURL()
-
-        if sqlite3_open(fileURL.path, &db) != SQLITE_OK {
-            print("❌ Error opening database: \(String(cString: sqlite3_errmsg(db)))")
-        } else {
-            print("✅ Database opened at \(fileURL.path)")
-            sqlite3_exec(db, "PRAGMA foreign_keys = ON", nil, nil, nil)
-            createPracticeSessionsTable()
-            createSRSTables()
-            dropOldReadingTablesIfNeeded()
-            createReadingPassagesTable()
-            ensureReadingSubjectExists()
+        var pointer: OpaquePointer?
+        if sqlite3_open(fileURL.path, &pointer) != SQLITE_OK {
+            let msg = pointer.flatMap { String(cString: sqlite3_errmsg($0)) } ?? "unknown"
+            sqlite3_close(pointer)
+            db = nil
+            return
         }
+        db = pointer
+        sqlite3_exec(db, "PRAGMA foreign_keys = ON", nil, nil, nil)
+        createPracticeSessionsTable()
+        createSRSTables()
+        dropOldReadingTablesIfNeeded()
+        createReadingPassagesTable()
+        ensureReadingSubjectExists()
     }
 
-    /// Một lần: xóa bảng cũ reading_questions và reading_passages, sau đó dùng lại bảng reading_passages mới (FK topic_id).
+    /// One-time migration: drop old reading_questions/reading_passages, create new reading_passages (FK topic_id).
     private func dropOldReadingTablesIfNeeded() {
         let key = "reading_tables_migrated_v2"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
@@ -161,7 +228,7 @@ class DatabaseManager {
         UserDefaults.standard.set(true, forKey: key)
     }
 
-    /// Bảng bài đọc (detail) – foreign key tới topic_id.
+    /// Reading passages table – foreign key to topic_id.
     private func createReadingPassagesTable() {
         let sql = """
             CREATE TABLE IF NOT EXISTS reading_passages (
@@ -227,6 +294,7 @@ class DatabaseManager {
         sqlite3_exec(db, "CREATE INDEX IF NOT EXISTS idx_mistake_date ON mistake_records(practice_date)", nil, nil, nil)
     }
 
+    /// SQLite file URL in Application Support (used when opening default DB).
     static func databaseURL() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let appDir = appSupport.appendingPathComponent("flash-card", isDirectory: true)
@@ -235,7 +303,10 @@ class DatabaseManager {
     }
 
     // MARK: - Load All Subjects
+
+    /// Load all subjects with topics and flashcards/readings. Returns empty array if DB not open.
     func loadAllSubjects() -> [Subject] {
+        guard db != nil else { return [] }
         var subjects: [Subject] = []
 
         let sql = "SELECT id, name, icon FROM subjects ORDER BY sort_order"
@@ -286,7 +357,7 @@ class DatabaseManager {
         return topics
     }
 
-    // MARK: - Reading Passages (subject Bài đọc)
+    // MARK: - Reading Passages
 
     private func loadReadings(for topicId: Int) -> [ReadingPassage] {
         var list: [ReadingPassage] = []
@@ -306,44 +377,41 @@ class DatabaseManager {
         return list
     }
 
-    func insertReadingPassage(topicId: Int, title: String, content: String) {
+    func insertReadingPassage(topicId: Int, title: String, content: String) throws {
+        let db = try requireDB()
         let sql = "INSERT INTO reading_passages (topic_id, title, content, sort_order) VALUES (?, ?, ?, 0)"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            print("❌ reading_passages insert prepare failed: \(String(cString: sqlite3_errmsg(db)))")
-            return
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
         defer { sqlite3_finalize(stmt) }
         sqlite3_bind_int(stmt, 1, Int32(topicId))
-        title.withCString { titlePtr in
-            content.withCString { contentPtr in
-                sqlite3_bind_text(stmt, 2, titlePtr, -1, nil)
-                sqlite3_bind_text(stmt, 3, contentPtr, -1, nil)
-                if sqlite3_step(stmt) != SQLITE_DONE {
-                    print("❌ reading_passages insert failed: \(String(cString: sqlite3_errmsg(db)))")
-                }
-            }
+        sqlite3_bind_text(stmt, 2, (title as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (content as NSString).utf8String, -1, nil)
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
     }
 
-    /// Returns true if delete succeeded, false otherwise.
-    func deleteReadingPassage(id: Int) -> Bool {
+    /// Deletes reading passage by id. Throws on error.
+    func deleteReadingPassage(id: Int) throws {
+        let db = try requireDB()
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, "DELETE FROM reading_passages WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else {
-            print("❌ deleteReadingPassage: prepare failed: \(String(cString: sqlite3_errmsg(db)))")
-            return false
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
         defer { sqlite3_finalize(stmt) }
         sqlite3_bind_int(stmt, 1, Int32(id))
-        if sqlite3_step(stmt) != SQLITE_DONE {
-            print("❌ deleteReadingPassage: delete failed: \(String(cString: sqlite3_errmsg(db)))")
-            return false
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
-        return true
     }
 
     // MARK: - Load Vocabularies
+
+    /// Loads flashcards for a topic; generates multiple-choice options if at least 4 cards. Returns [] on error.
     func loadFlashcards(for topicId: Int) -> [Flashcard] {
+        guard db != nil else { return [] }
         var flashcards: [Flashcard] = []
 
         let querySQL = "SELECT id, question, answer, hint, exercise_type FROM vocabularies WHERE topic_id = ?"
@@ -416,135 +484,119 @@ class DatabaseManager {
 
     // MARK: - CRUD Operations
 
-    /// Insert topic, trả về topic id (auto-increment)
-    @discardableResult
-    func insertTopic(_ topic: Topic) -> Int {
+    /// Inserts topic; returns topic id (auto-increment). Throws on error.
+    func insertTopic(_ topic: Topic) throws -> Int {
+        let db = try requireDB()
         let insertSQL = "INSERT INTO topics (name, subject_id, sort_order, is_user_created) VALUES (?, ?, ?, 1)"
         var stmt: OpaquePointer?
-        var newTopicId = 0
-
-        if sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nil) == SQLITE_OK {
-            let currentCount = Int32(getTotalTopicsCount(for: topic.subjectId))
-
-            sqlite3_bind_text(stmt, 1, (topic.name as NSString).utf8String, -1, nil)
-            sqlite3_bind_int(stmt, 2, Int32(topic.subjectId))
-            sqlite3_bind_int(stmt, 3, currentCount)
-
-            if sqlite3_step(stmt) == SQLITE_DONE {
-                newTopicId = Int(sqlite3_last_insert_rowid(db))
-            } else {
-                print("❌ Error: \(String(cString: sqlite3_errmsg(db)))")
-            }
+        guard sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nil) == SQLITE_OK else {
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
-        sqlite3_finalize(stmt)
-        return newTopicId
+        defer { sqlite3_finalize(stmt) }
+        let currentCount = Int32(getTotalTopicsCount(for: topic.subjectId))
+        sqlite3_bind_text(stmt, 1, (topic.name as NSString).utf8String, -1, nil)
+        sqlite3_bind_int(stmt, 2, Int32(topic.subjectId))
+        sqlite3_bind_int(stmt, 3, currentCount)
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
+        }
+        return Int(sqlite3_last_insert_rowid(db))
     }
 
-    func insertFlashcard(_ card: Flashcard, topicId: Int) {
+    /// Inserts flashcard into topic. Throws on error.
+    func insertFlashcard(_ card: Flashcard, topicId: Int) throws {
+        let db = try requireDB()
         let insertSQL = "INSERT INTO vocabularies (topic_id, question, answer, hint, exercise_type) VALUES (?, ?, ?, ?, ?)"
         var stmt: OpaquePointer?
-
-        if sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_int(stmt, 1, Int32(topicId))
-            sqlite3_bind_text(stmt, 2, (card.question as NSString).utf8String, -1, nil)
-            sqlite3_bind_text(stmt, 3, (card.answer as NSString).utf8String, -1, nil)
-            sqlite3_bind_text(stmt, 4, ((card.hint ?? "") as NSString).utf8String, -1, nil)
-            sqlite3_bind_text(stmt, 5, (card.exerciseType.rawValue as NSString).utf8String, -1, nil)
-
-            if sqlite3_step(stmt) != SQLITE_DONE {
-                print("❌ Error inserting flashcard: \(String(cString: sqlite3_errmsg(db)))")
-            }
+        guard sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nil) == SQLITE_OK else {
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
-        sqlite3_finalize(stmt)
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int(stmt, 1, Int32(topicId))
+        sqlite3_bind_text(stmt, 2, (card.question as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (card.answer as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 4, ((card.hint ?? "") as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 5, (card.exerciseType.rawValue as NSString).utf8String, -1, nil)
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
+        }
     }
 
-    func updateFlashcard(id: Int, question: String, answer: String, hint: String?) {
+    /// Updates flashcard content. Throws on error.
+    func updateFlashcard(id: Int, question: String, answer: String, hint: String?) throws {
+        let db = try requireDB()
         var stmt: OpaquePointer?
         let sql = "UPDATE vocabularies SET question = ?, answer = ?, hint = ? WHERE id = ?"
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            print("❌ updateFlashcard: prepare failed")
-            return
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
         defer { sqlite3_finalize(stmt) }
         let hintVal = hint ?? ""
-        question.withCString { q in
-            answer.withCString { a in
-                hintVal.withCString { h in
-                    sqlite3_bind_text(stmt, 1, q, -1, nil)
-                    sqlite3_bind_text(stmt, 2, a, -1, nil)
-                    sqlite3_bind_text(stmt, 3, h, -1, nil)
-                    sqlite3_bind_int(stmt, 4, Int32(id))
-                    if sqlite3_step(stmt) != SQLITE_DONE {
-                        print("❌ updateFlashcard: update failed: \(String(cString: sqlite3_errmsg(db)))")
-                    }
-                }
-            }
+        sqlite3_bind_text(stmt, 1, (question as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 2, (answer as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (hintVal as NSString).utf8String, -1, nil)
+        sqlite3_bind_int(stmt, 4, Int32(id))
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
     }
 
-    /// Returns true if delete succeeded, false otherwise.
-    func deleteTopic(id: Int) -> Bool {
+    /// Deletes topic and related data. Throws on error.
+    func deleteTopic(id: Int) throws {
+        let db = try requireDB()
         sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
-
+        defer { sqlite3_exec(db, "ROLLBACK", nil, nil, nil) }
         var stmt: OpaquePointer?
-        if sqlite3_prepare_v2(db, "DELETE FROM vocabularies WHERE topic_id = ?", -1, &stmt, nil) != SQLITE_OK {
-            print("❌ deleteTopic: prepare vocabularies failed")
-            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
-            return false
+        guard sqlite3_prepare_v2(db, "DELETE FROM vocabularies WHERE topic_id = ?", -1, &stmt, nil) == SQLITE_OK else {
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
         sqlite3_bind_int(stmt, 1, Int32(id))
-        if sqlite3_step(stmt) != SQLITE_DONE {
-            print("❌ deleteTopic: delete vocabularies failed")
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
             sqlite3_finalize(stmt)
-            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
-            return false
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
         sqlite3_finalize(stmt)
 
         stmt = nil
         if sqlite3_prepare_v2(db, "DELETE FROM reading_passages WHERE topic_id = ?", -1, &stmt, nil) == SQLITE_OK {
             sqlite3_bind_int(stmt, 1, Int32(id))
-            if sqlite3_step(stmt) != SQLITE_DONE {
-                print("❌ deleteTopic: delete reading_passages failed: \(String(cString: sqlite3_errmsg(db)))")
-            }
+            sqlite3_step(stmt)
             sqlite3_finalize(stmt)
         }
 
         stmt = nil
-        if sqlite3_prepare_v2(db, "DELETE FROM topics WHERE id = ?", -1, &stmt, nil) != SQLITE_OK {
-            print("❌ deleteTopic: prepare topics failed")
-            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
-            return false
+        guard sqlite3_prepare_v2(db, "DELETE FROM topics WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else {
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
         sqlite3_bind_int(stmt, 1, Int32(id))
-        if sqlite3_step(stmt) != SQLITE_DONE {
-            print("❌ deleteTopic: delete topic failed: \(String(cString: sqlite3_errmsg(db)))")
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
             sqlite3_finalize(stmt)
-            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
-            return false
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
         sqlite3_finalize(stmt)
         sqlite3_exec(db, "COMMIT", nil, nil, nil)
-        return true
     }
 
-    /// Returns true if delete succeeded, false otherwise.
-    func deleteFlashcard(id: Int) -> Bool {
+    /// Deletes flashcard by id. Throws on error.
+    func deleteFlashcard(id: Int) throws {
+        let db = try requireDB()
         let deleteSQL = "DELETE FROM vocabularies WHERE id = ?"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, deleteSQL, -1, &stmt, nil) == SQLITE_OK else {
-            print("❌ deleteFlashcard: prepare failed")
-            return false
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
         defer { sqlite3_finalize(stmt) }
         sqlite3_bind_int(stmt, 1, Int32(id))
-        return sqlite3_step(stmt) == SQLITE_DONE
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
+        }
     }
 
     // MARK: - Backup / Restore
 
     /// Exports all user-created data (topics with is_user_created=1 and their flashcards/readings) as JSON.
     func exportUserData() -> Data? {
+        guard db != nil else { return nil }
         let payload = loadUserDataForExport()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -591,65 +643,59 @@ class DatabaseManager {
         return result
     }
 
-    /// Imports user data from a backup payload. Replaces all current user-created topics and their content.
-    /// Returns true on success, false on failure.
-    func importUserData(_ payload: BackupPayload) -> Bool {
+    /// Imports user data from backup payload. Replaces all user-created topics and content. Throws on error.
+    func importUserData(_ payload: BackupPayload) throws {
+        let db = try requireDB()
         sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
         defer { sqlite3_exec(db, "ROLLBACK", nil, nil, nil) }
-        if !deleteAllUserCreatedData() {
-            return false
-        }
+        try deleteAllUserCreatedData()
         for exportSubj in payload.subjects {
             for exportTopic in exportSubj.topics {
                 let newTopic = Topic(name: exportTopic.name, subjectId: exportSubj.id, flashcards: [], readings: [])
-                let newTopicId = insertTopic(newTopic)
+                let newTopicId = try insertTopic(newTopic)
                 for card in exportTopic.flashcards {
                     let ex = ExerciseType(rawValue: card.exerciseType) ?? .chineseToVietnamese
                     let hintVal = (card.hint ?? "").isEmpty ? nil : card.hint
                     let f = Flashcard(question: card.question, answer: card.answer, hint: hintVal, exerciseType: ex)
-                    insertFlashcard(f, topicId: newTopicId)
+                    try insertFlashcard(f, topicId: newTopicId)
                 }
                 for reading in exportTopic.readings {
-                    insertReadingPassage(topicId: newTopicId, title: reading.title, content: reading.content)
+                    try insertReadingPassage(topicId: newTopicId, title: reading.title, content: reading.content)
                 }
             }
         }
         sqlite3_exec(db, "COMMIT", nil, nil, nil)
-        return true
     }
 
-    private func deleteAllUserCreatedData() -> Bool {
+    private func deleteAllUserCreatedData() throws {
+        let db = try requireDB()
         var stmt: OpaquePointer?
-        if sqlite3_prepare_v2(db, "DELETE FROM vocabularies WHERE topic_id IN (SELECT id FROM topics WHERE is_user_created = 1)", -1, &stmt, nil) != SQLITE_OK {
-            print("❌ deleteAllUserCreatedData: vocabularies failed")
-            return false
+        guard sqlite3_prepare_v2(db, "DELETE FROM vocabularies WHERE topic_id IN (SELECT id FROM topics WHERE is_user_created = 1)", -1, &stmt, nil) == SQLITE_OK else {
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
-        if sqlite3_step(stmt) != SQLITE_DONE {
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
             sqlite3_finalize(stmt)
-            return false
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
         sqlite3_finalize(stmt)
         stmt = nil
-        if sqlite3_prepare_v2(db, "DELETE FROM reading_passages WHERE topic_id IN (SELECT id FROM topics WHERE is_user_created = 1)", -1, &stmt, nil) != SQLITE_OK {
-            print("❌ deleteAllUserCreatedData: reading_passages failed")
-            return false
+        guard sqlite3_prepare_v2(db, "DELETE FROM reading_passages WHERE topic_id IN (SELECT id FROM topics WHERE is_user_created = 1)", -1, &stmt, nil) == SQLITE_OK else {
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
-        if sqlite3_step(stmt) != SQLITE_DONE {
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
             sqlite3_finalize(stmt)
-            return false
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
         sqlite3_finalize(stmt)
         stmt = nil
-        if sqlite3_prepare_v2(db, "DELETE FROM topics WHERE is_user_created = 1", -1, &stmt, nil) != SQLITE_OK {
-            print("❌ deleteAllUserCreatedData: topics failed")
-            return false
+        guard sqlite3_prepare_v2(db, "DELETE FROM topics WHERE is_user_created = 1", -1, &stmt, nil) == SQLITE_OK else {
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
         }
-        if sqlite3_step(stmt) != SQLITE_DONE {
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
             sqlite3_finalize(stmt)
-            return false
+            throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
         sqlite3_finalize(stmt)
-        return true
     }
 
     // MARK: - Private Helpers for CRUD
@@ -671,6 +717,7 @@ class DatabaseManager {
         sqlite3_exec(db, sql, nil, nil, nil)
     }
 
+    /// Records a practice session (date, type, topic, correct/total) into practice_sessions.
     func recordPracticeSession(practiceDate: String, practiceType: String, topicId: Int, correct: Int, total: Int) {
         let sql = "INSERT INTO practice_sessions (practice_date, practice_type, topic_id, correct_answers, total_questions) VALUES (?, ?, ?, ?, ?)"
         var stmt: OpaquePointer?
@@ -686,6 +733,7 @@ class DatabaseManager {
         sqlite3_finalize(stmt)
     }
 
+    /// Streak info (consecutive days, record, studied today) from practice_sessions.
     func getStreakInfo() -> StreakInfo {
         // Get all distinct practice dates, ordered descending
         let sql = "SELECT DISTINCT practice_date FROM practice_sessions ORDER BY practice_date DESC"
@@ -769,7 +817,8 @@ class DatabaseManager {
     }
     
     // MARK: - SRS (Spaced Repetition System)
-    
+
+    /// SRS progress for a flashcard (interval, next_review_date, …); nil if none.
     func getFlashcardProgress(flashcardId: Int) -> FlashcardProgress? {
         let sql = """
             SELECT id, flashcard_id, ease_factor, interval_days, repetitions, 
@@ -866,6 +915,7 @@ class DatabaseManager {
         sqlite3_finalize(stmt)
     }
     
+    /// Flashcard ids due for review today (next_review_date <= today).
     func getDueFlashcards() -> [Int] {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -891,6 +941,7 @@ class DatabaseManager {
     
     // MARK: - Mistake Records
     
+    /// Records one wrong answer (for mistake review).
     func recordMistake(flashcardId: Int, practiceType: String, topicId: Int) {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -912,6 +963,7 @@ class DatabaseManager {
         sqlite3_finalize(stmt)
     }
     
+    /// Flashcard ids with mistakes in the last N days (default 30).
     func getMistakeFlashcards(days: Int = 30) -> [Int] {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -937,7 +989,8 @@ class DatabaseManager {
     }
     
     // MARK: - Statistics
-    
+
+    /// Aggregated learning stats (card counts, learned, due, accuracy, practice history, streak).
     func getLearningStatistics() -> LearningStatistics {
         // Get all flashcards
         let totalFlashcards = getTotalFlashcardsCount()

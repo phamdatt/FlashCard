@@ -2,7 +2,7 @@
 //  SpeechManager.swift
 //  flash-card
 //
-//  Giữ AVSpeechSynthesizer để TTS không bị dừng do synthesizer bị giải phóng.
+//  Hold AVSpeechSynthesizer so TTS is not stopped when synthesizer is released.
 //
 
 import Foundation
@@ -10,7 +10,7 @@ import AVFoundation
 import Combine
 import AppKit
 
-/// Mã giọng tiếng Anh có thể chọn (accent).
+/// Selectable English voice (accent) identifier.
 enum EnglishAccent: String, CaseIterable, Identifiable {
     case us = "en-US"
     case gb = "en-GB"
@@ -31,7 +31,7 @@ enum EnglishAccent: String, CaseIterable, Identifiable {
 
 private let ttsEnglishAccentKey = "tts_english_accent"
 
-/// Shared TTS: phải giữ synthesizer trong instance, không tạo local.
+/// Shared TTS: keep synthesizer in instance, do not create locally.
 @MainActor
 final class SpeechManager: ObservableObject {
     static let shared = SpeechManager()
@@ -40,10 +40,10 @@ final class SpeechManager: ObservableObject {
     private let delegateHolder: SpeechDelegateHolder
 
     @Published private(set) var isSpeaking = false
-    /// Khi TTS không dùng được (không có giọng), set message để UI hiện hướng dẫn.
+    /// When TTS is unavailable (no voice), set message for UI to show guidance.
     @Published var ttsUnavailableMessage: String?
 
-    /// Accent tiếng Anh dùng cho TTS (lưu UserDefaults).
+    /// English accent used for TTS (stored in UserDefaults).
     var preferredEnglishAccent: EnglishAccent {
         get {
             let raw = UserDefaults.standard.string(forKey: ttsEnglishAccentKey) ?? EnglishAccent.gb.rawValue
@@ -86,7 +86,7 @@ final class SpeechManager: ObservableObject {
         synthesizer.speak(utterance)
     }
 
-    /// Mở Cài đặt hệ thống → Trợ năng (để user tự vào mục Nội dung đọc / Spoken Content).
+    /// Opens System Settings → Accessibility (user goes to Spoken Content).
     func openSpeechSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.universalaccess") {
             NSWorkspace.shared.open(url)
@@ -104,7 +104,7 @@ final class SpeechManager: ObservableObject {
         return preferredEnglishAccent.rawValue
     }
 
-    /// Phát hiện text có phải tiếng Việt (có ký tự đặc trưng: ă, â, đ, ê, ô, ơ, ư, dấu thanh).
+    /// Detects if text is Vietnamese (characteristic chars: ă, â, đ, ê, ô, ơ, ư, tone marks).
     private func looksLikeVietnamese(_ text: String) -> Bool {
         let vietnameseChars = CharacterSet(charactersIn: "ăâđêôơưĂÂĐÊÔƠƯàáảãạèéẻẽệìíỉĩịòóỏõọùúủũụỳýỷỹỵằắẳẵặầấẩẫậờớởỡợừứửữự")
         return text.unicodeScalars.contains { vietnameseChars.contains($0) }

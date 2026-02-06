@@ -2,7 +2,7 @@
 //  BackupRestoreView.swift
 //  flash-card
 //
-//  Sao lưu (export JSON) / Phục hồi (import với xác nhận).
+//  Backup (export JSON) / Restore (import with confirmation).
 //
 
 import SwiftUI
@@ -107,7 +107,7 @@ struct BackupRestoreView: View {
             }
             DispatchQueue.main.async {
                 statusMessage = nil
-                // Đóng sheet trước, sau đó mới mở hộp thoại lưu (tránh runModal() từ trong sheet bị trả về Cancel).
+                // Close sheet first, then open save panel (avoid runModal() from inside sheet returning Cancel).
                 dismiss()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                     showSavePanelAfterDismiss(data: data)
@@ -149,15 +149,12 @@ struct BackupRestoreView: View {
         do {
             let data = try Data(contentsOf: url)
             let payload = try JSONDecoder().decode(BackupPayload.self, from: data)
-            if DatabaseManager.shared.importUserData(payload) {
-                viewModel.loadLearningData()
-                statusMessage = "Đã phục hồi xong."
-                dismiss()
-            } else {
-                viewModel.errorMessage = "Phục hồi thất bại."
-            }
+            try DatabaseManager.shared.importUserData(payload)
+            viewModel.loadLearningData()
+            statusMessage = "Đã phục hồi xong."
+            dismiss()
         } catch {
-            viewModel.errorMessage = "File không hợp lệ: \(error.localizedDescription)"
+            viewModel.errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
     }
 

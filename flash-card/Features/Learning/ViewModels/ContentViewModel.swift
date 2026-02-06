@@ -8,9 +8,24 @@
 import SwiftUI
 import Combine
 
+// MARK: - Detail Route (D1 – Router)
+/// Detail screen state; ContentView renders detailColumn from this route.
+enum DetailRoute: Equatable {
+    case review
+    case reviewMistakes
+    case statistics
+    case learning(topic: Topic?)
+    case reading(topic: Topic)
+}
+
 // MARK: - ViewModel
 @MainActor
 class ContentViewModel: ObservableObject {
+    /// Injected for tests (in-memory DB); nil uses real database.
+    private var testDatabase: DatabaseManager?
+
+    private var database: DatabaseManager { testDatabase ?? DatabaseManager.shared }
+
     // Learning section
     @Published var subjects: [Subject] = []
     @Published var selectedSubject: Subject?
@@ -30,7 +45,7 @@ class ContentViewModel: ObservableObject {
     @Published var newFlashcardAnswer = ""
     @Published var newFlashcardHint = ""
 
-    // Add Reading passage sheet (subject Bài đọc)
+    // Add Reading passage sheet
     @Published var showAddReadingSheet = false
     @Published var newReadingTitle = ""
     @Published var newReadingContent = ""
@@ -50,7 +65,7 @@ class ContentViewModel: ObservableObject {
 
     // Error message for DB failures (shown as alert)
     @Published var errorMessage: String?
-    /// Thông báo sau khi sao lưu xong (sheet đã đóng, hiện alert trên màn chính).
+    /// Message after backup finishes (sheet closed, show alert on main screen).
     @Published var backupSaveResultMessage: String?
 
     // Loading state (initial load / reload)
@@ -65,19 +80,33 @@ class ContentViewModel: ObservableObject {
     @Published var undoableItem: UndoableItem?
     private var undoClearWorkItem: DispatchWorkItem?
 
-    // Keyboard shortcuts help sheet (menu Help → Phím tắt / sidebar)
+    // Keyboard shortcuts help sheet (menu Help / sidebar)
     @Published var showKeyboardShortcutsSheet = false
 
     // Backup / Restore sheet (sidebar)
     @Published var showBackupRestoreSheet = false
 
-    // Giọng đọc tiếng Anh (TTS accent) sheet (sidebar)
+    // TTS English accent sheet (sidebar)
     @Published var showSpeechAccentSheet = false
 
     // Import flashcards sheet (from CSV/JSON)
     @Published var showImportFlashcardSheet = false
 
     // MARK: - Navigation Helpers
+
+    /// Current route for detail column; ContentView switches on this.
+    var detailRoute: DetailRoute {
+        if showReviewMode { return .review }
+        if showReviewMistakes { return .reviewMistakes }
+        if showStatistics { return .statistics }
+        if let topic = selectedTopic {
+            if selectedSubject?.name == "Bài đọc" {
+                return .reading(topic: topic)
+            }
+            return .learning(topic: topic)
+        }
+        return .learning(topic: nil)
+    }
     
     var isInSpecialMode: Bool {
         showReviewMode || showReviewMistakes || showStatistics
@@ -127,7 +156,8 @@ class ContentViewModel: ObservableObject {
         }
     }
 
-    init() {
+    init(databaseForTesting: DatabaseManager? = nil) {
+        self.testDatabase = databaseForTesting
         isLoading = true
         DispatchQueue.main.async { [weak self] in
             self?.loadLearningData()
@@ -167,7 +197,7 @@ class ContentViewModel: ObservableObject {
         guard let subject = selectedSubject,
             !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
 
-        // Lưu lại ID trước khi load lại data
+        // Preserve selection before reload
         let currentSubjectId = subject.id
 
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
@@ -179,14 +209,18 @@ class ContentViewModel: ObservableObject {
             readings: []
         )
 
-        DatabaseManager.shared.insertTopic(newTopic)
-
+        do {
+            _ = try database.insertTopic(newTopic)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
         loadLearningData()
 
-        // Restore lại selection sau khi load
+        // Restore selection after load
         if let updatedSubject = subjects.first(where: { $0.id == currentSubjectId }) {
             self.selectedSubject = updatedSubject
-            // Giữ nguyên topic đang chọn nếu có
+            // Keep current topic if still present
             if let currentTopicId = selectedTopic?.id,
                let updatedTopic = updatedSubject.topics.first(where: { $0.id == currentTopicId }) {
                 self.selectedTopic = updatedTopic
@@ -203,7 +237,7 @@ class ContentViewModel: ObservableObject {
                 !question.trimmingCharacters(in: .whitespaces).isEmpty,
                 !answer.trimmingCharacters(in: .whitespaces).isEmpty else { return }
 
-            // Lưu lại ID trước khi load lại data
+            // Preserve selection before reload
             let currentTopicId = topic.id
             let currentSubjectId = topic.subjectId
 
@@ -220,16 +254,20 @@ class ContentViewModel: ObservableObject {
                 exerciseType: .chineseToVietnamese
             )
             
-            DatabaseManager.shared.insertFlashcard(newFlashcard, topicId: currentTopicId)
-
+            do {
+                try database.insertFlashcard(newFlashcard, topicId: currentTopicId)
+            } catch {
+                errorMessage = error.localizedDescription
+                return
+            }
             loadLearningData()
 
-            // Restore lại selection sau khi load
+            // Restore selection after load
             if let updatedSubject = subjects.first(where: { $0.id == currentSubjectId }),
                let updatedTopic = updatedSubject.topics.first(where: { $0.id == currentTopicId }) {
                 self.selectedSubject = updatedSubject
                 self.selectedTopic = updatedTopic
-                self.selectedFlashcard = updatedTopic.flashcards.last // Chọn thẻ vừa tạo
+                self.selectedFlashcard = updatedTopic.flashcards.last
             }
 
             newFlashcardQuestion = ""
@@ -256,12 +294,17 @@ class ContentViewModel: ObservableObject {
         switch item {
         case .topic(let name, let subjectId, let flashcards, let readings):
             let newTopic = Topic(name: name, subjectId: subjectId, flashcards: [], readings: [])
-            let newTopicId = DatabaseManager.shared.insertTopic(newTopic)
-            for card in flashcards {
-                DatabaseManager.shared.insertFlashcard(card, topicId: newTopicId)
-            }
-            for (title, content) in readings {
-                DatabaseManager.shared.insertReadingPassage(topicId: newTopicId, title: title, content: content)
+            do {
+                let newTopicId = try database.insertTopic(newTopic)
+                for card in flashcards {
+                    try database.insertFlashcard(card, topicId: newTopicId)
+                }
+                for (title, content) in readings {
+                    try database.insertReadingPassage(topicId: newTopicId, title: title, content: content)
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+                return
             }
             loadLearningData()
             if let sub = subjects.first(where: { $0.id == subjectId }),
@@ -271,7 +314,12 @@ class ContentViewModel: ObservableObject {
                 selectedFlashcard = restored.flashcards.first
             }
         case .flashcard(let card, let topicId):
-            DatabaseManager.shared.insertFlashcard(card, topicId: topicId)
+            do {
+                try database.insertFlashcard(card, topicId: topicId)
+            } catch {
+                errorMessage = error.localizedDescription
+                return
+            }
             loadLearningData()
             if let subId = selectedSubject?.id, let sub = subjects.first(where: { $0.id == subId }),
                let topic = sub.topics.first(where: { $0.id == topicId }) {
@@ -280,7 +328,12 @@ class ContentViewModel: ObservableObject {
                 selectedFlashcard = topic.flashcards.last
             }
         case .passage(let title, let content, let topicId):
-            DatabaseManager.shared.insertReadingPassage(topicId: topicId, title: title, content: content)
+            do {
+                try database.insertReadingPassage(topicId: topicId, title: title, content: content)
+            } catch {
+                errorMessage = error.localizedDescription
+                return
+            }
             loadLearningData()
             if let subId = selectedSubject?.id, let sub = subjects.first(where: { $0.id == subId }),
                let topic = sub.topics.first(where: { $0.id == topicId }) {
@@ -298,8 +351,10 @@ class ContentViewModel: ObservableObject {
     }
 
     func deleteTopic(_ topic: Topic) {
-        guard DatabaseManager.shared.deleteTopic(id: topic.id) else {
-            errorMessage = "Không thể xóa chủ đề. Vui lòng thử lại."
+        do {
+            try database.deleteTopic(id: topic.id)
+        } catch {
+            errorMessage = error.localizedDescription
             return
         }
         let readingsSnapshot = topic.readings.map { ($0.title, $0.content) }
@@ -326,7 +381,12 @@ class ContentViewModel: ObservableObject {
         let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
         let trimmedContent = content.trimmingCharacters(in: .whitespaces)
 
-        DatabaseManager.shared.insertReadingPassage(topicId: topicId, title: trimmedTitle, content: trimmedContent)
+        do {
+            try database.insertReadingPassage(topicId: topicId, title: trimmedTitle, content: trimmedContent)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
         loadLearningData()
 
         let currentSubjectId = selectedSubject?.id
@@ -342,8 +402,10 @@ class ContentViewModel: ObservableObject {
     }
 
     func deleteReadingPassage(_ passage: ReadingPassage) {
-        guard DatabaseManager.shared.deleteReadingPassage(id: passage.id) else {
-            errorMessage = "Không thể xóa bài đọc. Vui lòng thử lại."
+        do {
+            try database.deleteReadingPassage(id: passage.id)
+        } catch {
+            errorMessage = error.localizedDescription
             return
         }
         undoableItem = .passage(title: passage.title, content: passage.content, topicId: passage.topicId)
@@ -359,8 +421,10 @@ class ContentViewModel: ObservableObject {
 
     func deleteFlashcard(_ flashcard: Flashcard) {
         let topicId = selectedTopic?.id
-        guard DatabaseManager.shared.deleteFlashcard(id: flashcard.id) else {
-            errorMessage = "Không thể xóa từ vựng. Vui lòng thử lại."
+        do {
+            try database.deleteFlashcard(id: flashcard.id)
+        } catch {
+            errorMessage = error.localizedDescription
             return
         }
         if let topicId = topicId {
@@ -396,7 +460,12 @@ class ContentViewModel: ObservableObject {
         let trimmedHint = hint?.trimmingCharacters(in: .whitespaces)
         let hintOrNil = (trimmedHint?.isEmpty ?? true) ? nil : trimmedHint
 
-        DatabaseManager.shared.updateFlashcard(id: id, question: trimmedQuestion, answer: trimmedAnswer, hint: hintOrNil)
+        do {
+            try database.updateFlashcard(id: id, question: trimmedQuestion, answer: trimmedAnswer, hint: hintOrNil)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
         loadLearningData()
 
         if let subId = currentSubjectId, let sub = subjects.first(where: { $0.id == subId }),
@@ -412,14 +481,14 @@ class ContentViewModel: ObservableObject {
     // MARK: - Learning Data Management
 
     func loadLearningData() {
-        subjects = DatabaseManager.shared.loadAllSubjects()
+        subjects = database.loadAllSubjects()
         if selectedSubject == nil, let first = subjects.first {
             selectSubject(first)
         }
     }
 
     func selectSubject(_ subject: Subject) {
-        // Kiểm tra xem topic hiện tại có thuộc subject mới không
+        // Check if current topic belongs to new subject
         let currentTopicId = selectedTopic?.id
         let currentTopicBelongsToNewSubject = currentTopicId != nil && 
             subject.topics.contains(where: { $0.id == currentTopicId })
@@ -427,9 +496,9 @@ class ContentViewModel: ObservableObject {
         selectedSubject = subject
         
         if currentTopicBelongsToNewSubject, let currentTopic = subject.topics.first(where: { $0.id == currentTopicId }) {
-            // Giữ nguyên topic đang chọn nếu nó thuộc subject mới
+            // Keep topic if it belongs to new subject
             selectedTopic = currentTopic
-            // Giữ nguyên flashcard nếu có thể
+            // Keep flashcard if possible
             if let currentFlashcardId = selectedFlashcard?.id,
                currentTopic.flashcards.contains(where: { $0.id == currentFlashcardId }) {
                 selectedFlashcard = currentTopic.flashcards.first(where: { $0.id == currentFlashcardId })
@@ -437,7 +506,7 @@ class ContentViewModel: ObservableObject {
                 selectedFlashcard = currentTopic.flashcards.first
             }
         } else if let firstTopic = subject.topics.first {
-            // Chỉ chọn topic đầu tiên nếu topic hiện tại không thuộc subject mới
+            // Select first topic only if current topic not in new subject
             selectedTopic = firstTopic
             selectedFlashcard = firstTopic.flashcards.first
         } else {
@@ -447,7 +516,7 @@ class ContentViewModel: ObservableObject {
     }
 
     func selectTopic(_ topic: Topic) {
-        // Chỉ update nếu topic thực sự thay đổi
+        // Update only when topic actually changed
         if selectedTopic?.id != topic.id {
             selectedTopic = topic
             selectedFlashcard = topic.flashcards.first
@@ -461,7 +530,7 @@ class ContentViewModel: ObservableObject {
     // MARK: - Streak
 
     func loadStreakInfo() {
-        streakInfo = DatabaseManager.shared.getStreakInfo()
+        streakInfo = database.getStreakInfo()
     }
 
     func recordPractice(practiceType: String, topicId: Int, correct: Int, total: Int) {
@@ -469,7 +538,7 @@ class ContentViewModel: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         let today = formatter.string(from: Date())
 
-        DatabaseManager.shared.recordPracticeSession(
+        database.recordPracticeSession(
             practiceDate: today,
             practiceType: practiceType,
             topicId: topicId,

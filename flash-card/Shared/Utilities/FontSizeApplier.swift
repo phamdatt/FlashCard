@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// MARK: - Font Size Applier - Tự động scale tất cả font trong app
+// MARK: - Font Size Applier
 struct FontSizeApplier: ViewModifier {
     @ObservedObject var fontSizeManager: FontSizeManager
     
@@ -18,7 +18,7 @@ struct FontSizeApplier: ViewModifier {
 }
 
 extension View {
-    // Áp dụng font size scaling cho toàn bộ view hierarchy
+    // Apply font size scaling to entire view hierarchy
     func applyGlobalFontSize(fontSizeManager: FontSizeManager) -> some View {
         self.modifier(FontSizeApplier(fontSizeManager: fontSizeManager))
     }
