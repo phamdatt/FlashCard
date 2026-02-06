@@ -199,7 +199,12 @@ struct FlashcardMainView: View {
             // Content based on mode
             switch selectedMode {
             case .list:
-                listView
+                VocabularyListView(
+                    viewModel: viewModel,
+                    topic: topic,
+                    showEditFlashcardSheet: $showEditFlashcardSheet,
+                    showDeleteMultipleFlashcardsConfirmation: $showDeleteMultipleFlashcardsConfirmation
+                )
             case .practice:
                 practiceView
             }
@@ -262,199 +267,26 @@ struct FlashcardMainView: View {
         }
     }
     
-    private var flashcardListSelection: Binding<Set<Flashcard>> {
-        Binding(
-            get: { Set(topic.flashcards.filter { viewModel.selectedFlashcardIds.contains($0.id) }) },
-            set: { viewModel.setSelectedFlashcards($0) }
-        )
-    }
-    
-    // List mode view
-    private var listView: some View {
-        HSplitView {
-            List(topic.flashcards, selection: flashcardListSelection) { flashcard in
-                ZStack(alignment: .topTrailing) {
-                    // Main content
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 4) {
-                            Text(Flashcard.exerciseTypeLabel)
-                                .scaledFont(.sm)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Color.gray.opacity(colorScheme == .light ? 0.12 : 0.18))
-                                .cornerRadius(4)
-                                .lineLimit(1)
-                            
-                            Spacer()
-                        }
-                        
-                        Text(flashcard.question)
-                            .scaledFont(.base)
-                            .fontWeight(.medium)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.trailing, 32) // Space for icons
-
-                        if let hint = flashcard.hint, !hint.isEmpty {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "lightbulb.fill")
-                                        .font(.app(.subheadline))
-                                        .foregroundStyle(.green)
-                                    Text("Gợi ý")
-                                        .font(.app(.subheadline))
-                                        .foregroundStyle(.secondary)
-                                }
-                                Text(hint)
-                                    .font(.app(.subheadline))
-                                    .foregroundStyle(.secondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.trailing, 32)
-                        }
-                        if viewModel.selectedSubject?.name == "Tiếng Trung", let radical = flashcard.radical, !radical.isEmpty {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack(spacing: 4) {
-                                    Text("Bộ thủ")
-                                        .font(.app(.subheadline))
-                                        .foregroundStyle(.secondary)
-                                }
-                                Text(radical)
-                                    .font(.app(.callout))
-                                    .foregroundStyle(.secondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.trailing, 32)
-                        }
-                        if let notes = flashcard.notes, !notes.isEmpty {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack(spacing: 4) {
-                                    Text("Ghi chú")
-                                        .font(.app(.subheadline))
-                                        .foregroundStyle(.secondary)
-                                }
-                                Text(notes)
-                                    .font(.app(.callout))
-                                    .foregroundStyle(.secondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.trailing, 32)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    // Status Icons - absolute positioned
-                    HStack(spacing: 4) {
-                        if isFlashcardLearned(flashcard) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .scaledFont(.sm)
-                                .foregroundStyle(.secondary)
-                                .help("Đã học")
-                                .accessibilityLabel("Đã học")
-                        }
-                        
-                        if needsImprovement(flashcard) {
-                            Image(systemName: "arrow.clockwise.circle.fill")
-                                .scaledFont(.sm)
-                                .foregroundStyle(.teal)
-                                .help("Cần ôn lại")
-                                .accessibilityLabel("Cần ôn lại")
-                        }
-                    }
-                    .padding(.top, 2)
-                    .padding(.trailing, 4)
-                }
-                .cursor(.pointingHand)
-                .tag(flashcard)
-                .padding(.vertical, 4)
-                .padding(.horizontal, 4)
-                .contextMenu {
-                    Button(action: {
-                        viewModel.selectFlashcard(flashcard)
-                        showEditFlashcardSheet = true
-                    }) {
-                        Label("Sửa từ vựng", systemImage: "pencil")
-                    }
-                    Button(role: .destructive, action: {
-                        viewModel.flashcardToDelete = flashcard
-                    }) {
-                        Label("Xoá từ vựng", systemImage: "trash")
-                    }
-                }
-            }
-            .frame(minWidth: 250, idealWidth: 300, maxWidth: 400)
-            .listStyle(.plain)
-            .tint(.green)
-            
-            VStack(spacing: 0) {
-                if !viewModel.selectedFlashcardIds.isEmpty {
-                    HStack {
-                        Text("\(viewModel.selectedFlashcardIds.count) thẻ đã chọn")
-                            .scaledFont(.sm)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Button(role: .destructive) {
-                            showDeleteMultipleFlashcardsConfirmation = true
-                        } label: {
-                            Label("Xóa \(viewModel.selectedFlashcardIds.count) thẻ", systemImage: "trash")
-                                .scaledFont(.sm)
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
-                    Divider()
-                }
-                if topic.flashcards.isEmpty {
-                    ContentUnavailableView(
-                        "Chưa có từ vựng",
-                        systemImage: "text.badge.plus",
-                        description: Text("Nhấn \"Thêm từ\" hoặc \"Import\" ở góc phải để thêm từ vựng vào chủ đề này.")
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let flashcard = viewModel.selectedFlashcard {
-                    let radicalText: String? = viewModel.selectedSubject?.name == "Tiếng Trung" ? (flashcard.radical.flatMap { $0.isEmpty ? nil : $0 } ?? viewModel.radicalForCharacter(flashcard.questionDisplayText)) : nil
-                    FlashcardDetailView(flashcard: flashcard, topic: topic, subjectName: viewModel.selectedSubject?.name ?? "", radicalText: radicalText, onEdit: { showEditFlashcardSheet = true }, onAnswered: nil)
-                } else {
-                    ContentUnavailableView(
-                        "Chọn một flashcard",
-                        systemImage: "rectangle.portrait.on.rectangle.portrait",
-                        description: Text("Chọn một hoặc nhiều flashcard để xem chi tiết hoặc xóa")
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            }
-            .frame(minWidth: 400)
-        }
-    }
-    
-    // MARK: - Helper Functions
-    
-    private func isFlashcardLearned(_ flashcard: Flashcard) -> Bool {
-        if let progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id) {
-            return progress.totalReviews > 0
-        }
-        return false
-    }
-    
-    private func needsImprovement(_ flashcard: Flashcard) -> Bool {
-        // Check if flashcard has mistakes in the last 30 days
-        let mistakeIds = DatabaseManager.shared.getMistakeFlashcards(days: 30)
-        return mistakeIds.contains(flashcard.id)
-    }
-    
     // Practice mode view
     private var practiceView: some View {
         Group {
             switch selectedPracticeType {
             case .multipleChoice:
-                multipleChoicePracticeView
+                MultipleChoicePracticeView(
+                    flashcards: shuffledFlashcards,
+                    topic: topic,
+                    topicId: topic.id,
+                    subjectName: viewModel.selectedSubject?.name ?? "",
+                    radicalForCharacter: viewModel.radicalForCharacter,
+                    onComplete: { correctCount, total in
+                        score = correctCount
+                        totalAnswered = total
+                    },
+                    onReset: {
+                        recordPracticeIfNeeded()
+                        resetPractice()
+                    }
+                )
             case .matching:
                 MatchingPracticeView(
                     flashcards: shuffledFlashcards,
@@ -524,67 +356,6 @@ struct FlashcardMainView: View {
         }
     }
 
-    // Original multiple choice practice
-    private var multipleChoicePracticeView: some View {
-        VStack {
-            if currentIndex < shuffledFlashcards.count {
-                let flashcard = shuffledFlashcards[currentIndex]
-
-                // Progress indicator
-                VStack(spacing: 8) {
-                    HStack {
-                        Text("Câu \(currentIndex + 1)/\(shuffledFlashcards.count)")
-                            .font(.app(.headline))
-
-                        Spacer()
-
-                        Text(Flashcard.exerciseTypeLabel)
-                            .font(.app(.subheadline))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.green.opacity(colorScheme == .light ? 0.14 : 0.2))
-                            .cornerRadius(6)
-                    }
-
-                    ProgressView(value: Double(currentIndex), total: Double(shuffledFlashcards.count))
-                }
-                .padding()
-
-                // Flashcard with auto-advance - use id to force view recreation
-                FlashcardDetailView(
-                    flashcard: flashcard,
-                    topic: topic,
-                    subjectName: viewModel.selectedSubject?.name ?? "",
-                    radicalText: viewModel.selectedSubject?.name == "Tiếng Trung" ? (flashcard.radical.flatMap { $0.isEmpty ? nil : $0 } ?? viewModel.radicalForCharacter(flashcard.questionDisplayText)) : nil,
-                    onEdit: nil,
-                    onAnswered: { isCorrect in
-                        handleAnswer(isCorrect: isCorrect)
-                    },
-                    onContinueToNext: {
-                        withAnimation {
-                            currentIndex += 1
-                        }
-                    }
-                )
-                .id(flashcard.id)
-            } else {
-                practiceCompletedView
-            }
-        }
-    }
-
-    private var practiceCompletedView: some View {
-        PracticeCompletedView(
-            score: score,
-            totalAnswered: totalAnswered,
-            onContinue: {
-                recordPracticeIfNeeded()
-                resetPractice()
-            }
-        )
-    }
-        
     /// Correct percentage in session (0–100)
     private var practiceScorePercentage: Int {
         totalAnswered > 0 ? Int((Double(score) / Double(totalAnswered)) * 100) : 0
@@ -645,36 +416,6 @@ struct FlashcardMainView: View {
         startPractice()
     }
     
-    private func handleAnswer(isCorrect: Bool) {
-        totalAnswered += 1
-        if isCorrect {
-            score += 1
-        }
-        
-        // Update SRS progress
-        if currentIndex < shuffledFlashcards.count {
-            let flashcard = shuffledFlashcards[currentIndex]
-            var progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id) ?? 
-                FlashcardProgress(flashcardId: flashcard.id)
-            
-            let srsAlgorithm = SRSAlgorithm()
-            let quality: Double = isCorrect ? 1.0 : 0.0
-            progress = srsAlgorithm.calculateNextReview(progress: progress, quality: quality)
-            DatabaseManager.shared.saveFlashcardProgress(progress)
-            
-            // Record mistake if wrong
-            if !isCorrect {
-                DatabaseManager.shared.recordMistake(
-                    flashcardId: flashcard.id,
-                    practiceType: "Multiple Choice",
-                    topicId: topic.id
-                )
-            }
-        }
-
-        // User taps "Tiếp tục" to advance (no auto-advance)
-    }
-
     private func recordPracticeIfNeeded() {
         guard totalAnswered > 0, !practiceRecorded else { return }
         practiceRecorded = true
