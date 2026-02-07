@@ -97,6 +97,9 @@ class ContentViewModel: ObservableObject {
     // Backup / Restore sheet (sidebar)
     @Published var showBackupRestoreSheet = false
 
+    /// Vẽ nét → gợi ý từ (canvas + suggest by stroke count)
+    @Published var showStrokeDrawSuggestSheet = false
+
     // TTS English accent sheet (sidebar)
     @Published var showSpeechAccentSheet = false
 
@@ -485,7 +488,7 @@ class ContentViewModel: ObservableObject {
         }
     }
 
-    func updateFlashcard(id: Int, question: String, answer: String, hint: String?) {
+    func updateFlashcard(id: Int, question: String, answer: String, hint: String?, notes: String? = nil, radical: String? = nil) {
         guard let topic = selectedTopic,
               !question.trimmingCharacters(in: .whitespaces).isEmpty,
               !answer.trimmingCharacters(in: .whitespaces).isEmpty else { return }
@@ -498,9 +501,13 @@ class ContentViewModel: ObservableObject {
         let trimmedAnswer = answer.trimmingCharacters(in: .whitespaces)
         let trimmedHint = hint?.trimmingCharacters(in: .whitespaces)
         let hintOrNil = (trimmedHint?.isEmpty ?? true) ? nil : trimmedHint
+        let trimmedNotes = notes?.trimmingCharacters(in: .whitespaces)
+        let notesOrNil = (trimmedNotes?.isEmpty ?? true) ? nil : trimmedNotes
+        let trimmedRadical = radical?.trimmingCharacters(in: .whitespaces)
+        let radicalOrNil = (trimmedRadical?.isEmpty ?? true) ? nil : trimmedRadical
 
         do {
-            try database.updateFlashcard(id: id, question: trimmedQuestion, answer: trimmedAnswer, hint: hintOrNil)
+            try database.updateFlashcard(id: id, question: trimmedQuestion, answer: trimmedAnswer, hint: hintOrNil, notes: notesOrNil, radical: radicalOrNil)
         } catch {
             errorMessage = error.localizedDescription
             return
