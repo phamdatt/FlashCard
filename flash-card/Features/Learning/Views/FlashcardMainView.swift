@@ -255,6 +255,9 @@ struct FlashcardMainView: View {
         .onChange(of: practiceStarted) { _, started in
             viewModel.isPracticeSessionActive = started
         }
+        .onChange(of: viewModel.isPracticeSessionActive) { _, active in
+            if !active { practiceStarted = false }
+        }
         .onAppear {
             viewModel.isInPracticeMode = (selectedMode == .practice)
         }
