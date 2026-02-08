@@ -100,10 +100,10 @@ struct SpeedCardsPracticeView: View {
 
                     // Card with flip
                     ZStack {
-                        RoundedRectangle(cornerRadius: 20)
+                        RoundedRectangle(cornerRadius: 16)
                             .fill(Color.appCardBackground(isLight: colorScheme == .light))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 20)
+                                RoundedRectangle(cornerRadius: 16)
                                     .stroke(
                                         isFlipped
                                         ? Color.green.opacity(colorScheme == .light ? 0.5 : 0.8)

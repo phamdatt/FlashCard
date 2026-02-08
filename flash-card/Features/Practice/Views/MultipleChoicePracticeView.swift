@@ -12,6 +12,7 @@ struct MultipleChoicePracticeView: View {
     let topic: Topic
     let topicId: Int
     let subjectName: String
+    var subjectIcon: String? = nil
     /// Chỉ dùng khi subject là Tiếng Trung: lấy bộ thủ cho ký tự (questionDisplayText).
     var radicalForCharacter: ((String) -> String?)?
     let onComplete: (Int, Int) -> Void
@@ -78,6 +79,7 @@ struct MultipleChoicePracticeView: View {
                 flashcard: flashcard,
                 topic: topic,
                 subjectName: subjectName,
+                subjectIcon: subjectIcon,
                 radicalText: radicalText,
                 onEdit: nil,
                 onAnswered: { isCorrect in

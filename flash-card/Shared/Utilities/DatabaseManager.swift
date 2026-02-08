@@ -128,6 +128,7 @@ class DatabaseManager {
                 hint TEXT,
                 notes TEXT,
                 radical TEXT,
+                phonetic TEXT,
                 FOREIGN KEY (topic_id) REFERENCES topics(id)
             )
             """, nil, nil, nil)
@@ -266,6 +267,9 @@ class DatabaseManager {
         sqlite3_exec(db, "PRAGMA foreign_keys = ON", nil, nil, nil)
         dropVocabulariesExerciseTypeAndPassageIdIfNeeded()
         addNotesAndRadicalToVocabulariesIfNeeded()
+        addPhoneticToVocabulariesIfNeeded()
+        moveNotesToPhoneticForEnglishIfNeeded()
+        moveRadicalToPhoneticForEnglishIfNeeded()
         createPracticeSessionsTable()
         createSRSTables()
         dropOldReadingTablesIfNeeded()
@@ -320,6 +324,43 @@ class DatabaseManager {
             sqlite3_exec(db, "ALTER TABLE vocabularies ADD COLUMN radical TEXT", nil, nil, nil)
         }
         backfillRadicalsInVocabularies(radicalLookup: Self.builtInRadicalMap)
+    }
+
+    /// One-time migration: add phonetic column (pinyin for 中文, IPA/phonetic for English).
+    private func addPhoneticToVocabulariesIfNeeded() {
+        guard let db = db else { return }
+        if !hasColumn(table: "vocabularies", column: "phonetic") {
+            sqlite3_exec(db, "ALTER TABLE vocabularies ADD COLUMN phonetic TEXT", nil, nil, nil)
+        }
+    }
+
+    /// One-time migration: move notes → phonetic for Tiếng Anh (user đã nhập phiên âm vào Ghi chú).
+    private func moveNotesToPhoneticForEnglishIfNeeded() {
+        let key = "vocabularies_moved_notes_to_phonetic_english"
+        guard let db = db, hasColumn(table: "vocabularies", column: "phonetic"), !UserDefaults.standard.bool(forKey: key) else { return }
+        let sql = """
+            UPDATE vocabularies SET phonetic = notes, notes = NULL
+            WHERE (phonetic IS NULL OR phonetic = '')
+            AND notes IS NOT NULL AND trim(notes) != ''
+            AND topic_id IN (SELECT id FROM topics WHERE subject_id = (SELECT id FROM subjects WHERE name = 'Tiếng Anh'))
+            """
+        if sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK {
+            UserDefaults.standard.set(true, forKey: key)
+        }
+    }
+
+    /// One-time migration: move radical → phonetic for Tiếng Anh (radical đã dùng nhầm cho phiên âm).
+    private func moveRadicalToPhoneticForEnglishIfNeeded() {
+        let key = "vocabularies_moved_radical_to_phonetic_english"
+        guard let db = db, hasColumn(table: "vocabularies", column: "phonetic"), hasColumn(table: "vocabularies", column: "radical"), !UserDefaults.standard.bool(forKey: key) else { return }
+        let sql = """
+            UPDATE vocabularies SET phonetic = radical, radical = NULL
+            WHERE radical IS NOT NULL AND trim(radical) != ''
+            AND topic_id IN (SELECT id FROM topics WHERE subject_id = (SELECT id FROM subjects WHERE name = 'Tiếng Anh'))
+            """
+        if sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK {
+            UserDefaults.standard.set(true, forKey: key)
+        }
     }
 
     private func hasColumn(table: String, column: String) -> Bool {
@@ -585,9 +626,11 @@ class DatabaseManager {
         guard db != nil else { return [] }
         let hasNotes = hasColumn(table: "vocabularies", column: "notes")
         let hasRadical = hasColumn(table: "vocabularies", column: "radical")
+        let hasPhonetic = hasColumn(table: "vocabularies", column: "phonetic")
         var cols = "id, question, answer, hint"
         if hasNotes { cols += ", notes" }
         if hasRadical { cols += ", radical" }
+        if hasPhonetic { cols += ", phonetic" }
         let querySQL = "SELECT \(cols) FROM vocabularies WHERE topic_id = ?"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, querySQL, -1, &stmt, nil) == SQLITE_OK else { return [] }
@@ -602,9 +645,11 @@ class DatabaseManager {
             let hint: String? = sqlite3_column_text(stmt, 3).map { String(cString: $0) }
             var notes: String? = nil
             var radical: String? = nil
+            var phonetic: String? = nil
             var idx: Int32 = 4
             if hasNotes { notes = sqlite3_column_text(stmt, idx).map { String(cString: $0) }; idx += 1 }
-            if hasRadical { radical = sqlite3_column_text(stmt, idx).map { String(cString: $0) } }
+            if hasRadical { radical = sqlite3_column_text(stmt, idx).map { String(cString: $0) }; idx += 1 }
+            if hasPhonetic { phonetic = sqlite3_column_text(stmt, idx).map { String(cString: $0) } }
 
             flashcards.append(Flashcard(
                 id: id,
@@ -615,7 +660,8 @@ class DatabaseManager {
                 correctAnswer: nil,
                 exerciseType: Flashcard.exerciseTypeLabel,
                 notes: notes,
-                radical: radical
+                radical: radical,
+                phonetic: phonetic
             ))
         }
         return generateOptions(for: flashcards)
@@ -648,7 +694,8 @@ class DatabaseManager {
                 correctAnswer: correctLabel,
                 exerciseType: card.exerciseType,
                 notes: card.notes,
-                radical: card.radical
+                radical: card.radical,
+                phonetic: card.phonetic
             )
         }
     }
@@ -685,7 +732,8 @@ class DatabaseManager {
                 correctAnswer: correctLabel,
                 exerciseType: card.exerciseType,
                 notes: card.notes,
-                radical: card.radical
+                radical: card.radical,
+                phonetic: card.phonetic
             )
         }
     }
@@ -732,10 +780,12 @@ class DatabaseManager {
         let db = try requireDB()
         let hasNotes = hasColumn(table: "vocabularies", column: "notes")
         let hasRadical = hasColumn(table: "vocabularies", column: "radical")
+        let hasPhonetic = hasColumn(table: "vocabularies", column: "phonetic")
         var cols = "topic_id, question, answer, hint"
         var placeholders = "?, ?, ?, ?"
         if hasNotes { cols += ", notes"; placeholders += ", ?" }
         if hasRadical { cols += ", radical"; placeholders += ", ?" }
+        if hasPhonetic { cols += ", phonetic"; placeholders += ", ?" }
         let insertSQL = "INSERT INTO vocabularies (\(cols)) VALUES (\(placeholders))"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nil) == SQLITE_OK else {
@@ -748,20 +798,23 @@ class DatabaseManager {
         sqlite3_bind_text(stmt, idx, (card.answer as NSString).utf8String, -1, nil); idx += 1
         sqlite3_bind_text(stmt, idx, ((card.hint ?? "") as NSString).utf8String, -1, nil); idx += 1
         if hasNotes { sqlite3_bind_text(stmt, idx, ((card.notes ?? "") as NSString).utf8String, -1, nil); idx += 1 }
-        if hasRadical { sqlite3_bind_text(stmt, idx, ((card.radical ?? "") as NSString).utf8String, -1, nil) }
+        if hasRadical { sqlite3_bind_text(stmt, idx, ((card.radical ?? "") as NSString).utf8String, -1, nil); idx += 1 }
+        if hasPhonetic { sqlite3_bind_text(stmt, idx, ((card.phonetic ?? "") as NSString).utf8String, -1, nil) }
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
         }
     }
 
     /// Updates flashcard content. Throws on error.
-    func updateFlashcard(id: Int, question: String, answer: String, hint: String?, notes: String? = nil, radical: String? = nil) throws {
+    func updateFlashcard(id: Int, question: String, answer: String, hint: String?, notes: String? = nil, radical: String? = nil, phonetic: String? = nil) throws {
         let db = try requireDB()
         let hasNotes = hasColumn(table: "vocabularies", column: "notes")
         let hasRadical = hasColumn(table: "vocabularies", column: "radical")
+        let hasPhonetic = hasColumn(table: "vocabularies", column: "phonetic")
         var setClause = "question = ?, answer = ?, hint = ?"
         if hasNotes { setClause += ", notes = ?" }
         if hasRadical { setClause += ", radical = ?" }
+        if hasPhonetic { setClause += ", phonetic = ?" }
         let sql = "UPDATE vocabularies SET \(setClause) WHERE id = ?"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
@@ -774,6 +827,7 @@ class DatabaseManager {
         sqlite3_bind_text(stmt, idx, ((hint ?? "") as NSString).utf8String, -1, nil); idx += 1
         if hasNotes { sqlite3_bind_text(stmt, idx, ((notes ?? "") as NSString).utf8String, -1, nil); idx += 1 }
         if hasRadical { sqlite3_bind_text(stmt, idx, ((radical ?? "") as NSString).utf8String, -1, nil); idx += 1 }
+        if hasPhonetic { sqlite3_bind_text(stmt, idx, ((phonetic ?? "") as NSString).utf8String, -1, nil); idx += 1 }
         sqlite3_bind_int(stmt, idx, Int32(id))
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
@@ -874,7 +928,7 @@ class DatabaseManager {
         while sqlite3_step(stmt) == SQLITE_ROW {
             let topicId = Int(sqlite3_column_int(stmt, 0))
             let name = String(cString: sqlite3_column_text(stmt, 1))
-            let flashcards = loadFlashcards(for: topicId).map { ExportFlashcard(question: $0.question, answer: $0.answer, hint: $0.hint, exerciseType: $0.exerciseType, notes: $0.notes, radical: $0.radical) }
+            let flashcards = loadFlashcards(for: topicId).map { ExportFlashcard(question: $0.question, answer: $0.answer, hint: $0.hint, exerciseType: $0.exerciseType, notes: $0.notes, radical: $0.radical, phonetic: $0.phonetic) }
             let readings: [ExportReading] = isReading ? loadReadings(for: topicId).map { ExportReading(title: $0.title, content: $0.content) } : []
             result.append(ExportTopic(name: name, flashcards: flashcards, readings: readings))
         }
@@ -894,7 +948,7 @@ class DatabaseManager {
                 let newTopicId = try insertTopic(newTopic)
                 for card in exportTopic.flashcards {
                     let hintVal = (card.hint ?? "").isEmpty ? nil : card.hint
-                    let f = Flashcard(question: card.question, answer: card.answer, hint: hintVal, exerciseType: Flashcard.exerciseTypeLabel, notes: card.notes, radical: card.radical)
+                    let f = Flashcard(question: card.question, answer: card.answer, hint: hintVal, exerciseType: Flashcard.exerciseTypeLabel, notes: card.notes, radical: card.radical, phonetic: card.phonetic)
                     try insertFlashcard(f, topicId: newTopicId)
                 }
                 for reading in exportTopic.readings {

@@ -18,6 +18,19 @@ enum DetailRoute: Equatable {
     case reading(topic: Topic)
 }
 
+/// Hành động bấm ở sidebar khi đang practice; confirm xong mới thực hiện.
+enum PendingSidebarAction: Equatable {
+    case switchToSubject(id: Int)
+    case switchToReviewMistakes
+    case switchToStatistics
+    case showKeyboardShortcuts
+    case showSpeechAccent
+    case showStrokeDraw
+    case showBackupRestore
+    case cycleTheme
+    case none
+}
+
 // MARK: - ViewModel
 @MainActor
 class ContentViewModel: ObservableObject {
@@ -33,6 +46,14 @@ class ContentViewModel: ObservableObject {
     @Published var selectedFlashcard: Flashcard?
     /// Multiple selection in flashcard list (IDs). Syncs to selectedFlashcard = first when set.
     @Published var selectedFlashcardIds: Set<Int> = []
+    /// Đang trong phiên luyện tập (bấm Bắt đầu); đổi topic sẽ cần confirm.
+    @Published var isPracticeSessionActive: Bool = false
+    /// Topic muốn chuyển sang khi user chọn topic khác trong lúc practice; nil = không pending.
+    @Published var pendingTopicSwitch: Topic?
+    /// Đang ở tab Luyện tập (ẩn cột topic list).
+    @Published var isInPracticeMode: Bool = false
+    /// Bấm item sidebar khi đang practice → show popup, confirm mới thực hiện.
+    @Published var pendingSidebarAction: PendingSidebarAction = .none
 
     // Search
     @Published var searchText = ""
@@ -293,7 +314,7 @@ class ContentViewModel: ObservableObject {
     }
 
     /// Import rows into topic; closes sheet first, then runs import. Skips rows whose "từ gốc" (question) already exists in the topic.
-    func importFlashcardsFromRows(topicId: Int, subjectId: Int, rows: [(question: String, answer: String, hint: String?, notes: String?, radical: String?)]) {
+    func importFlashcardsFromRows(topicId: Int, subjectId: Int, rows: [(question: String, answer: String, hint: String?, notes: String?, radical: String?, phonetic: String?)]) {
         var existing = Set(DatabaseManager.shared.loadFlashcards(for: topicId).map { $0.question.trimmingCharacters(in: .whitespaces) })
         var added = 0
         var skipped = 0
@@ -313,7 +334,8 @@ class ContentViewModel: ObservableObject {
                 correctAnswer: nil,
                 exerciseType: Flashcard.exerciseTypeLabel,
                 notes: row.notes.flatMap { $0.isEmpty ? nil : $0 },
-                radical: row.radical.flatMap { $0.isEmpty ? nil : $0 }
+                radical: row.radical.flatMap { $0.isEmpty ? nil : $0 },
+                phonetic: row.phonetic.flatMap { $0.isEmpty ? nil : $0 }
             )
             do {
                 try database.insertFlashcard(card, topicId: topicId)
@@ -536,7 +558,7 @@ class ContentViewModel: ObservableObject {
         }
     }
 
-    func updateFlashcard(id: Int, question: String, answer: String, hint: String?, notes: String? = nil, radical: String? = nil) {
+    func updateFlashcard(id: Int, question: String, answer: String, hint: String?, notes: String? = nil, radical: String? = nil, phonetic: String? = nil) {
         guard let topic = selectedTopic,
               !question.trimmingCharacters(in: .whitespaces).isEmpty,
               !answer.trimmingCharacters(in: .whitespaces).isEmpty else { return }
@@ -553,9 +575,11 @@ class ContentViewModel: ObservableObject {
         let notesOrNil = (trimmedNotes?.isEmpty ?? true) ? nil : trimmedNotes
         let trimmedRadical = radical?.trimmingCharacters(in: .whitespaces)
         let radicalOrNil = (trimmedRadical?.isEmpty ?? true) ? nil : trimmedRadical
+        let trimmedPhonetic = phonetic?.trimmingCharacters(in: .whitespaces)
+        let phoneticOrNil = (trimmedPhonetic?.isEmpty ?? true) ? nil : trimmedPhonetic
 
         do {
-            try database.updateFlashcard(id: id, question: trimmedQuestion, answer: trimmedAnswer, hint: hintOrNil, notes: notesOrNil, radical: radicalOrNil)
+            try database.updateFlashcard(id: id, question: trimmedQuestion, answer: trimmedAnswer, hint: hintOrNil, notes: notesOrNil, radical: radicalOrNil, phonetic: phoneticOrNil)
         } catch {
             errorMessage = error.localizedDescription
             return
@@ -641,11 +665,50 @@ class ContentViewModel: ObservableObject {
         }
     }
 
-    /// Gọi khi user chọn topic từ list: luôn set topic + active item = từ đầu tiên (kể cả khi chọn lại cùng topic).
+    /// Gọi khi user chọn topic từ list. Nếu đang practice thì gửi vào pending và cần confirm ở UI.
     func setSelectedTopic(_ topic: Topic?) {
+        if isPracticeSessionActive, topic?.id != selectedTopic?.id {
+            pendingTopicSwitch = topic
+            return
+        }
+        applyTopicSwitch(to: topic)
+    }
+
+    /// Áp dụng chuyển topic (sau khi user confirm hoặc khi không trong practice).
+    func applyTopicSwitch(to topic: Topic?) {
+        pendingTopicSwitch = nil
+        isPracticeSessionActive = false
         selectedTopic = topic
         selectedFlashcard = topic?.flashcards.first
         selectedFlashcardIds = []
+    }
+
+    /// Thực hiện hành động sidebar đã pending (sau khi user confirm "Kết thúc").
+    func applyPendingSidebarAction() {
+        defer { pendingSidebarAction = .none; isPracticeSessionActive = false }
+        switch pendingSidebarAction {
+        case .switchToSubject(let id):
+            if let s = subjects.first(where: { $0.id == id }) {
+                selectSubject(s)
+                switchToLearningMode()
+            }
+        case .switchToReviewMistakes:
+            switchToReviewMistakes()
+        case .switchToStatistics:
+            switchToStatistics()
+        case .showKeyboardShortcuts:
+            showKeyboardShortcutsSheet = true
+        case .showSpeechAccent:
+            showSpeechAccentSheet = true
+        case .showStrokeDraw:
+            showStrokeDrawSuggestSheet = true
+        case .showBackupRestore:
+            showBackupRestoreSheet = true
+        case .cycleTheme:
+            break
+        case .none:
+            break
+        }
     }
 
     func selectFlashcard(_ flashcard: Flashcard) {

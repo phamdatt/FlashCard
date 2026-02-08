@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct VocabularyListView: View {
     @ObservedObject var viewModel: ContentViewModel
@@ -15,30 +16,36 @@ struct VocabularyListView: View {
 
     @Environment(\.colorScheme) private var colorScheme
 
-    private var flashcardListSelection: Binding<Set<Flashcard>> {
-        Binding(
-            get: { Set(topic.flashcards.filter { viewModel.selectedFlashcardIds.contains($0.id) }) },
-            set: { viewModel.setSelectedFlashcards($0) }
-        )
-    }
-
     private var isLight: Bool { colorScheme == .light }
 
     var body: some View {
         HSplitView {
-            List(topic.flashcards, selection: flashcardListSelection) { flashcard in
+            List(topic.flashcards) { flashcard in
                 vocabularyRow(flashcard: flashcard)
+                    .contentShape(Rectangle())
                     .listRowBackground(
                         viewModel.selectedFlashcardIds.contains(flashcard.id)
                         ? Color.gray.opacity(isLight ? 0.2 : 0.25)
                         : Color.clear
                     )
+                    .onTapGesture {
+                        let shiftPressed = NSEvent.modifierFlags.contains(.shift)
+                        if shiftPressed {
+                            let ids = viewModel.selectedFlashcardIds
+                            let newIds = ids.contains(flashcard.id)
+                                ? ids.filter { $0 != flashcard.id }
+                                : ids.union([flashcard.id])
+                            let newSet = Set(topic.flashcards.filter { newIds.contains($0.id) })
+                            viewModel.setSelectedFlashcards(newSet)
+                        } else {
+                            viewModel.setSelectedFlashcards([flashcard])
+                        }
+                    }
             }
             .frame(minWidth: 250, idealWidth: 300, maxWidth: 400)
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(Color.appBackgroundPage(isLight: isLight))
-            .tint(.green)
 
             VStack(spacing: 0) {
                 if !viewModel.selectedFlashcardIds.isEmpty {
@@ -72,7 +79,7 @@ struct VocabularyListView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
                     Text(Flashcard.exerciseTypeLabel)
-                        .scaledFont(.sm)
+                        .font(.app(.caption))
                         .fontWeight(.medium)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 5)
@@ -82,12 +89,50 @@ struct VocabularyListView: View {
                         .lineLimit(1)
                     Spacer()
                 }
-                Text(flashcard.question)
-                    .scaledFont(.base)
-                    .fontWeight(.medium)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.trailing, 32)
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Từ gốc")
+                            .font(.app(.caption2))
+                            .foregroundStyle(.tertiary)
+                        Text(flashcard.question)
+                            .scaledFont(.sm)
+                            .fontWeight(.medium)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Image(systemName: "arrow.right")
+                        .font(.app(.caption))
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 2)
+                    if let phonetic = flashcard.displayPhonetic, !phonetic.isEmpty {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Phiên âm")
+                                .font(.app(.caption2))
+                                .foregroundStyle(.tertiary)
+                            Text(phonetic)
+                                .font(.app(.subheadline))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Image(systemName: "arrow.right")
+                            .font(.app(.caption))
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 2)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Ý nghĩa")
+                            .font(.app(.caption2))
+                            .foregroundStyle(.tertiary)
+                        Text(flashcard.answer)
+                            .font(.app(.subheadline))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, 32)
 
                 if let hint = flashcard.hint, !hint.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
@@ -195,6 +240,7 @@ struct VocabularyListView: View {
                 flashcard: flashcard,
                 topic: topic,
                 subjectName: viewModel.selectedSubject?.name ?? "",
+                subjectIcon: viewModel.selectedSubject?.displayIcon,
                 radicalText: radicalText,
                 onEdit: { showEditFlashcardSheet = true },
                 onAnswered: nil

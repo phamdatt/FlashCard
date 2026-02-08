@@ -318,7 +318,7 @@ struct StatisticsDashboardView: View {
 
     private func subjectAccuracyRow(subject: Subject, accuracy: Double) -> some View {
         HStack(spacing: 16) {
-            Image(systemName: subject.icon)
+            Image(systemName: subject.displayIcon)
                 .font(.system(size: 18, weight: .medium, design: .rounded))
                 .foregroundStyle(accentColor(for: accuracy))
                 .frame(width: 32, alignment: .center)

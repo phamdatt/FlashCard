@@ -33,6 +33,7 @@ struct ExportFlashcard: Codable {
     let exerciseType: String
     let notes: String?
     let radical: String?
+    let phonetic: String?
 }
 
 struct ExportReading: Codable {

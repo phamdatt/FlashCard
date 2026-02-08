@@ -198,10 +198,10 @@ private struct MistakeSummaryCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.appDivider(isLight: colorScheme == .light), lineWidth: 1)
                     )
             )
@@ -228,10 +228,10 @@ private struct MistakeSummaryCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.appDivider(isLight: colorScheme == .light), lineWidth: 1)
                     )
             )
@@ -276,10 +276,10 @@ private struct MistakeSectionCard: View {
             }
             .padding(18)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(Color.appBackgroundControl(isLight: isLight))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 12)
                             .stroke(
                                 isHovering ? Color.appBorder(isLight: isLight).opacity(0.8) : Color.appBorder(isLight: isLight).opacity(0.5),
                                 lineWidth: isHovering ? 1.5 : 1
@@ -419,6 +419,7 @@ struct FlashcardReviewView: View {
                     flashcard: flashcard,
                     topic: topic,
                     subjectName: subjectName,
+                    subjectIcon: viewModel.subjects.first(where: { $0.name == subjectName })?.displayIcon,
                     radicalText: subjectName == "Tiếng Trung" ? (flashcard.radical.flatMap { $0.isEmpty ? nil : $0 } ?? viewModel.radicalForCharacter(flashcard.questionDisplayText)) : nil,
                     onEdit: nil,
                     onAnswered: { isCorrect in recordAnswer(isCorrect) },

@@ -142,8 +142,18 @@ Image(systemName: "checkmark.circle.fill")
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(questionBorder(isMatched: isMatched, isSelected: isSelected, isWrong: isWrong), lineWidth: isSelected ? 3 : 2)
                 )
-                // Use opacity to avoid overflow
-                .opacity(isMatched ? 0.5 : (isWrong ? 0.7 : 1.0))
+                .overlay(
+                    Group {
+                        if isMatched {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(.green.opacity(0.8))
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                                .padding(8)
+                        }
+                    }
+                )
+                .opacity(isWrong ? 0.7 : 1.0)
         }
         .buttonStyle(.plain)
         .cursor(.pointingHand)
@@ -176,11 +186,21 @@ Image(systemName: "checkmark.circle.fill")
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(answerBorder(isMatched: isMatched, isWrong: isWrong), lineWidth: isMatched ? 3 : 2)
+                        .stroke(answerBorder(isMatched: isMatched, isWrong: isWrong), lineWidth: isMatched ? 2 : 2)
                 )
-                // Use opacity and shadow to avoid overflow
-                .shadow(color: isMatched ? .green.opacity(0.3) : (isWrong ? .red.opacity(0.2) : .clear), radius: isMatched ? 8 : (isWrong ? 4 : 0))
-                .opacity(isMatched ? 0.6 : (isWrong ? 0.7 : 1.0))
+                .overlay(
+                    Group {
+                        if isMatched {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(.green.opacity(0.8))
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                                .padding(8)
+                        }
+                    }
+                )
+                .shadow(color: isWrong ? .red.opacity(0.2) : .clear, radius: isWrong ? 4 : 0)
+                .opacity(isWrong ? 0.7 : 1.0)
         }
         .buttonStyle(.plain)
         .cursor(.pointingHand)
@@ -193,14 +213,14 @@ Image(systemName: "checkmark.circle.fill")
 
     private func questionBackground(isMatched: Bool, isSelected: Bool, isWrong: Bool) -> Color {
         let isLight = colorScheme == .light
-        if isMatched { return Color.green.opacity(isLight ? 0.1 : 0.15) }
+        if isMatched { return Color.green.opacity(isLight ? 0.06 : 0.1) }
         if isWrong { return Color.red.opacity(isLight ? 0.1 : 0.15) }
         if isSelected { return Color.blue.opacity(isLight ? 0.1 : 0.15) }
         return Color.appBackgroundControl(isLight: isLight)
     }
 
     private func questionBorder(isMatched: Bool, isSelected: Bool, isWrong: Bool) -> Color {
-        if isMatched { return .green }
+        if isMatched { return Color.green.opacity(colorScheme == .light ? 0.5 : 0.6) }
         if isWrong { return .red }
         if isSelected { return .blue }
         return Color.appBorder(isLight: colorScheme == .light)
@@ -208,13 +228,13 @@ Image(systemName: "checkmark.circle.fill")
 
     private func answerBackground(isMatched: Bool, isWrong: Bool) -> Color {
         let isLight = colorScheme == .light
-        if isMatched { return Color.green.opacity(isLight ? 0.1 : 0.15) }
+        if isMatched { return Color.green.opacity(isLight ? 0.06 : 0.1) }
         if isWrong { return Color.red.opacity(isLight ? 0.1 : 0.15) }
         return Color.appBackgroundControl(isLight: isLight)
     }
 
     private func answerBorder(isMatched: Bool, isWrong: Bool) -> Color {
-        if isMatched { return .green }
+        if isMatched { return Color.green.opacity(colorScheme == .light ? 0.5 : 0.6) }
         if isWrong { return .red }
         return Color.appBorder(isLight: colorScheme == .light)
     }

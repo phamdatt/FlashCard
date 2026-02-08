@@ -21,6 +21,16 @@ struct Subject: Identifiable, Hashable, Codable {
         self.icon = icon
         self.topics = topics
     }
+
+    /// Icon dùng để hiển thị trong danh sách/header: đẹp và đặc trưng cho từng môn.
+    var displayIcon: String {
+        switch name {
+        case "Tiếng Anh": return "globe.americas.fill"
+        case "Tiếng Trung": return "text.book.closed.fill"
+        case "Bài đọc": return "doc.richtext.fill"
+        default: return icon
+        }
+    }
 }
 
 struct Topic: Identifiable, Hashable, Codable {
@@ -67,6 +77,8 @@ struct Flashcard: Identifiable, Hashable, Codable {
     let exerciseType: String
     let notes: String?
     let radical: String?
+    /// Phiên âm: pinyin (Tiếng Trung) hoặc phonetic (Tiếng Anh, vd IPA).
+    let phonetic: String?
 
     var isMultipleChoice: Bool {
         options != nil && correctAnswer != nil
@@ -95,10 +107,22 @@ struct Flashcard: Identifiable, Hashable, Codable {
         return pinyin.isEmpty ? nil : pinyin
     }
 
+    /// Phiên âm để hiển thị: ưu tiên cột phonetic, Tiếng Trung fallback pinyinFromQuestion.
+    var displayPhonetic: String? {
+        if let p = phonetic, !p.isEmpty { return p }
+        return pinyinFromQuestion
+    }
+
+    /// Câu hỏi hiển thị kèm phiên âm trong ngoặc đơn khi có, vd: "Family (/'fæm.əl.i/)".
+    var questionDisplayTextWithPhonetic: String {
+        guard let p = displayPhonetic, !p.isEmpty else { return questionDisplayText }
+        return "\(questionDisplayText) (\(p))"
+    }
+
     /// True if this flashcard has pinyin in question (for Điền pinyin mode).
     var hasPinyin: Bool { pinyinFromQuestion != nil }
 
-    init(id: Int = 0, question: String, answer: String, hint: String? = nil, options: [String]? = nil, correctAnswer: String? = nil, exerciseType: String = Flashcard.exerciseTypeLabel, notes: String? = nil, radical: String? = nil) {
+    init(id: Int = 0, question: String, answer: String, hint: String? = nil, options: [String]? = nil, correctAnswer: String? = nil, exerciseType: String = Flashcard.exerciseTypeLabel, notes: String? = nil, radical: String? = nil, phonetic: String? = nil) {
         self.id = id
         self.question = question
         self.answer = answer
@@ -108,5 +132,6 @@ struct Flashcard: Identifiable, Hashable, Codable {
         self.exerciseType = exerciseType
         self.notes = notes
         self.radical = radical
+        self.phonetic = phonetic
     }
 }

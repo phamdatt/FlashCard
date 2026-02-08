@@ -27,6 +27,7 @@ struct SidebarView: View {
             reviewSection
             statisticsSection
         }
+        .environment(\.fontSizeMultiplier, fontSizeManager.fontSizeMultiplier)
         .scrollContentBackground(colorScheme == .dark ? .hidden : .visible)
         .background(colorScheme == .dark ? Color.appDarkBackground : Color.clear)
         .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
@@ -40,14 +41,19 @@ struct SidebarView: View {
     // MARK: - Sections
     
     private var learningSection: some View {
-        Section("Học tập") {
+        Section {
             ForEach(viewModel.subjects) { subject in
                 Button(action: {
-                    viewModel.selectSubject(subject)
-                    viewModel.switchToLearningMode()
+                    if viewModel.isPracticeSessionActive {
+                        viewModel.pendingSidebarAction = .switchToSubject(id: subject.id)
+                    } else {
+                        viewModel.selectSubject(subject)
+                        viewModel.switchToLearningMode()
+                    }
                 }) {
-                    Label(subject.name, systemImage: subject.icon)
+                    Label(subject.name, systemImage: subject.displayIcon)
                         .scaledFont(.sm)
+                        .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 12)
                         .padding(.horizontal, 12)
@@ -56,11 +62,13 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .cursor(.pointingHand)
             }
+        } header: {
+            Text("Học tập").scaledFont(.sm).fontWeight(.semibold).foregroundStyle(.secondary)
         }
     }
     
     private var reviewSection: some View {
-        Section("Ôn tập") {
+        Section {
             // Button(action: {
             //     viewModel.switchToReviewMode()
             // }) {
@@ -76,7 +84,11 @@ struct SidebarView: View {
             // .accessibilityHint("Mở màn ôn từ theo thuật toán lặp lại ngắt quãng")
 
             Button(action: {
-                viewModel.switchToReviewMistakes()
+                if viewModel.isPracticeSessionActive {
+                    viewModel.pendingSidebarAction = .switchToReviewMistakes
+                } else {
+                    viewModel.switchToReviewMistakes()
+                }
             }) {
                 Label("Ôn lại từ sai", systemImage: "xmark.circle.fill")
                     .scaledFont(.sm)
@@ -89,13 +101,19 @@ struct SidebarView: View {
             .cursor(.pointingHand)
             .accessibilityLabel("Ôn lại từ sai")
             .accessibilityHint("Mở danh sách từ đã trả lời sai để ôn lại")
+        } header: {
+            Text("Ôn tập").scaledFont(.sm).fontWeight(.semibold).foregroundStyle(.secondary)
         }
     }
     
     private var statisticsSection: some View {
-        Section("Thống kê") {
+        Section {
             Button(action: {
-                viewModel.switchToStatistics()
+                if viewModel.isPracticeSessionActive {
+                    viewModel.pendingSidebarAction = .switchToStatistics
+                } else {
+                    viewModel.switchToStatistics()
+                }
             }) {
                 Label("Thống kê", systemImage: "chart.line.uptrend.xyaxis")
                     .scaledFont(.sm)
@@ -108,6 +126,8 @@ struct SidebarView: View {
             .cursor(.pointingHand)
             .accessibilityLabel("Thống kê")
             .accessibilityHint("Xem thống kê học tập và streak")
+        } header: {
+            Text("Thống kê").scaledFont(.sm).fontWeight(.semibold).foregroundStyle(.secondary)
         }
     }
     
@@ -170,8 +190,12 @@ struct SidebarView: View {
 
                 // Theme toggle
                 Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        appearanceManager.cycleMode()
+                    if viewModel.isPracticeSessionActive {
+                        viewModel.pendingSidebarAction = .cycleTheme
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            appearanceManager.cycleMode()
+                        }
                     }
                 }) {
                     HStack(spacing: 8) {
@@ -192,7 +216,7 @@ struct SidebarView: View {
                         Spacer()
 
                         Image(systemName: "chevron.right")
-                            .scaledFont(.xs)
+                            .scaledFont(.sm)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
                             .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
@@ -210,7 +234,11 @@ struct SidebarView: View {
 
                 // Keyboard shortcuts
                 Button(action: {
-                    viewModel.showKeyboardShortcutsSheet = true
+                    if viewModel.isPracticeSessionActive {
+                        viewModel.pendingSidebarAction = .showKeyboardShortcuts
+                    } else {
+                        viewModel.showKeyboardShortcutsSheet = true
+                    }
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "keyboard")
@@ -244,7 +272,11 @@ struct SidebarView: View {
 
                 // English TTS accent
                 Button(action: {
-                    viewModel.showSpeechAccentSheet = true
+                    if viewModel.isPracticeSessionActive {
+                        viewModel.pendingSidebarAction = .showSpeechAccent
+                    } else {
+                        viewModel.showSpeechAccentSheet = true
+                    }
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "speaker.wave.2.fill")
@@ -280,7 +312,11 @@ struct SidebarView: View {
 
                 // Vẽ nét → Gợi ý từ
                 Button(action: {
-                    viewModel.showStrokeDrawSuggestSheet = true
+                    if viewModel.isPracticeSessionActive {
+                        viewModel.pendingSidebarAction = .showStrokeDraw
+                    } else {
+                        viewModel.showStrokeDrawSuggestSheet = true
+                    }
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "pencil.and.outline")
@@ -316,7 +352,11 @@ struct SidebarView: View {
 
                 // Backup / Restore
                 Button(action: {
-                    viewModel.showBackupRestoreSheet = true
+                    if viewModel.isPracticeSessionActive {
+                        viewModel.pendingSidebarAction = .showBackupRestore
+                    } else {
+                        viewModel.showBackupRestoreSheet = true
+                    }
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "externaldrive.fill")
@@ -488,12 +528,23 @@ struct TopicsListView: View {
         } else {
             List(filteredTopics, selection: Binding(
                 get: { viewModel.selectedTopic },
-                set: { viewModel.setSelectedTopic($0) }
+                set: { newTopic in
+                    var t = Transaction()
+                    t.disablesAnimations = true
+                    withTransaction(t) {
+                        viewModel.setSelectedTopic(newTopic)
+                    }
+                }
             )) { topic in
                 TopicRowView(topic: topic, subject: subject, practiceCount: viewModel.topicPracticeCounts[topic.id] ?? 0, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light, onDelete: { viewModel.topicToDelete = topic }, onRename: { viewModel.startRenameTopic(topic) })
+                .listRowBackground(viewModel.selectedTopic?.id == topic.id ? Color.gray.opacity(colorScheme == .light ? 0.2 : 0.25) : Color.clear)
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    viewModel.setSelectedTopic(topic)
+                    var t = Transaction()
+                    t.disablesAnimations = true
+                    withTransaction(t) {
+                        viewModel.setSelectedTopic(topic)
+                    }
                 }
             }
             .listStyle(.plain)
@@ -555,6 +606,7 @@ struct TopicsListView: View {
             addTopicBottomBar
         }
         .navigationTitle(subject.name)
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
         .animation(.easeInOut(duration: 0.2), value: viewModel.searchText)
         .sheet(isPresented: $viewModel.showAddTopicSheet) {
             AddTopicSheet(viewModel: viewModel)
@@ -679,7 +731,7 @@ struct AddTopicSheet: View {
 
             if let subject = viewModel.selectedSubject {
                 HStack(spacing: 8) {
-                    Image(systemName: subject.icon)
+                    Image(systemName: subject.displayIcon)
                         .foregroundStyle(.secondary)
                     Text(subject.name)
                         .font(.app(.subheadline))
@@ -1223,12 +1275,13 @@ struct EditFlashcardSheet: View {
     @State private var editHint: String = ""
     @State private var editNotes: String = ""
     @State private var editRadical: String = ""
+    @State private var editPhonetic: String = ""
     @FocusState private var focusedField: Field?
 
     private var isChineseSubject: Bool { viewModel.selectedSubject?.name == "Tiếng Trung" }
 
     enum Field {
-        case question, answer, hint, notes, radical
+        case question, answer, hint, notes, radical, phonetic
     }
 
     var body: some View {
@@ -1305,6 +1358,17 @@ struct EditFlashcardSheet: View {
                     }
                 }
 
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(isChineseSubject ? "Phiên âm (pinyin)" : "Phiên âm (IPA, không bắt buộc)")
+                        .scaledFont(.sm)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                    TextField(isChineseSubject ? "vd: nǐ hǎo" : "vd: /ˈhɛloʊ/", text: $editPhonetic)
+                        .textFieldStyle(.roundedBorder)
+                        .scaledFont(.sm)
+                        .focused($focusedField, equals: .phonetic)
+                }
+
                 HStack {
                     Button(action: { onDismiss() }) {
                         Text("Huỷ")
@@ -1338,13 +1402,14 @@ struct EditFlashcardSheet: View {
             }
             .padding(24)
         }
-        .frame(width: 440, height: 520)
+        .frame(width: 440, height: 560)
         .onAppear {
             editQuestion = flashcard.question
             editAnswer = flashcard.answer
             editHint = flashcard.hint ?? ""
             editNotes = flashcard.notes ?? ""
             editRadical = flashcard.radical ?? ""
+            editPhonetic = flashcard.phonetic ?? ""
             focusedField = .question
         }
     }
@@ -1356,7 +1421,8 @@ struct EditFlashcardSheet: View {
             answer: editAnswer,
             hint: editHint.isEmpty ? nil : editHint,
             notes: editNotes.isEmpty ? nil : editNotes,
-            radical: isChineseSubject ? (editRadical.isEmpty ? nil : editRadical) : nil
+            radical: isChineseSubject ? (editRadical.isEmpty ? nil : editRadical) : nil,
+            phonetic: editPhonetic.isEmpty ? nil : editPhonetic
         )
         onDismiss()
     }
@@ -1437,7 +1503,11 @@ struct HintExpandableBox: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.green.opacity(isLight ? 0.1 : 0.15))
+            .background(Color.green.opacity(isLight ? 0.38 : 0.28))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.green.opacity(isLight ? 0.45 : 0.4), lineWidth: 1.5)
+            )
             .cornerRadius(8)
         }
         .buttonStyle(.plain)
@@ -1450,6 +1520,7 @@ struct FlashcardDetailView: View {
     let flashcard: Flashcard
     let topic: Topic
     let subjectName: String
+    var subjectIcon: String? = nil
     var radicalText: String? = nil
     var onEdit: (() -> Void)? = nil
     let onAnswered: ((Bool) -> Void)?  // Callback for practice mode
@@ -1473,9 +1544,9 @@ struct FlashcardDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 30) {
-                // Header
+                // Header (icon + màu đồng nhất với sidebar)
                 HStack {
-                    Image(systemName: "graduationcap.fill")
+                    Image(systemName: subjectIcon ?? "book.fill")
                         .font(.app(.title))
                         .foregroundStyle(.secondary)
                     
@@ -1497,17 +1568,14 @@ struct FlashcardDetailView: View {
 
                     if onEdit != nil {
                         Button(action: { onEdit?() }) {
-                            Label("Sửa từ vựng", systemImage: "pencil.circle.fill")
-                                .font(.app(.body))
-                                .fontWeight(.semibold)
-                                .symbolRenderingMode(.hierarchical)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
+                            Label("Sửa từ vựng", systemImage: "pencil")
+                                .font(.app(.subheadline))
+                                .fontWeight(.medium)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.bordered)
                         .cursor(.pointingHand)
-                        .tint(.accentColor)
-                        .controlSize(.large)
+                        .tint(.primary)
+                        .controlSize(.regular)
                     }
                 }
                 
@@ -1525,7 +1593,7 @@ struct FlashcardDetailView: View {
             }
             .padding()
         }
-        .frame(minWidth: 500)
+        .frame(minWidth: 280)
         .onAppear {
             if let progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id), progress.totalReviews > 0 {
                 nextReviewDateString = Self.nextReviewFormatter.string(from: progress.nextReviewDate)
@@ -1545,7 +1613,7 @@ struct FlashcardDetailView: View {
                     .fill(Color.appCardBackground(isLight: isLight))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.green.opacity(isLight ? 0.5 : 0.7), lineWidth: 2)
+                            .stroke(Color.appBorderStrong(isLight: isLight), lineWidth: 2)
                     )
                 
                 VStack(spacing: 16) {
@@ -1558,7 +1626,7 @@ struct FlashcardDetailView: View {
                         SpeakButton(text: isFlipped ? flashcard.answer : flashcard.question, fontSize: 18)
                     }
 
-                    SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.questionDisplayText, flashcards: topic.flashcards)
+                    SmartCopyDefineText(text: isFlipped ? flashcard.answer : flashcard.questionDisplayTextWithPhonetic, flashcards: topic.flashcards)
                         .scaledFont(.xl3)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
@@ -1617,75 +1685,88 @@ struct FlashcardDetailView: View {
         }
     }
     
-    // Multiple choice question view
+    // Multiple choice question view — responsive: ưu tiên khung câu hỏi và nút trả lời trên màn nhỏ
     private var multipleChoiceView: some View {
-        VStack(spacing: 25) {
-            // Question card
-            VStack(spacing: 16) {
-                HStack {
-                    Text("Câu hỏi")
-                        .scaledFont(.xl)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    SpeakButton(text: flashcard.question, fontSize: 24)
-                }
+        GeometryReader { geo in
+            let isCompact = geo.size.width < 420
+            let hPadding: CGFloat = isCompact ? 12 : 20
+            let cardPadding: CGFloat = isCompact ? 12 : 16
+            let questionFont: Font.TailwindSize = isCompact ? .xl3 : .display
+            let optionPadding: CGFloat = isCompact ? 12 : 16
+            let spacing: CGFloat = isCompact ? 16 : 25
 
-                SmartCopyDefineText(text: flashcard.questionDisplayText, flashcards: topic.flashcards)
-                    .scaledFont(.display)
-                    .fontWeight(.bold)
-                    .multilineTextAlignment(.center)
-                    .padding()
-                    .environmentObject(fontSizeManager)
-            }
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(Color.appCardBackground(isLight: colorScheme == .light))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.appBorder(isLight: colorScheme == .light), lineWidth: 1.5)
-            )
-            .cornerRadius(16)
-            
-            // Hint box: tap to expand/collapse (từ gốc + bộ thủ + gợi ý + ghi chú). Hiện khi có hint, bộ thủ hoặc ghi chú.
-            if ((flashcard.hint != nil && !(flashcard.hint?.isEmpty ?? true)) || (radicalText != nil && !(radicalText?.isEmpty ?? true)) || (flashcard.notes != nil && !(flashcard.notes?.isEmpty ?? true))) && !showResult {
-                HintExpandableBox(expanded: $hintExpanded, fromGoc: flashcard.question, hint: flashcard.hint ?? "", flashcards: topic.flashcards, radicalText: radicalText, notesText: flashcard.notes, compact: true)
-            }
-            
-            // Options
-            VStack(spacing: 16) {
-                ForEach(flashcard.options ?? [], id: \.self) { option in
-                    multipleChoiceButton(option: option)
-                }
-            }
-            
-            // Result feedback
-            if showResult {
-                resultView
-                if onContinueToNext != nil {
-                    Button(action: { onContinueToNext?() }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .scaledFont(.xl2)
-                            Text("Tiếp tục")
-                                .scaledFont(.lg)
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.blue)
-                        .foregroundStyle(.white)
-                        .cornerRadius(12)
+            VStack(spacing: spacing) {
+                // Question card
+                VStack(spacing: isCompact ? 10 : 16) {
+                    HStack {
+                        Text("Câu hỏi")
+                            .scaledFont(isCompact ? .lg : .xl)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        SpeakButton(text: flashcard.question, fontSize: isCompact ? 18 : 24)
                     }
-                    .buttonStyle(ScaleButtonStyle())
-                    .cursor(.pointingHand)
-                    .padding(.top, 8)
+
+                    SmartCopyDefineText(text: flashcard.questionDisplayTextWithPhonetic, flashcards: topic.flashcards)
+                        .scaledFont(questionFont)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.65)
+                        .lineLimit(3)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, isCompact ? 8 : 12)
+                        .environmentObject(fontSizeManager)
+                }
+                .padding(cardPadding)
+                .frame(maxWidth: .infinity)
+                .background(Color.appCardBackground(isLight: colorScheme == .light))
+                .overlay(
+                    RoundedRectangle(cornerRadius: isCompact ? 12 : 16)
+                        .stroke(Color.appBorderStrong(isLight: colorScheme == .light), lineWidth: 2)
+                )
+                .cornerRadius(isCompact ? 12 : 16)
+                
+                // Hint box
+                if ((flashcard.hint != nil && !(flashcard.hint?.isEmpty ?? true)) || (radicalText != nil && !(radicalText?.isEmpty ?? true)) || (flashcard.notes != nil && !(flashcard.notes?.isEmpty ?? true))) && !showResult {
+                    HintExpandableBox(expanded: $hintExpanded, fromGoc: flashcard.question, hint: flashcard.hint ?? "", flashcards: topic.flashcards, radicalText: radicalText, notesText: flashcard.notes, compact: true)
+                }
+                
+                // Options
+                VStack(spacing: isCompact ? 10 : 16) {
+                    ForEach(flashcard.options ?? [], id: \.self) { option in
+                        multipleChoiceButton(option: option, horizontalPadding: optionPadding, isCompact: isCompact)
+                    }
+                }
+                
+                if showResult {
+                    resultView
+                    if onContinueToNext != nil {
+                        Button(action: { onContinueToNext?() }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .scaledFont(.xl2)
+                                Text("Tiếp tục")
+                                    .scaledFont(.lg)
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, isCompact ? 12 : 16)
+                            .background(Color.blue)
+                            .foregroundStyle(.white)
+                            .cornerRadius(12)
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+                        .cursor(.pointingHand)
+                        .padding(.top, 8)
+                    }
                 }
             }
+            .padding(.horizontal, hPadding)
         }
+        .frame(minHeight: 200)
     }
     
-    private func multipleChoiceButton(option: String) -> some View {
+    private func multipleChoiceButton(option: String, horizontalPadding: CGFloat = 16, isCompact: Bool = false) -> some View {
         let optionLetter = String(option.prefix(1))
         let isSelected = selectedAnswer == optionLetter
         let isCorrect = flashcard.correctAnswer == optionLetter
@@ -1694,6 +1775,7 @@ struct FlashcardDetailView: View {
         @State var isPressed = false
         
         let isLight = colorScheme == .light
+        let cornerRadius: CGFloat = isCompact ? 10 : 12
 
         var backgroundColor: Color {
             if !showResult {
@@ -1728,7 +1810,7 @@ struct FlashcardDetailView: View {
             if !showResult {
                 return isSelected
                     ? Color.green.opacity(isLight ? 0.2 : 0.4)
-                    : Color.appBorder(isLight: isLight).opacity(0.8)
+                    : Color.appBorder(isLight: isLight).opacity(isLight ? 0.8 : 0.6)
             } else {
                 if isCorrect {
                     return Color.green.opacity(isLight ? 0.35 : 0.5)
@@ -1757,44 +1839,44 @@ struct FlashcardDetailView: View {
                 }
             }
         }) {
-            HStack {
+            HStack(spacing: isCompact ? 8 : 12) {
                 Text(option)
-                    .scaledFont(.base)
+                    .scaledFont(isCompact ? .sm : .base)
                     .fontWeight(.regular)
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                 
-                Spacer()
+                Spacer(minLength: 8)
                 
                 if showResult {
                     if isCorrect {
                         Image(systemName: "checkmark.circle.fill")
-                            .scaledFont(.lg)
+                            .scaledFont(isCompact ? .base : .lg)
                             .foregroundStyle(.green)
                             .symbolEffect(.bounce.up, value: showResult)
                             .shadow(color: .green.opacity(0.5), radius: 4)
                     } else if isSelected && !isCorrect {
                         Image(systemName: "xmark.circle.fill")
-                            .scaledFont(.lg)
+                            .scaledFont(isCompact ? .base : .lg)
                             .foregroundStyle(.red)
                             .symbolEffect(.bounce.down, value: showResult)
                             .shadow(color: .red.opacity(0.5), radius: 4)
                     }
                 }
             }
-            .padding(16)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, isCompact ? 12 : 16)
             .background(
                 ZStack {
-                    // Bottom shadow layer (depth effect)
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: cornerRadius)
                         .fill(shadowColor)
                         .offset(y: isPressed ? 2 : 4)
-                    
-                    // Main button layer
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: cornerRadius)
                         .fill(backgroundColor)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: cornerRadius)
                                 .strokeBorder(borderColor, lineWidth: 2)
                         )
                 }
@@ -1804,9 +1886,8 @@ struct FlashcardDetailView: View {
         .buttonStyle(CoreButtonStyle(isPressed: $isPressed, isDisabled: showResult))
         .cursor(.pointingHand)
         .keyboardShortcut(shortcutKey, modifiers: [])
-        // Use opacity and border to avoid overflow
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: cornerRadius)
                 .stroke(
                     showResult && isCorrect ? Color.green.opacity(0.6) : 
                     (showResult && isSelected && !isCorrect ? Color.red.opacity(0.6) : Color.clear),
@@ -1950,6 +2031,7 @@ struct ContentView: View {
     @ObservedObject private var speechManager = SpeechManager.shared
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @EnvironmentObject var fontSizeManager: FontSizeManager
+    @EnvironmentObject var appearanceManager: AppearanceManager
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -2021,6 +2103,41 @@ struct ContentView: View {
                 Text(msg)
             }
         }
+        .overlay {
+            ConfirmActionOverlay(
+                title: "Kết thúc luyện tập?",
+                message: viewModel.pendingTopicSwitch.map { "Chuyển sang \"\($0.name)\" sẽ kết thúc phiên luyện tập hiện tại." } ?? "",
+                destructiveTitle: "Chuyển",
+                cancelTitle: "Ở lại",
+                isPresented: Binding(
+                    get: { viewModel.pendingTopicSwitch != nil },
+                    set: { if !$0 { viewModel.pendingTopicSwitch = nil } }
+                ),
+                onConfirm: {
+                    if let t = viewModel.pendingTopicSwitch {
+                        viewModel.applyTopicSwitch(to: t)
+                    }
+                }
+            )
+        }
+        .overlay {
+            ConfirmActionOverlay(
+                title: "Kết thúc luyện tập?",
+                message: "Bạn có chắc muốn thoát? Phiên luyện tập sẽ kết thúc.",
+                destructiveTitle: "Kết thúc",
+                cancelTitle: "Tiếp tục",
+                isPresented: Binding(
+                    get: { viewModel.pendingSidebarAction != .none },
+                    set: { if !$0 { viewModel.pendingSidebarAction = .none } }
+                ),
+                onConfirm: {
+                    if viewModel.pendingSidebarAction == .cycleTheme {
+                        withAnimation(.easeInOut(duration: 0.2)) { appearanceManager.cycleMode() }
+                    }
+                    viewModel.applyPendingSidebarAction()
+                }
+            )
+        }
         .overlay(alignment: .top) {
             if viewModel.undoableItem != nil {
                 UndoBannerView(
@@ -2055,8 +2172,7 @@ struct ContentView: View {
     
     @ViewBuilder
     private var middleColumn: some View {
-        if viewModel.isInSpecialMode {
-            // Empty view when in special mode
+        if viewModel.isInSpecialMode || viewModel.isInPracticeMode {
             Color.clear
                 .frame(width: 0)
                 .navigationSplitViewColumnWidth(min: 0, ideal: 0, max: 0)

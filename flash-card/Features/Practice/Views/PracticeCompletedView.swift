@@ -116,11 +116,11 @@ struct PracticeCompletedView: View {
                 .padding(.vertical, 28)
                 .padding(.horizontal, 20)
                 .background(
-                    RoundedRectangle(cornerRadius: 24)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(Color.appBackgroundPage(isLight: colorScheme == .light))
                         .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 8)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 24)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(
                                     LinearGradient(
                                         colors: [.blue.opacity(0.2), .purple.opacity(0.1)],
@@ -195,7 +195,7 @@ struct PracticeCompletedView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            SoundManager.shared.playSuccessWithHaptic()
         }
     }
 }

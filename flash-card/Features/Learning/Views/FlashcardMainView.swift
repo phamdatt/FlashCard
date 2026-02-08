@@ -60,6 +60,9 @@ struct FlashcardMainView: View {
     @State private var practiceSource: PracticeSource = .all
     @State private var showEditFlashcardSheet: Bool = false
     @State private var showDeleteMultipleFlashcardsConfirmation: Bool = false
+    /// Đã bấm Bắt đầu → đang trong phiên luyện tập (bấm Back sẽ confirm).
+    @State private var practiceStarted: Bool = false
+    @State private var showEndPracticeConfirmation: Bool = false
 
     enum PracticeSource: String, CaseIterable {
         case all = "Tất cả"
@@ -71,8 +74,12 @@ struct FlashcardMainView: View {
             // Header with Back button
             HStack {
                 Button(action: {
-                    viewModel.selectedTopic = nil
-                    viewModel.selectedFlashcard = nil
+                    if selectedMode == .practice && practiceStarted {
+                        showEndPracticeConfirmation = true
+                    } else {
+                        viewModel.selectedTopic = nil
+                        viewModel.selectedFlashcard = nil
+                    }
                 }) {
                     Label("Quay lại", systemImage: "chevron.left")
                 }
@@ -121,102 +128,104 @@ struct FlashcardMainView: View {
 
             ThemeDivider()
 
-            // Mode Toggle
-            VStack(spacing: 8) {
-                Picker("Chế độ", selection: $selectedMode) {
-                    ForEach(ViewMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue)
-                            .font(.app(.body))
-                            .tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .controlSize(.large)
-
-                if selectedMode == .practice {
-                    VStack(spacing: 10) {
-                        HStack(spacing: 8) {
-                            Picker("Kiểu", selection: $selectedPracticeType) {
-                                ForEach(PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name), id: \.self) { type in
-                                    Text(type.rawValue)
-                                        .font(.app(.body))
-                                        .tag(type)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .controlSize(.large)
-                            .onChange(of: viewModel.selectedSubject?.name) { _, _ in
-                                let available = PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name)
-                                if !available.contains(selectedPracticeType) {
-                                    selectedPracticeType = .multipleChoice
-                                    resetPractice()
-                                }
-                            }
+            // Mode Toggle + cài đặt: chỉ hiện khi chưa bắt đầu phiên (đã vào session thì ẩn để gọn UI)
+            if selectedMode == .list || !practiceStarted {
+                VStack(spacing: 8) {
+                    Picker("Chế độ", selection: $selectedMode) {
+                        ForEach(ViewMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue)
+                                .font(.app(.body))
+                                .tag(mode)
                         }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .controlSize(.large)
 
-                        HStack(alignment: .center, spacing: 8) {
-                            Picker("Nguồn", selection: $practiceSource) {
-                                ForEach(PracticeSource.allCases, id: \.self) { src in
-                                    Text(src.rawValue)
-                                        .font(.app(.body))
-                                        .tag(src)
+                    if selectedMode == .practice {
+                        VStack(spacing: 10) {
+                            HStack(spacing: 8) {
+                                Picker("Kiểu", selection: $selectedPracticeType) {
+                                    ForEach(PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name), id: \.self) { type in
+                                        Text(type.rawValue)
+                                            .font(.app(.body))
+                                            .tag(type)
+                                    }
                                 }
-                            }
-                            .pickerStyle(.menu)
-                            .labelsHidden()
-                            .frame(maxWidth: 120)
-                            .controlSize(.large)
-                            .onChange(of: practiceSource) { _, _ in resetPractice() }
-
-                            Menu {
-                                ForEach(practiceSessionSizes, id: \.self) { count in
-                                    Button(sessionSizeLabel(count) + (count >= topic.flashcards.count ? " (\(topic.flashcards.count))" : "")) {
-                                        selectedWordCount = count
+                                .pickerStyle(.segmented)
+                                .labelsHidden()
+                                .controlSize(.large)
+                                .onChange(of: viewModel.selectedSubject?.name) { _, _ in
+                                    let available = PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name)
+                                    if !available.contains(selectedPracticeType) {
+                                        selectedPracticeType = .multipleChoice
                                         resetPractice()
                                     }
                                 }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "number.circle.fill")
-                                        .font(.app(.body))
-                                    Text("\(min(selectedWordCount, practicePoolCount)) từ")
-                                        .font(.app(.body))
-                                    Image(systemName: "chevron.down")
-                                        .font(.app(.subheadline))
+                            }
+
+                            HStack(alignment: .center, spacing: 8) {
+                                Picker("Nguồn", selection: $practiceSource) {
+                                    ForEach(PracticeSource.allCases, id: \.self) { src in
+                                        Text(src.rawValue)
+                                            .font(.app(.body))
+                                            .tag(src)
+                                    }
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.appBackgroundControl(isLight: colorScheme == .light).opacity(0.8))
-                                .foregroundStyle(.secondary)
-                                .cornerRadius(8)
-                            }
-                            .buttonStyle(.plain)
+                                .pickerStyle(.menu)
+                                .labelsHidden()
+                                .frame(maxWidth: 120)
+                                .controlSize(.large)
+                                .onChange(of: practiceSource) { _, _ in resetPractice() }
 
-                            if topic.flashcards.count > 60 {
-                                Text("Nên 20–30 từ/phiên")
-                                    .font(.app(.subheadline))
+                                Menu {
+                                    ForEach(practiceSessionSizes, id: \.self) { count in
+                                        Button(sessionSizeLabel(count) + (count >= topic.flashcards.count ? " (\(topic.flashcards.count))" : "")) {
+                                            selectedWordCount = count
+                                            resetPractice()
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "number.circle.fill")
+                                            .font(.app(.body))
+                                        Text("\(min(selectedWordCount, practicePoolCount)) từ")
+                                            .font(.app(.body))
+                                        Image(systemName: "chevron.down")
+                                            .font(.app(.subheadline))
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color.appBackgroundControl(isLight: colorScheme == .light).opacity(0.8))
                                     .foregroundStyle(.secondary)
-                            }
+                                    .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
 
-                            if totalAnswered > 0 {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.secondary)
-                                    Text("\(score)/\(totalAnswered) (\(practiceScorePercentage)%)")
+                                if topic.flashcards.count > 60 {
+                                    Text("Nên 20–30 từ/phiên")
                                         .font(.app(.subheadline))
-                                        .foregroundStyle(practiceScorePercentage >= 70 ? .green : .orange)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                if totalAnswered > 0 {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(.secondary)
+                                        Text("\(score)/\(totalAnswered) (\(practiceScorePercentage)%)")
+                                            .font(.app(.subheadline))
+                                            .foregroundStyle(practiceScorePercentage >= 70 ? .green : .orange)
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
 
-            ThemeDivider()
+                ThemeDivider()
+            }
 
             // Content based on mode
             switch selectedMode {
@@ -228,13 +237,28 @@ struct FlashcardMainView: View {
                     showDeleteMultipleFlashcardsConfirmation: $showDeleteMultipleFlashcardsConfirmation
                 )
             case .practice:
-                practiceView
+                if practiceStarted {
+                    practiceView
+                } else {
+                    practiceStartView
+                }
             }
         }
         .onChange(of: selectedMode) { _, newValue in
-            if newValue == .practice {
-                startPractice()
+            viewModel.isInPracticeMode = (newValue == .practice)
+            if newValue == .list {
+                practiceStarted = false
+                viewModel.isPracticeSessionActive = false
             }
+        }
+        .onChange(of: practiceStarted) { _, started in
+            viewModel.isPracticeSessionActive = started
+        }
+        .onAppear {
+            viewModel.isInPracticeMode = (selectedMode == .practice)
+        }
+        .onDisappear {
+            viewModel.isInPracticeMode = false
         }
         .onChange(of: topic.id) { _, _ in
             // Reset when topic changes; nếu không phải Tiếng Trung thì bỏ chọn Điền pinyin
@@ -288,6 +312,59 @@ struct FlashcardMainView: View {
                 }
             )
         }
+        .overlay {
+            ConfirmActionOverlay(
+                title: "Kết thúc luyện tập?",
+                message: "Bạn có chắc muốn thoát? Phiên luyện tập sẽ kết thúc.",
+                destructiveTitle: "Kết thúc",
+                cancelTitle: "Tiếp tục",
+                isPresented: $showEndPracticeConfirmation,
+                onConfirm: {
+                    showEndPracticeConfirmation = false
+                    practiceStarted = false
+                    viewModel.isPracticeSessionActive = false
+                    viewModel.selectedTopic = nil
+                    viewModel.selectedFlashcard = nil
+                }
+            )
+        }
+    }
+    
+    /// Màn trước khi vào luyện tập: nút "Bắt đầu".
+    private var practiceStartView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            VStack(spacing: 12) {
+                Image(systemName: selectedPracticeType.icon)
+                    .font(.system(size: 48, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Text(selectedPracticeType.rawValue)
+                    .font(.app(.title2))
+                    .fontWeight(.semibold)
+                Text("\(min(selectedWordCount, practicePoolCount)) từ · \(practiceSource.rawValue)")
+                    .font(.app(.subheadline))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button(action: {
+                practiceStarted = true
+                startPractice()
+            }) {
+                Text("Bắt đầu")
+                    .font(.app(.title3))
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.accentColor)
+                    .foregroundStyle(.white)
+                    .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+            .cursor(.pointingHand)
+            .frame(maxWidth: 320)
+            .padding(.bottom, 40)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     // Practice mode view
@@ -300,6 +377,7 @@ struct FlashcardMainView: View {
                     topic: topic,
                     topicId: topic.id,
                     subjectName: viewModel.selectedSubject?.name ?? "",
+                    subjectIcon: viewModel.selectedSubject?.displayIcon,
                     radicalForCharacter: viewModel.radicalForCharacter,
                     onComplete: { correctCount, total in
                         score = correctCount

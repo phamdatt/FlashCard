@@ -14,7 +14,7 @@ struct ImportFlashcardSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedFileURL: URL?
     @State private var selectedTopicId: Int?
-    @State private var parsedRows: [(question: String, answer: String, hint: String?, notes: String?, radical: String?)] = []
+    @State private var parsedRows: [(question: String, answer: String, hint: String?, notes: String?, radical: String?, phonetic: String?)] = []
     @State private var parseError: String?
 
     private var targetTopic: Topic? {
@@ -145,7 +145,7 @@ struct ImportFlashcardSheet: View {
             let ext = url.pathExtension.lowercased()
             if ext == "json" {
                 let decoded = try JSONDecoder().decode([ImportFlashcardRow].self, from: data)
-                parsedRows = decoded.map { ($0.question, $0.answer, $0.hint, $0.notes, $0.radical) }
+                parsedRows = decoded.map { ($0.question, $0.answer, $0.hint, $0.notes, $0.radical, $0.phonetic) }
             } else {
                 guard let content = String(data: data, encoding: .utf8) else {
                     parseError = "Không đọc được file (encoding)."
@@ -163,7 +163,8 @@ struct ImportFlashcardSheet: View {
                     let h = commaParts.count > 2 && !commaParts[2].isEmpty ? commaParts[2] : nil
                     let notes = commaParts.count > 3 && !commaParts[3].isEmpty ? commaParts[3] : nil
                     let radical = commaParts.count > 4 && !commaParts[4].isEmpty ? commaParts[4] : nil
-                    parsedRows.append((q, a, h, notes, radical))
+                    let phonetic = commaParts.count > 5 && !commaParts[5].isEmpty ? commaParts[5] : nil  // Cột 6 = phiên âm
+                    parsedRows.append((q, a, h, notes, radical, phonetic))
                 }
             }
             if parsedRows.isEmpty && parseError == nil {
@@ -188,4 +189,5 @@ private struct ImportFlashcardRow: Codable {
     let hint: String?
     let notes: String?
     let radical: String?
+    let phonetic: String?  // Pinyin (Tiếng Trung) hoặc phiên âm (Tiếng Anh, vd IPA)
 }

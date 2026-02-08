@@ -12,6 +12,8 @@ extension Color {
     // MARK: - Light mode
     static let appCardBackgroundLight = Color(red: 252/255, green: 251/255, blue: 249/255)
     static let appBorderLight = Color(red: 228/255, green: 226/255, blue: 222/255)
+    /// Viền đậm cho nút / card (light mode) — rõ hơn appBorderLight.
+    static let appBorderStrongLight = Color(red: 0.55, green: 0.55, blue: 0.58)
     static let appDividerLight = Color(red: 224/255, green: 222/255, blue: 218/255)
     static let appTintLight = Color(red: 236/255, green: 242/255, blue: 234/255)
 
@@ -22,6 +24,8 @@ extension Color {
     static let appCardBackgroundDark = Color(red: 0.16, green: 0.16, blue: 0.18)
     /// Viền trong dark.
     static let appBorderDark = Color(red: 0.28, green: 0.28, blue: 0.30)
+    /// Viền đậm cho nút / card (dark mode).
+    static let appBorderStrongDark = Color(red: 0.42, green: 0.42, blue: 0.45)
     /// Đường kẻ ngăn cách trong dark.
     static let appDividerDark = Color(white: 0.18)
     /// Nền control (input, list row) trong dark.
@@ -36,6 +40,10 @@ extension Color {
     }
     static func appBorder(isLight: Bool) -> Color {
         isLight ? appBorderLight : appBorderDark
+    }
+    /// Viền nút/card đậm, rõ ở cả light và dark.
+    static func appBorderStrong(isLight: Bool) -> Color {
+        isLight ? appBorderStrongLight : appBorderStrongDark
     }
     static func appDivider(isLight: Bool) -> Color {
         isLight ? appDividerLight : appDividerDark

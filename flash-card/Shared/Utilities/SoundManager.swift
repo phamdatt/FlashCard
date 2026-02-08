@@ -32,8 +32,8 @@ class SoundManager {
             ?? NSSound(named: "Funk")
             ?? NSSound(named: "Blow")
 
-        // Completion / success
-        successSound = NSSound(named: "Glass") ?? NSSound(named: "Hero")
+        // Completion / success (celebratory, Duolingo-style)
+        successSound = NSSound(named: "Hero") ?? NSSound(named: "Glass") ?? NSSound(named: "Tink")
     }
 
     private func stopAndPlay(_ sound: NSSound?) {
