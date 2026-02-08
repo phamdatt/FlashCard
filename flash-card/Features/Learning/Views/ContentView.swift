@@ -1515,6 +1515,11 @@ struct HintExpandableBox: View {
     }
 }
 
+private struct WidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 400
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
 // Flashcard Detail View
 struct FlashcardDetailView: View {
     let flashcard: Flashcard
@@ -1533,6 +1538,9 @@ struct FlashcardDetailView: View {
     @State private var showResult = false
     @State private var nextReviewDateString: String? = nil
     @State private var hintExpanded = false
+    @State private var contentWidth: CGFloat = 400
+
+    private var isPracticeMode: Bool { onAnswered != nil }
 
     private static var nextReviewFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -1542,56 +1550,60 @@ struct FlashcardDetailView: View {
     }()
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 30) {
-                // Header (icon + màu đồng nhất với sidebar)
-                HStack {
-                    Image(systemName: subjectIcon ?? "book.fill")
-                        .font(.app(.title))
+        let spacing: CGFloat = isPracticeMode ? 16 : 30
+        let inner = VStack(spacing: spacing) {
+            // Header (gọn hơn khi practice)
+            HStack {
+                Image(systemName: subjectIcon ?? "book.fill")
+                    .font(.app(isPracticeMode ? .title3 : .title))
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: isPracticeMode ? 2 : 4) {
+                    Text(subjectName)
+                        .font(.app(isPracticeMode ? .subheadline : .headline))
                         .foregroundStyle(.secondary)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(subjectName)
-                            .font(.app(.headline))
+                    Text(topic.name)
+                        .font(.app(isPracticeMode ? .headline : .title2))
+                        .fontWeight(.semibold)
+                    if let dateStr = nextReviewDateString, !isPracticeMode {
+                        Text("Ôn lại vào: \(dateStr)")
+                            .font(.app(.subheadline))
                             .foregroundStyle(.secondary)
-                        Text(topic.name)
-                            .font(.app(.title2))
-                            .fontWeight(.semibold)
-                        if let dateStr = nextReviewDateString {
-                            Text("Ôn lại vào: \(dateStr)")
-                                .font(.app(.subheadline))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    
-                    Spacer()
-
-                    if onEdit != nil {
-                        Button(action: { onEdit?() }) {
-                            Label("Sửa từ vựng", systemImage: "pencil")
-                                .font(.app(.subheadline))
-                                .fontWeight(.medium)
-                        }
-                        .buttonStyle(.bordered)
-                        .cursor(.pointingHand)
-                        .tint(.primary)
-                        .controlSize(.regular)
                     }
                 }
-                
-                ThemeDivider()
-                
-                if flashcard.isMultipleChoice {
-                    // Multiple Choice Question
-                    multipleChoiceView
-                } else {
-                    // Traditional Flashcard
-                    traditionalFlashcardView
-                }
-                
                 Spacer()
+                if onEdit != nil {
+                    Button(action: { onEdit?() }) {
+                        Label("Sửa từ vựng", systemImage: "pencil")
+                            .font(.app(.subheadline))
+                            .fontWeight(.medium)
+                    }
+                    .buttonStyle(.bordered)
+                    .cursor(.pointingHand)
+                    .tint(.primary)
+                    .controlSize(.regular)
+                }
             }
-            .padding()
+            if !isPracticeMode { ThemeDivider() }
+            if flashcard.isMultipleChoice {
+                multipleChoiceView
+            } else {
+                traditionalFlashcardView
+            }
+            if !isPracticeMode { Spacer() }
+        }
+        .padding()
+        .background(GeometryReader { g in Color.clear.preference(key: WidthPreferenceKey.self, value: g.size.width) })
+        .onPreferenceChange(WidthPreferenceKey.self) { contentWidth = $0 }
+
+        Group {
+            if isPracticeMode {
+                inner
+            } else {
+                ScrollView {
+                    inner
+                }
+                .scrollBounceBehavior(.basedOnSize)
+            }
         }
         .frame(minWidth: 280)
         .onAppear {
@@ -1685,17 +1697,16 @@ struct FlashcardDetailView: View {
         }
     }
     
-    // Multiple choice question view — responsive: ưu tiên khung câu hỏi và nút trả lời trên màn nhỏ
+    // Multiple choice question view — dùng contentWidth (không GeometryReader bọc ngoài) để scroll được khi embed trong practice
     private var multipleChoiceView: some View {
-        GeometryReader { geo in
-            let isCompact = geo.size.width < 420
-            let hPadding: CGFloat = isCompact ? 12 : 20
-            let cardPadding: CGFloat = isCompact ? 12 : 16
-            let questionFont: Font.TailwindSize = isCompact ? .xl3 : .display
-            let optionPadding: CGFloat = isCompact ? 12 : 16
-            let spacing: CGFloat = isCompact ? 16 : 25
+        let isCompact = contentWidth < 420 || isPracticeMode
+        let hPadding: CGFloat = isCompact ? 12 : 20
+        let cardPadding: CGFloat = isCompact ? 12 : 16
+        let questionFont: Font.TailwindSize = isCompact ? .xl3 : .display
+        let optionPadding: CGFloat = isCompact ? 12 : 16
+        let spacing: CGFloat = isCompact ? 12 : 25
 
-            VStack(spacing: spacing) {
+        return VStack(spacing: spacing) {
                 // Question card
                 VStack(spacing: isCompact ? 10 : 16) {
                     HStack {
@@ -1762,8 +1773,6 @@ struct FlashcardDetailView: View {
                 }
             }
             .padding(.horizontal, hPadding)
-        }
-        .frame(minHeight: 200)
     }
     
     private func multipleChoiceButton(option: String, horizontalPadding: CGFloat = 16, isCompact: Bool = false) -> some View {

@@ -57,11 +57,14 @@ struct MultipleChoicePracticeView: View {
             return radicalForCharacter?(flashcard.questionDisplayText)
         }()
 
-        return VStack {
-            VStack(spacing: 8) {
+        return VStack(spacing: 0) {
+            // Khối tiến độ rõ ràng: Câu x/20 + thanh progress
+            VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Câu \(currentIndex + 1)/\(flashcards.count)")
                         .font(.app(.headline))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
                     Spacer()
                     Text(Flashcard.exerciseTypeLabel)
                         .font(.app(.subheadline))
@@ -71,9 +74,11 @@ struct MultipleChoicePracticeView: View {
                         .background(Color.green.opacity(colorScheme == .light ? 0.14 : 0.2))
                         .cornerRadius(6)
                 }
-                ProgressView(value: Double(currentIndex), total: Double(flashcards.count))
+                ProgressView(value: Double(currentIndex), total: Double(max(flashcards.count, 1)))
+                    .scaleEffect(y: 1.8, anchor: .center)
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
 
             FlashcardDetailView(
                 flashcard: flashcard,

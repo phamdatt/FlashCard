@@ -244,6 +244,7 @@ struct FlashcardMainView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onChange(of: selectedMode) { _, newValue in
             viewModel.isInPracticeMode = (newValue == .practice)
             if newValue == .list {
