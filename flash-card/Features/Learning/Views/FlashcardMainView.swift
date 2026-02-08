@@ -77,6 +77,7 @@ struct FlashcardMainView: View {
                     Label("Quay lại", systemImage: "chevron.left")
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
                 
                 Spacer()
 
@@ -92,25 +93,33 @@ struct FlashcardMainView: View {
                         Label("Thêm từ", systemImage: "plus.circle.fill")
                             .font(.app(.body))
                             .fontWeight(.medium)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .cursor(.pointingHand)
                     .foregroundStyle(.secondary)
-                    .frame(height: 28, alignment: .center)
+                    .frame(minHeight: 44, alignment: .center)
                     Button(action: {
                         viewModel.showImportFlashcardSheet = true
                     }) {
                         Label("Import", systemImage: "square.and.arrow.down")
                             .font(.app(.body))
                             .fontWeight(.medium)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .cursor(.pointingHand)
                     .foregroundStyle(.secondary)
-                    .frame(height: 28, alignment: .center)
+                    .frame(minHeight: 44, alignment: .center)
                 }
             }
             .padding()
 
-            Divider()
+            ThemeDivider()
 
             // Mode Toggle
             VStack(spacing: 8) {
@@ -179,7 +188,7 @@ struct FlashcardMainView: View {
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
-                                .background(Color.gray.opacity(colorScheme == .light ? 0.1 : 0.15))
+                                .background(Color.appBackgroundControl(isLight: colorScheme == .light).opacity(0.8))
                                 .foregroundStyle(.secondary)
                                 .cornerRadius(8)
                             }
@@ -207,7 +216,7 @@ struct FlashcardMainView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
 
-            Divider()
+            ThemeDivider()
 
             // Content based on mode
             switch selectedMode {
@@ -468,6 +477,7 @@ struct AddFlashcardSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
             }
 
             // Topic info
@@ -482,7 +492,7 @@ struct AddFlashcardSheet: View {
                 }
             }
 
-            Divider()
+            ThemeDivider()
 
             // Input fields
             VStack(alignment: .leading, spacing: 16) {
@@ -515,10 +525,16 @@ struct AddFlashcardSheet: View {
 
             // Action buttons
             HStack {
-                Button("Huỷ") {
-                    clearAndClose()
+                Button(action: { clearAndClose() }) {
+                    Text("Huỷ")
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
                 .keyboardShortcut(.escape)
+                .buttonStyle(.bordered)
+                .cursor(.pointingHand)
+                .controlSize(.large)
 
                 Spacer()
 
@@ -531,12 +547,19 @@ struct AddFlashcardSheet: View {
                 }) {
                     Text("Thêm từ vựng")
                         .fontWeight(.semibold)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
                 .keyboardShortcut(.return)
                 .disabled(
                     viewModel.newFlashcardQuestion.trimmingCharacters(in: .whitespaces).isEmpty ||
                     viewModel.newFlashcardAnswer.trimmingCharacters(in: .whitespaces).isEmpty
                 )
+                .buttonStyle(.borderedProminent)
+                .cursor(.pointingHand)
+                .tint(.accentColor)
+                .controlSize(.large)
             }
         }
         .padding(24)

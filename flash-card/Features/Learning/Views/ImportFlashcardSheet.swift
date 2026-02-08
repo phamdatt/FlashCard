@@ -16,8 +16,6 @@ struct ImportFlashcardSheet: View {
     @State private var selectedTopicId: Int?
     @State private var parsedRows: [(question: String, answer: String, hint: String?, notes: String?, radical: String?)] = []
     @State private var parseError: String?
-    @State private var isImporting = false
-    @State private var importResult: String?
 
     private var targetTopic: Topic? {
         guard let sid = viewModel.selectedSubject?.id,
@@ -40,14 +38,20 @@ struct ImportFlashcardSheet: View {
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
             }
 
             Group {
                 HStack {
-                    Button("Chọn file CSV hoặc JSON...") {
-                        openFilePanel()
+                    Button(action: { openFilePanel() }) {
+                        Text("Chọn file CSV hoặc JSON...")
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.bordered)
+                    .cursor(.pointingHand)
+                    .controlSize(.large)
                     if let url = selectedFileURL {
                         Text(url.lastPathComponent)
                             .lineLimit(1)
@@ -82,25 +86,32 @@ struct ImportFlashcardSheet: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
-                if let result = importResult {
-                    Text(result)
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                }
             }
 
             Spacer(minLength: 0)
 
             HStack {
                 Spacer()
-                Button("Huỷ") { dismiss() }
-                    .buttonStyle(.bordered)
-                Button("Import") {
-                    performImport()
+                Button(action: { dismiss() }) {
+                    Text("Huỷ")
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.bordered)
+                .cursor(.pointingHand)
+                .controlSize(.large)
+                Button(action: { performImportAndClose() }) {
+                    Text("Import")
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderedProminent)
+                .cursor(.pointingHand)
                 .tint(.green)
-                .disabled(targetTopic == nil || parsedRows.isEmpty || isImporting)
+                .controlSize(.large)
+                .disabled(targetTopic == nil || parsedRows.isEmpty)
             }
         }
         .padding(24)
@@ -163,44 +174,11 @@ struct ImportFlashcardSheet: View {
         }
     }
 
-    private func performImport() {
+    private func performImportAndClose() {
         guard let topic = targetTopic else { return }
-        isImporting = true
-        importResult = nil
-        var added = 0
-        for row in parsedRows {
-            let q = row.question.trimmingCharacters(in: .whitespaces)
-            let a = row.answer.trimmingCharacters(in: .whitespaces)
-            guard !q.isEmpty, !a.isEmpty else { continue }
-            let card = Flashcard(
-                question: q,
-                answer: a,
-                hint: row.hint.flatMap { $0.isEmpty ? nil : $0 },
-                exerciseType: Flashcard.exerciseTypeLabel,
-                notes: row.notes.flatMap { $0.isEmpty ? nil : $0 },
-                radical: row.radical.flatMap { $0.isEmpty ? nil : $0 }
-            )
-            do {
-                try DatabaseManager.shared.insertFlashcard(card, topicId: topic.id)
-                added += 1
-            } catch {
-                viewModel.errorMessage = error.localizedDescription
-                isImporting = false
-                return
-            }
-        }
-        isImporting = false
-        importResult = "Đã thêm \(added) thẻ."
-        viewModel.loadLearningData()
-        if let subId = viewModel.selectedSubject?.id,
-           let sub = viewModel.subjects.first(where: { $0.id == subId }),
-           let t = sub.topics.first(where: { $0.id == topic.id }) {
-            viewModel.selectedSubject = sub
-            viewModel.selectedTopic = t
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            dismiss()
-        }
+        let rows = parsedRows
+        dismiss()
+        viewModel.importFlashcardsFromRows(topicId: topic.id, subjectId: topic.subjectId, rows: rows)
     }
 }
 

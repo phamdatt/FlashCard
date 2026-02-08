@@ -22,7 +22,7 @@ struct ConfirmActionOverlay: View {
     var body: some View {
         if isPresented {
             ZStack {
-                Color(nsColor: .windowBackgroundColor).opacity(0.7)
+                Color.appBackgroundPage(isLight: colorScheme == .light).opacity(0.7)
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
@@ -47,6 +47,7 @@ struct ConfirmActionOverlay: View {
                         }
                         .keyboardShortcut(.escape)
                         .buttonStyle(.bordered)
+                        .cursor(.pointingHand)
 
                         Button(destructiveTitle, role: .destructive) {
                             onConfirm()
@@ -54,16 +55,17 @@ struct ConfirmActionOverlay: View {
                         }
                         .keyboardShortcut(.defaultAction)
                         .buttonStyle(.borderedProminent)
+                        .cursor(.pointingHand)
                         .tint(.red)
                     }
                 }
                 .padding(24)
                 .frame(width: 380, alignment: .topLeading)
-                .background(Color(nsColor: .windowBackgroundColor))
+                .background(Color.appBackgroundPage(isLight: colorScheme == .light))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                        .stroke(Color.appBorder(isLight: colorScheme == .light), lineWidth: 0.5)
                 )
                 .shadow(color: .black.opacity(colorScheme == .dark ? 0.4 : 0.15), radius: 20, x: 0, y: 8)
             }

@@ -91,7 +91,7 @@ struct SpeedCardsPracticeView: View {
             }
             .padding()
 
-            Divider()
+            ThemeDivider()
 
             // Flashcard
             ScrollView {
@@ -101,7 +101,7 @@ struct SpeedCardsPracticeView: View {
                     // Card with flip
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
+                            .fill(Color.appCardBackground(isLight: colorScheme == .light))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20)
                                     .stroke(
@@ -158,6 +158,7 @@ struct SpeedCardsPracticeView: View {
                                     .cornerRadius(8)
                                 }
                                 .buttonStyle(.plain)
+                                .cursor(.pointingHand)
                             }
                         }
                         .padding(30)
@@ -203,6 +204,7 @@ struct SpeedCardsPracticeView: View {
                                 .foregroundStyle(.red)
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .cursor(.pointingHand)
 
                             // Known
                             Button(action: { markCard(known: true) }) {
@@ -226,6 +228,7 @@ struct SpeedCardsPracticeView: View {
                                 .foregroundStyle(.secondary)
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .cursor(.pointingHand)
                         }
                         .padding(.horizontal, 24)
                         .transition(.scale.combined(with: .opacity))

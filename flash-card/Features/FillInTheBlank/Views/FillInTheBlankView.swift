@@ -91,7 +91,7 @@ Image(systemName: "checkmark.circle.fill")
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(Color.appBackgroundControl(isLight: colorScheme == .light))
                 .cornerRadius(16)
                 .padding(.horizontal, 40)
 
@@ -106,7 +106,7 @@ Image(systemName: "checkmark.circle.fill")
                         .fontWeight(.medium)
                         .textFieldStyle(.plain)
                         .padding()
-                        .background(Color(nsColor: .textBackgroundColor))
+                        .background(Color.appBackgroundText(isLight: colorScheme == .light))
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
@@ -172,6 +172,7 @@ Image(systemName: "checkmark.circle.fill")
                         .cornerRadius(12)
                 }
                 .buttonStyle(ScaleButtonStyle())
+                .cursor(.pointingHand)
                 .disabled(userAnswer.isEmpty)
                 .padding(.horizontal, 40)
             } else {
@@ -188,6 +189,7 @@ Image(systemName: "checkmark.circle.fill")
                         .cornerRadius(12)
                 }
                 .buttonStyle(ScaleButtonStyle())
+                .cursor(.pointingHand)
                 .padding(.horizontal, 40)
             }
         }

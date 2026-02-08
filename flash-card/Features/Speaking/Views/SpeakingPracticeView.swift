@@ -88,12 +88,12 @@ Image(systemName: "checkmark.circle.fill")
                     .multilineTextAlignment(.center)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color(nsColor: .controlBackgroundColor))
+                    .background(Color.appBackgroundControl(isLight: colorScheme == .light))
                     .cornerRadius(16)
                     .padding(.horizontal, 40)
 
                 if showResult {
-                    Divider()
+                    ThemeDivider()
                         .padding(.vertical, 8)
 
                     VStack(spacing: 12) {
@@ -117,7 +117,7 @@ Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.primary)
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color(nsColor: .controlBackgroundColor))
+                                    .background(Color.appBackgroundControl(isLight: colorScheme == .light))
                                     .cornerRadius(8)
                             }
                         }
@@ -160,6 +160,7 @@ Image(systemName: "checkmark.circle.fill")
                     .cornerRadius(12)
                 }
                 .buttonStyle(ScaleButtonStyle())
+                .cursor(.pointingHand)
                 .padding(.horizontal, 40)
             } else {
                 Button(action: {
@@ -175,6 +176,7 @@ Image(systemName: "checkmark.circle.fill")
                         .cornerRadius(12)
                 }
                 .buttonStyle(ScaleButtonStyle())
+                .cursor(.pointingHand)
                 .padding(.horizontal, 40)
             }
         }

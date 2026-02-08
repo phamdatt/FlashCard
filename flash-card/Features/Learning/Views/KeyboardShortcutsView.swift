@@ -32,12 +32,13 @@ struct KeyboardShortcutsView: View {
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)
             .padding(.bottom, 16)
 
-            Divider()
+            ThemeDivider()
 
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(shortcuts.enumerated()), id: \.offset) { index, item in
@@ -59,7 +60,7 @@ struct KeyboardShortcutsView: View {
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     if index < shortcuts.count - 1 {
-                        Divider()
+                        ThemeDivider()
                             .padding(.leading, 24)
                     }
                 }
@@ -69,7 +70,7 @@ struct KeyboardShortcutsView: View {
             Spacer(minLength: 0)
         }
         .frame(width: 440, height: 280)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
 }
 

@@ -27,6 +27,8 @@ struct SidebarView: View {
             reviewSection
             statisticsSection
         }
+        .scrollContentBackground(colorScheme == .dark ? .hidden : .visible)
+        .background(colorScheme == .dark ? Color.appDarkBackground : Color.clear)
         .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
         .navigationTitle("Menu")
         .tint(.green)
@@ -46,9 +48,10 @@ struct SidebarView: View {
                 }) {
                     Label(subject.name, systemImage: subject.icon)
                         .scaledFont(.sm)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 8)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 12)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .cursor(.pointingHand)
@@ -77,9 +80,10 @@ struct SidebarView: View {
             }) {
                 Label("Ôn lại từ sai", systemImage: "xmark.circle.fill")
                     .scaledFont(.sm)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 12)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .cursor(.pointingHand)
@@ -95,9 +99,10 @@ struct SidebarView: View {
             }) {
                 Label("Thống kê", systemImage: "chart.line.uptrend.xyaxis")
                     .scaledFont(.sm)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 12)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .cursor(.pointingHand)
@@ -160,7 +165,7 @@ struct SidebarView: View {
                 .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(nsColor: .controlBackgroundColor))
+                        .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                 )
 
                 // Theme toggle
@@ -197,10 +202,11 @@ struct SidebarView: View {
                     .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(nsColor: .controlBackgroundColor))
+                            .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     )
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
 
                 // Keyboard shortcuts
                 Button(action: {
@@ -230,10 +236,11 @@ struct SidebarView: View {
                     .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(nsColor: .controlBackgroundColor))
+                            .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     )
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
 
                 // English TTS accent
                 Button(action: {
@@ -263,10 +270,11 @@ struct SidebarView: View {
                     .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(nsColor: .controlBackgroundColor))
+                            .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     )
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
                 .accessibilityLabel("Giọng đọc tiếng Anh")
                 .accessibilityHint("Chọn accent cho phát âm tiếng Anh (US, UK, Úc, …)")
 
@@ -298,10 +306,11 @@ struct SidebarView: View {
                     .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(nsColor: .controlBackgroundColor))
+                            .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     )
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
                 .accessibilityLabel("Vẽ nét gợi ý từ")
                 .accessibilityHint("Vẽ nét chữ lên canvas, gợi ý từ theo số nét (Tiếng Trung)")
 
@@ -333,10 +342,11 @@ struct SidebarView: View {
                     .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(nsColor: .controlBackgroundColor))
+                            .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     )
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
                 .accessibilityLabel("Sao lưu và Phục hồi")
                 .accessibilityHint("Mở màn sao lưu dữ liệu ra file JSON hoặc phục hồi từ file")
             }
@@ -390,6 +400,7 @@ struct TopicsListView: View {
                         .scaledFont(.sm)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
                 .transition(.scale.combined(with: .opacity))
             }
         }
@@ -397,10 +408,10 @@ struct TopicsListView: View {
         .padding(.vertical, 8)
 .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
-                            .stroke(isSearchFocused ? Color.green : Color(nsColor: .separatorColor).opacity(0.8), lineWidth: isSearchFocused ? 2 : 1)
+                            .stroke(isSearchFocused ? Color.green : Color.appBorder(isLight: colorScheme == .light), lineWidth: isSearchFocused ? 2 : 1)
                     )
             )
             .padding(.horizontal, 16)
@@ -453,6 +464,7 @@ struct TopicsListView: View {
                                 .padding(.vertical, 4)
                             }
                             .buttonStyle(.plain)
+                            .cursor(.pointingHand)
                         }
                     }
                     .listStyle(.plain)
@@ -508,18 +520,22 @@ struct TopicsListView: View {
             Button(action: {
                 viewModel.showAddTopicSheet = true
             }) {
-Label("Thêm chủ đề", systemImage: "plus.circle.fill")
-                        .scaledFont(.sm)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
+                Label("Thêm chủ đề", systemImage: "plus.circle.fill")
+                    .scaledFont(.sm)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .cursor(.pointingHand)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
             LinearGradient(
-                colors: [Color(nsColor: .windowBackgroundColor).opacity(0), Color(nsColor: .windowBackgroundColor)],
+                colors: [Color.appBackgroundPage(isLight: colorScheme == .light).opacity(0), Color.appBackgroundPage(isLight: colorScheme == .light)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -638,6 +654,7 @@ private struct TopicRowView: View {
 struct AddTopicSheet: View {
     @ObservedObject var viewModel: ContentViewModel
     @FocusState private var isFocused: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(spacing: 20) {
@@ -657,6 +674,7 @@ struct AddTopicSheet: View {
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
             }
 
             if let subject = viewModel.selectedSubject {
@@ -670,8 +688,7 @@ struct AddTopicSheet: View {
                 }
             }
 
-            Divider()
-                .background(Color(nsColor: .separatorColor))
+            ThemeDivider()
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Tên chủ đề")
@@ -686,12 +703,19 @@ struct AddTopicSheet: View {
             Spacer()
 
             HStack(spacing: 12) {
-                Button("Huỷ") {
+                Button(action: {
                     viewModel.newTopicName = ""
                     viewModel.showAddTopicSheet = false
+                }) {
+                    Text("Huỷ")
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
                 .keyboardShortcut(.escape)
                 .buttonStyle(.bordered)
+                .cursor(.pointingHand)
+                .controlSize(.large)
 
                 Spacer()
 
@@ -700,16 +724,21 @@ struct AddTopicSheet: View {
                 }) {
                     Text("Tạo chủ đề")
                         .fontWeight(.semibold)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
                 .keyboardShortcut(.return)
                 .disabled(viewModel.newTopicName.trimmingCharacters(in: .whitespaces).isEmpty)
                 .buttonStyle(.borderedProminent)
+                .cursor(.pointingHand)
                 .tint(.accentColor)
+                .controlSize(.large)
             }
         }
         .padding(24)
         .frame(width: 400, height: 280)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
         .onAppear { isFocused = true }
     }
 }
@@ -718,6 +747,7 @@ struct AddTopicSheet: View {
 struct RenameTopicSheet: View {
     @ObservedObject var viewModel: ContentViewModel
     @FocusState private var isFocused: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(spacing: 20) {
@@ -737,6 +767,7 @@ struct RenameTopicSheet: View {
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -752,27 +783,39 @@ struct RenameTopicSheet: View {
             Spacer()
 
             HStack(spacing: 12) {
-                Button("Huỷ") {
+                Button(action: {
                     viewModel.topicToRename = nil
                     viewModel.renameTopicName = ""
+                }) {
+                    Text("Huỷ")
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
                 .keyboardShortcut(.escape)
                 .buttonStyle(.bordered)
+                .cursor(.pointingHand)
+                .controlSize(.large)
 
                 Spacer()
                 Button(action: { viewModel.renameTopic() }) {
                     Text("Lưu")
                         .fontWeight(.semibold)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
                 .keyboardShortcut(.return)
                 .disabled(viewModel.renameTopicName.trimmingCharacters(in: .whitespaces).isEmpty)
                 .buttonStyle(.borderedProminent)
+                .cursor(.pointingHand)
                 .tint(.accentColor)
+                .controlSize(.large)
             }
         }
         .padding(24)
         .frame(width: 400, height: 240)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
         .onAppear { isFocused = true }
     }
 }
@@ -796,6 +839,7 @@ struct ReadingMainView: View {
                         .scaledFont(.sm)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
 
                 Spacer()
                 Text(topic.name)
@@ -813,11 +857,12 @@ struct ReadingMainView: View {
                         .fontWeight(.medium)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
                 .foregroundStyle(.secondary)
             }
             .padding()
 
-            Divider()
+            ThemeDivider()
 
             if topic.readings.isEmpty {
                 ContentUnavailableView {
@@ -829,29 +874,18 @@ struct ReadingMainView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 HSplitView {
-                    // Reading list
+                    // Reading list – card style với tag độ khó (HSK / level)
                     List(topic.readings, selection: $selectedPassage) { passage in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(passage.title)
-                                .scaledFont(.sm)
-                                .fontWeight(.semibold)
-                                .lineLimit(2)
-                            Text(passage.content)
-                                .scaledFont(.xs)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
-                        .padding(.vertical, 6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .tag(passage)
-                        .contextMenu {
-                            Button(role: .destructive, action: {
-                                viewModel.passageToDelete = passage
-                            }) {
-                                Label("Xoá bài đọc", systemImage: "trash")
+                        ReadingPassageRow(topicName: topic.name, passage: passage, isSelected: selectedPassage?.id == passage.id)
+                            .contentShape(Rectangle())
+                            .tag(passage)
+                            .contextMenu {
+                                Button(role: .destructive, action: {
+                                    viewModel.passageToDelete = passage
+                                }) {
+                                    Label("Xoá bài đọc", systemImage: "trash")
+                                }
                             }
-                        }
                     }
                     .frame(minWidth: 260, idealWidth: 320, maxWidth: 400)
                     .listStyle(.plain)
@@ -910,60 +944,147 @@ struct ReadingMainView: View {
     }
 }
 
-// MARK: - Reading Detail View
+// MARK: - Reading passage list row (card + level tag)
+private struct ReadingPassageRow: View {
+    let topicName: String
+    let passage: ReadingPassage
+    let isSelected: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var levelTag: (text: String, color: Color)? {
+        let lower = topicName.lowercased()
+        if lower.contains("hsk1") || lower.contains("hsk 1") { return ("HSK 1", Color(red: 0.2, green: 0.7, blue: 0.45)) }
+        if lower.contains("hsk2") || lower.contains("hsk 2") { return ("HSK 2", Color(red: 0.25, green: 0.5, blue: 1.0)) }
+        if lower.contains("hsk3") || lower.contains("hsk 3") { return ("HSK 3", Color(red: 0.95, green: 0.6, blue: 0.2)) }
+        if lower.contains("hsk4") || lower.contains("hsk 4") { return ("HSK 4", Color(red: 0.9, green: 0.4, blue: 0.5)) }
+        if lower.contains("hsk5") || lower.contains("hsk 5") { return ("HSK 5", Color(red: 0.6, green: 0.35, blue: 0.85)) }
+        if lower.contains("hsk6") || lower.contains("hsk 6") { return ("HSK 6", Color(red: 0.5, green: 0.3, blue: 0.6)) }
+        if lower.contains("hsk") { return ("HSK", Color.gray) }
+        return nil
+    }
+
+    private var rowBackground: Color {
+        if isSelected {
+            return colorScheme == .dark ? Color.white.opacity(0.12) : Color.accentColor.opacity(0.12)
+        }
+        return colorScheme == .dark ? Color.white.opacity(0.04) : Color.primary.opacity(0.04)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let tag = levelTag {
+                Text(tag.text)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(tag.color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(tag.color.opacity(0.2)))
+            }
+            Text(passage.title)
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .lineLimit(2)
+                .foregroundStyle(.primary)
+            Text(passage.content)
+                .font(.system(size: 12, weight: .regular, design: .rounded))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(rowBackground))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? (colorScheme == .dark ? Color.white.opacity(0.2) : Color.accentColor.opacity(0.5)) : Color.clear, lineWidth: 1.5)
+        )
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Reading Detail View (reading-optimized: constrained width, typography, toolbar above content)
+private let readingContentMaxWidth: CGFloat = 720   // ~65–70 chars per line
+private let readingHorizontalPadding: CGFloat = 40
+
 struct ReadingDetailView: View {
     let passage: ReadingPassage
     let topicName: String
     @ObservedObject private var speechManager = SpeechManager.shared
     @Environment(\.colorScheme) private var colorScheme
 
+    private var readingBackground: Color {
+        Color.appBackgroundText(isLight: colorScheme == .light)
+    }
+
+    private var readingTitleColor: Color {
+        colorScheme == .dark ? Color(white: 0.95) : Color.primary
+    }
+
+    private var readingBodyColor: Color {
+        colorScheme == .dark ? Color(white: 0.88) : Color.primary
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Toolbar: Đọc + Ngắt đọc + Sao chép
-                HStack {
+            VStack(alignment: .leading, spacing: 0) {
+                // Toolbar ngay trên nội dung (cùng cột với bài đọc)
+                HStack(spacing: 12) {
                     Text(topicName)
-                        .scaledFont(.sm)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
-                    Spacer()
+                    Spacer(minLength: 16)
                     Button(action: {
                         speechManager.speak(text: passage.content)
                     }) {
                         Label("Đọc", systemImage: "speaker.wave.2.fill")
-                            .scaledFont(.sm)
-                            .fontWeight(.medium)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
                     }
                     .buttonStyle(.bordered)
+                    .cursor(.pointingHand)
+                    .controlSize(.regular)
                     .disabled(passage.content.trimmingCharacters(in: .whitespaces).isEmpty)
                     Button(action: { speechManager.stop() }) {
                         Label("Ngắt đọc", systemImage: "stop.fill")
-                            .scaledFont(.sm)
-                            .fontWeight(.medium)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
                     }
                     .buttonStyle(.bordered)
+                    .cursor(.pointingHand)
+                    .controlSize(.regular)
                     .disabled(!speechManager.isSpeaking)
                     Button(action: copyFullContent) {
                         Label("Sao chép", systemImage: "doc.on.doc")
-                            .scaledFont(.sm)
-                            .fontWeight(.medium)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
                     }
                     .buttonStyle(.bordered)
+                    .cursor(.pointingHand)
+                    .controlSize(.regular)
                 }
+                .padding(.bottom, 20)
 
                 Text(passage.title)
-                    .scaledFont(.xl2)
-                    .fontWeight(.bold)
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(readingTitleColor)
+                    .lineSpacing(4)
+                    .padding(.bottom, 16)
 
-                Divider()
+                ThemeDivider()
+                    .padding(.bottom, 24)
 
-                SmartCopyDefineText(text: passage.content, flashcards: nil)
-                    .scaledFont(.xl3)
-                    .lineSpacing(6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                SmartCopyDefineText(
+                    text: passage.content,
+                    flashcards: nil,
+                    singleTapToDefine: true,
+                    defineTextFont: .system(size: 19, weight: .regular, design: .rounded),
+                    defineTextColor: readingBodyColor
+                )
+                    .frame(maxWidth: .infinity, minHeight: 400, alignment: .leading)
             }
+            .frame(maxWidth: readingContentMaxWidth)
+            .frame(maxWidth: .infinity)
             .padding(24)
+            .padding(.horizontal, readingHorizontalPadding)
         }
-        .background(Color(nsColor: .textBackgroundColor))
+        .scrollIndicators(.hidden, axes: .horizontal)
+        .background(readingBackground)
     }
 
     private func copyFullContent() {
@@ -979,6 +1100,7 @@ struct AddReadingSheet: View {
     @ObservedObject var viewModel: ContentViewModel
     let topic: Topic
     @FocusState private var focusedField: Field?
+    @Environment(\.colorScheme) private var colorScheme
 
     enum Field {
         case title, content
@@ -1001,6 +1123,7 @@ struct AddReadingSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
             }
 
             HStack(spacing: 8) {
@@ -1013,7 +1136,7 @@ struct AddReadingSheet: View {
                 Spacer()
             }
 
-            Divider()
+            ThemeDivider()
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Tiêu đề")
@@ -1034,11 +1157,11 @@ struct AddReadingSheet: View {
                     .frame(minHeight: 200, maxHeight: 360)
                     .scrollContentBackground(.hidden)
                     .padding(8)
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(Color.appBackgroundText(isLight: colorScheme == .light))
                     .cornerRadius(8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            .stroke(Color.appBorder(isLight: colorScheme == .light), lineWidth: 1)
                     )
                     .focused($focusedField, equals: .content)
             }
@@ -1046,13 +1169,21 @@ struct AddReadingSheet: View {
             Spacer(minLength: 0)
 
             HStack {
-                Button("Huỷ") {
+                Button(action: {
                     viewModel.newReadingTitle = ""
                     viewModel.newReadingContent = ""
                     viewModel.showAddReadingSheet = false
+                }) {
+                    Text("Huỷ")
+                        .scaledFont(.sm)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
-                .scaledFont(.sm)
                 .keyboardShortcut(.escape)
+                .buttonStyle(.bordered)
+                .cursor(.pointingHand)
+                .controlSize(.large)
 
                 Spacer()
 
@@ -1062,9 +1193,16 @@ struct AddReadingSheet: View {
                     Text("Lưu bài đọc")
                         .scaledFont(.sm)
                         .fontWeight(.semibold)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                 }
                 .keyboardShortcut(.return)
                 .disabled(viewModel.newReadingTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+                .buttonStyle(.borderedProminent)
+                .cursor(.pointingHand)
+                .tint(.accentColor)
+                .controlSize(.large)
             }
         }
         .padding(24)
@@ -1107,6 +1245,7 @@ struct EditFlashcardSheet: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .cursor(.pointingHand)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -1167,11 +1306,17 @@ struct EditFlashcardSheet: View {
                 }
 
                 HStack {
-                    Button("Huỷ") {
-                        onDismiss()
+                    Button(action: { onDismiss() }) {
+                        Text("Huỷ")
+                            .scaledFont(.sm)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .contentShape(Rectangle())
                     }
-                    .scaledFont(.sm)
                     .keyboardShortcut(.escape)
+                    .buttonStyle(.bordered)
+                    .cursor(.pointingHand)
+                    .controlSize(.large)
 
                     Spacer()
 
@@ -1179,9 +1324,16 @@ struct EditFlashcardSheet: View {
                         Text("Lưu")
                             .scaledFont(.sm)
                             .fontWeight(.semibold)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .contentShape(Rectangle())
                     }
                     .keyboardShortcut(.return)
                     .disabled(editQuestion.trimmingCharacters(in: .whitespaces).isEmpty || editAnswer.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .buttonStyle(.borderedProminent)
+                    .cursor(.pointingHand)
+                    .tint(.accentColor)
+                    .controlSize(.large)
                 }
             }
             .padding(24)
@@ -1345,14 +1497,21 @@ struct FlashcardDetailView: View {
 
                     if onEdit != nil {
                         Button(action: { onEdit?() }) {
-                            Label("Sửa", systemImage: "pencil")
-                                .scaledFont(.sm)
+                            Label("Sửa từ vựng", systemImage: "pencil.circle.fill")
+                                .font(.app(.body))
+                                .fontWeight(.semibold)
+                                .symbolRenderingMode(.hierarchical)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.borderedProminent)
+                        .cursor(.pointingHand)
+                        .tint(.accentColor)
+                        .controlSize(.large)
                     }
                 }
                 
-                Divider()
+                ThemeDivider()
                 
                 if flashcard.isMultipleChoice {
                     // Multiple Choice Question
@@ -1383,7 +1542,7 @@ struct FlashcardDetailView: View {
             // Card
             ZStack {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(isLight ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
+                    .fill(Color.appCardBackground(isLight: isLight))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(Color.green.opacity(isLight ? 0.5 : 0.7), lineWidth: 2)
@@ -1481,7 +1640,7 @@ struct FlashcardDetailView: View {
             }
             .padding()
             .frame(maxWidth: .infinity)
-            .background(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
+            .background(Color.appCardBackground(isLight: colorScheme == .light))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.appBorder(isLight: colorScheme == .light), lineWidth: 1.5)
@@ -1541,14 +1700,14 @@ struct FlashcardDetailView: View {
                 if isSelected {
                     return Color.green.opacity(isLight ? 0.1 : 0.15)
                 }
-                return Color(nsColor: .controlBackgroundColor)
+                return Color.appBackgroundControl(isLight: isLight)
             } else {
                 if isCorrect {
                     return Color.green.opacity(isLight ? 0.18 : 0.2)
                 } else if isSelected && !isCorrect {
                     return Color.red.opacity(isLight ? 0.18 : 0.2)
                 }
-                return Color(nsColor: .controlBackgroundColor)
+                return Color.appBackgroundControl(isLight: isLight)
             }
         }
 
@@ -1704,7 +1863,7 @@ struct FlashcardDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(colorScheme == .light ? Color(.controlBackgroundColor).opacity(0.6) : Color(.windowBackgroundColor).opacity(0.5))
+                .fill(Color.appBackgroundControl(isLight: colorScheme == .light).opacity(colorScheme == .light ? 0.6 : 0.5))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(accent.opacity(colorScheme == .light ? 0.25 : 0.4), lineWidth: 1)
@@ -1762,6 +1921,7 @@ private struct UndoBannerView: View {
                 onUndo()
             }
             .buttonStyle(.borderedProminent)
+            .cursor(.pointingHand)
             .tint(.green)
             .scaledFont(.sm)
             Button(action: onDismiss) {
@@ -1771,12 +1931,13 @@ private struct UndoBannerView: View {
                     .symbolRenderingMode(.hierarchical)
             }
             .buttonStyle(.plain)
+            .cursor(.pointingHand)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(nsColor: .controlBackgroundColor))
+                .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                 .shadow(color: .black.opacity(colorScheme == .dark ? 0.4 : 0.12), radius: 8, y: 4)
         )
         .frame(maxWidth: 420)
@@ -1789,6 +1950,7 @@ struct ContentView: View {
     @ObservedObject private var speechManager = SpeechManager.shared
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @EnvironmentObject var fontSizeManager: FontSizeManager
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -1798,6 +1960,7 @@ struct ContentView: View {
         } detail: {
             detailColumn
         }
+        .background(colorScheme == .dark ? Color.appDarkBackground : Color.clear)
         .applyFontSizeScaling(multiplier: fontSizeManager.fontSizeMultiplier)
         .onChange(of: viewModel.isInSpecialMode) { oldValue, newValue in
             // Only update if actually changed to avoid unnecessary animations
@@ -1829,6 +1992,16 @@ struct ContentView: View {
             Button("OK") { viewModel.backupSaveResultMessage = nil }
         } message: {
             if let msg = viewModel.backupSaveResultMessage {
+                Text(msg)
+            }
+        }
+        .alert("Import", isPresented: Binding(
+            get: { viewModel.importResultMessage != nil },
+            set: { if !$0 { viewModel.importResultMessage = nil } }
+        )) {
+            Button("OK") { viewModel.importResultMessage = nil }
+        } message: {
+            if let msg = viewModel.importResultMessage {
                 Text(msg)
             }
         }
@@ -1940,7 +2113,7 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
     
     // MARK: - Helpers

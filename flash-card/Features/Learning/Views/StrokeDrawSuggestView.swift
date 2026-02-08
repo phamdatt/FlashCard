@@ -72,15 +72,17 @@ final class DrawingCanvasNSView: NSView {
 struct DrawingCanvasView: NSViewRepresentable {
     @Binding var strokes: [[CGPoint]]
     var strokeCount: Int { strokes.count }
+    @Environment(\.colorScheme) private var colorScheme
 
     func makeNSView(context: Context) -> DrawingCanvasNSView {
         let v = DrawingCanvasNSView()
         v.wantsLayer = true
-        v.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
+        v.layer?.backgroundColor = NSColor.appBackgroundText(isLight: colorScheme == .light).cgColor
         return v
     }
 
     func updateNSView(_ nsView: DrawingCanvasNSView, context: Context) {
+        nsView.layer?.backgroundColor = NSColor.appBackgroundText(isLight: colorScheme == .light).cgColor
         nsView.strokes = strokes
         nsView.onStrokesChanged = { [weak nsView] in
             guard let v = nsView else { return }
@@ -140,6 +142,7 @@ struct StrokeDrawSuggestView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
             }
             .padding()
 
@@ -151,10 +154,10 @@ struct StrokeDrawSuggestView: View {
 
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(nsColor: .textBackgroundColor))
+                    .fill(Color.appBackgroundText(isLight: colorScheme == .light))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                            .stroke(Color.appBorder(isLight: colorScheme == .light), lineWidth: 1)
                     )
                 DrawingCanvasView(strokes: $strokes)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -171,6 +174,7 @@ struct StrokeDrawSuggestView: View {
                     showSuggestions = false
                 }
                 .buttonStyle(.bordered)
+                .cursor(.pointingHand)
                 Button("Hoàn tác") {
                     if !strokes.isEmpty {
                         strokes.removeLast()
@@ -178,18 +182,20 @@ struct StrokeDrawSuggestView: View {
                     }
                 }
                 .buttonStyle(.bordered)
+                .cursor(.pointingHand)
                 .disabled(strokes.isEmpty)
                 Spacer()
                 Button(action: suggestWords) {
                     Label("Gợi ý từ", systemImage: "lightbulb.fill")
                 }
                 .buttonStyle(.borderedProminent)
+                .cursor(.pointingHand)
                 .tint(.green)
             }
             .padding(.horizontal)
 
             if showSuggestions {
-                Divider()
+                ThemeDivider()
                     .padding(.vertical, 8)
                 if suggestedFlashcards.isEmpty {
                     Text(strokes.isEmpty ? "Vẽ vài nét rồi nhấn \"Gợi ý từ\"." : "Không có từ nào có chữ đúng \(strokes.count) nét trong bộ từ của bạn.")
@@ -223,6 +229,7 @@ struct StrokeDrawSuggestView: View {
                                 .padding(.vertical, 4)
                             }
                             .buttonStyle(.plain)
+                            .cursor(.pointingHand)
                         }
                     }
                     .listStyle(.plain)
@@ -233,6 +240,6 @@ struct StrokeDrawSuggestView: View {
             Spacer(minLength: 0)
         }
         .frame(width: 480, height: 620)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
 }

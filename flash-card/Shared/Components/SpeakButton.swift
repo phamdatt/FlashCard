@@ -24,6 +24,7 @@ struct SpeakButton: View {
                 .symbolEffect(.variableColor, isActive: speechManager.isSpeaking)
         }
         .buttonStyle(.plain)
+        .cursor(.pointingHand)
         .help("Phát âm")
     }
 

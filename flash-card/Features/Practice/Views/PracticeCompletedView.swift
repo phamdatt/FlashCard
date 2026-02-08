@@ -16,6 +16,7 @@ struct PracticeCompletedView: View {
     let onContinue: () -> Void
     var unknownCards: [Flashcard]? = nil
     @EnvironmentObject var fontSizeManager: FontSizeManager
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -116,7 +117,7 @@ struct PracticeCompletedView: View {
                 .padding(.horizontal, 20)
                 .background(
                     RoundedRectangle(cornerRadius: 24)
-                        .fill(Color(nsColor: .windowBackgroundColor))
+                        .fill(Color.appBackgroundPage(isLight: colorScheme == .light))
                         .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 24)

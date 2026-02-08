@@ -60,7 +60,7 @@ struct OnboardingView: View {
                     .padding(.vertical, 14)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(nsColor: .controlBackgroundColor))
+                            .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     )
                 }
             }
@@ -74,19 +74,21 @@ struct OnboardingView: View {
                     onComplete()
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
                 .foregroundStyle(.secondary)
                 Spacer()
                 Button("Bắt đầu") {
                     onComplete()
                 }
                 .buttonStyle(.borderedProminent)
+                .cursor(.pointingHand)
                 .tint(.green)
             }
             .padding(.horizontal, 32)
             .padding(.bottom, 48)
         }
         .frame(minWidth: 480, minHeight: 520)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
 }
 

@@ -64,7 +64,7 @@ Image(systemName: "checkmark.circle.fill")
             }
             .padding()
 
-            Divider()
+            ThemeDivider()
 
             // Instructions
             HStack(spacing: 8) {
@@ -146,6 +146,7 @@ Image(systemName: "checkmark.circle.fill")
                 .opacity(isMatched ? 0.5 : (isWrong ? 0.7 : 1.0))
         }
         .buttonStyle(.plain)
+        .cursor(.pointingHand)
         .disabled(isMatched)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
         .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isWrong)
@@ -182,6 +183,7 @@ Image(systemName: "checkmark.circle.fill")
                 .opacity(isMatched ? 0.6 : (isWrong ? 0.7 : 1.0))
         }
         .buttonStyle(.plain)
+        .cursor(.pointingHand)
         .disabled(isMatched || selectedQuestion == nil)
         .animation(.spring(response: 0.4, dampingFraction: 0.6), value: isMatched)
         .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isWrong)
@@ -194,27 +196,27 @@ Image(systemName: "checkmark.circle.fill")
         if isMatched { return Color.green.opacity(isLight ? 0.1 : 0.15) }
         if isWrong { return Color.red.opacity(isLight ? 0.1 : 0.15) }
         if isSelected { return Color.blue.opacity(isLight ? 0.1 : 0.15) }
-        return isLight ? Color(nsColor: .controlBackgroundColor) : Color.gray.opacity(0.08)
+        return Color.appBackgroundControl(isLight: isLight)
     }
 
     private func questionBorder(isMatched: Bool, isSelected: Bool, isWrong: Bool) -> Color {
         if isMatched { return .green }
         if isWrong { return .red }
         if isSelected { return .blue }
-        return Color.gray.opacity(colorScheme == .light ? 0.25 : 0.4)
+        return Color.appBorder(isLight: colorScheme == .light)
     }
 
     private func answerBackground(isMatched: Bool, isWrong: Bool) -> Color {
         let isLight = colorScheme == .light
         if isMatched { return Color.green.opacity(isLight ? 0.1 : 0.15) }
         if isWrong { return Color.red.opacity(isLight ? 0.1 : 0.15) }
-        return isLight ? Color(nsColor: .controlBackgroundColor) : Color.gray.opacity(0.08)
+        return Color.appBackgroundControl(isLight: isLight)
     }
 
     private func answerBorder(isMatched: Bool, isWrong: Bool) -> Color {
         if isMatched { return .green }
         if isWrong { return .red }
-        return Color.gray.opacity(colorScheme == .light ? 0.25 : 0.4)
+        return Color.appBorder(isLight: colorScheme == .light)
     }
 
     // MARK: - Logic

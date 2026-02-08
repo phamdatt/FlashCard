@@ -73,6 +73,8 @@ class ContentViewModel: ObservableObject {
     @Published var errorMessage: String?
     /// Message after backup finishes (sheet closed, show alert on main screen).
     @Published var backupSaveResultMessage: String?
+    /// Message after import finishes (sheet closed).
+    @Published var importResultMessage: String?
 
     // Loading state (initial load / reload)
     @Published var isLoading = false
@@ -288,6 +290,52 @@ class ContentViewModel: ObservableObject {
             newFlashcardAnswer = ""
             newFlashcardHint = ""
             showAddFlashcardSheet = false
+    }
+
+    /// Import rows into topic; closes sheet first, then runs import. Skips rows whose "từ gốc" (question) already exists in the topic.
+    func importFlashcardsFromRows(topicId: Int, subjectId: Int, rows: [(question: String, answer: String, hint: String?, notes: String?, radical: String?)]) {
+        var existing = Set(DatabaseManager.shared.loadFlashcards(for: topicId).map { $0.question.trimmingCharacters(in: .whitespaces) })
+        var added = 0
+        var skipped = 0
+        for row in rows {
+            let q = row.question.trimmingCharacters(in: .whitespaces)
+            let a = row.answer.trimmingCharacters(in: .whitespaces)
+            guard !q.isEmpty, !a.isEmpty else { continue }
+            if existing.contains(q) {
+                skipped += 1
+                continue
+            }
+            let card = Flashcard(
+                question: q,
+                answer: a,
+                hint: row.hint.flatMap { $0.isEmpty ? nil : $0 },
+                options: nil,
+                correctAnswer: nil,
+                exerciseType: Flashcard.exerciseTypeLabel,
+                notes: row.notes.flatMap { $0.isEmpty ? nil : $0 },
+                radical: row.radical.flatMap { $0.isEmpty ? nil : $0 }
+            )
+            do {
+                try database.insertFlashcard(card, topicId: topicId)
+                added += 1
+                existing.insert(q)
+            } catch {
+                errorMessage = error.localizedDescription
+                loadLearningData()
+                return
+            }
+        }
+        loadLearningData()
+        if let sub = subjects.first(where: { $0.id == subjectId }),
+           let topic = sub.topics.first(where: { $0.id == topicId }) {
+            selectedSubject = sub
+            selectedTopic = topic
+        }
+        if skipped > 0 {
+            importResultMessage = "Đã thêm \(added) thẻ. Bỏ qua \(skipped) thẻ trùng từ gốc."
+        } else {
+            importResultMessage = "Đã thêm \(added) thẻ."
+        }
     }
 
     private func scheduleUndoClear() {

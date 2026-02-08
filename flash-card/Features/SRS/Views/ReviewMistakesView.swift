@@ -72,18 +72,19 @@ struct ReviewMistakesView: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(nsColor: .controlBackgroundColor))
+                        .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.gray.opacity(0.25), lineWidth: 1)
+                                .stroke(Color.appBorder(isLight: colorScheme == .light), lineWidth: 1)
                         )
                 )
             }
             .buttonStyle(.plain)
+            .cursor(.pointingHand)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
 
     // MARK: - Sections List (custom summary + section cards)
@@ -111,7 +112,7 @@ struct ReviewMistakesView: View {
                 .padding(.bottom, 32)
             }
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
 
     // MARK: - Empty State
@@ -138,7 +139,7 @@ struct ReviewMistakesView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
 
     private func loadMistakeSections() {
@@ -171,6 +172,7 @@ struct ReviewMistakesView: View {
 private struct MistakeSummaryCard: View {
     let totalWords: Int
     let totalTopics: Int
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: 20) {
@@ -197,10 +199,10 @@ private struct MistakeSummaryCard: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                            .stroke(Color.appDivider(isLight: colorScheme == .light), lineWidth: 1)
                     )
             )
 
@@ -227,10 +229,10 @@ private struct MistakeSummaryCard: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                            .stroke(Color.appDivider(isLight: colorScheme == .light), lineWidth: 1)
                     )
             )
         }
@@ -275,17 +277,18 @@ private struct MistakeSectionCard: View {
             .padding(18)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(Color.appBackgroundControl(isLight: isLight))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
                             .stroke(
-                                isHovering ? Color.gray.opacity(0.35) : Color.gray.opacity(0.12),
+                                isHovering ? Color.appBorder(isLight: isLight).opacity(0.8) : Color.appBorder(isLight: isLight).opacity(0.5),
                                 lineWidth: isHovering ? 1.5 : 1
                             )
                     )
             )
         }
         .buttonStyle(.plain)
+        .cursor(.pointingHand)
         .onHover { isHovering = $0 }
         .animation(.easeOut(duration: 0.15), value: isHovering)
     }
@@ -362,7 +365,7 @@ struct FlashcardReviewView: View {
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.appBackgroundControl(isLight: colorScheme == .light)))
             }
             .buttonStyle(.plain)
             .cursor(.pointingHand)
@@ -388,7 +391,7 @@ struct FlashcardReviewView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
 
     private var multipleChoiceReviewView: some View {
@@ -487,7 +490,7 @@ struct FlashcardReviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(40)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
 
     private func recordAnswer(_ isCorrect: Bool) {

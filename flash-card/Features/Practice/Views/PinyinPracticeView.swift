@@ -103,7 +103,7 @@ struct PinyinPracticeView: View {
                 .multilineTextAlignment(.center)
                 .padding()
                 .frame(maxWidth: .infinity)
-                .background(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
+                .background(Color.appCardBackground(isLight: colorScheme == .light))
                 .cornerRadius(16)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
@@ -120,7 +120,7 @@ struct PinyinPracticeView: View {
                     .fontWeight(.medium)
                     .textFieldStyle(.plain)
                     .padding()
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(Color.appBackgroundText(isLight: colorScheme == .light))
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
@@ -193,6 +193,7 @@ struct PinyinPracticeView: View {
                     .cornerRadius(12)
             }
             .buttonStyle(ScaleButtonStyle())
+            .cursor(.pointingHand)
             .padding(.horizontal, 40)
             .padding(.top, 8)
         } else {
@@ -207,6 +208,7 @@ struct PinyinPracticeView: View {
                     .cornerRadius(12)
             }
             .buttonStyle(ScaleButtonStyle())
+            .cursor(.pointingHand)
             .disabled(userPinyin.isEmpty)
             .padding(.horizontal, 40)
             .padding(.top, 8)

@@ -79,7 +79,7 @@ struct ReviewModeView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
     
     // MARK: - Review Card View
@@ -121,7 +121,7 @@ struct ReviewModeView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
             }
-            .background(Color(nsColor: .controlBackgroundColor))
+            .background(Color.appBackgroundControl(isLight: colorScheme == .light))
             
             // Main Content
             ScrollView {
@@ -145,7 +145,7 @@ struct ReviewModeView: View {
                         .padding(.vertical, 48)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(nsColor: .controlBackgroundColor))
+                                .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
@@ -156,7 +156,7 @@ struct ReviewModeView: View {
                         // Answer Section
                         if showAnswer {
                             VStack(spacing: 20) {
-                                Divider()
+                                ThemeDivider()
                                     .padding(.vertical, 24)
                                 
                                 Text(flashcard.answer)
@@ -231,7 +231,7 @@ struct ReviewModeView: View {
                     Spacer(minLength: 60)
                 }
             }
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(Color.appBackgroundPage(isLight: colorScheme == .light))
         }
     }
     
@@ -265,7 +265,7 @@ struct ReviewModeView: View {
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(color.opacity(0.3), lineWidth: 1.5)
@@ -339,12 +339,13 @@ struct ReviewModeView: View {
                     .cornerRadius(10)
             }
             .buttonStyle(.plain)
+            .cursor(.pointingHand)
             
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(40)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
     
     // MARK: - Functions

@@ -22,13 +22,22 @@ struct VocabularyListView: View {
         )
     }
 
+    private var isLight: Bool { colorScheme == .light }
+
     var body: some View {
         HSplitView {
             List(topic.flashcards, selection: flashcardListSelection) { flashcard in
                 vocabularyRow(flashcard: flashcard)
+                    .listRowBackground(
+                        viewModel.selectedFlashcardIds.contains(flashcard.id)
+                        ? Color.gray.opacity(isLight ? 0.2 : 0.25)
+                        : Color.clear
+                    )
             }
             .frame(minWidth: 250, idealWidth: 300, maxWidth: 400)
             .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Color.appBackgroundPage(isLight: isLight))
             .tint(.green)
 
             VStack(spacing: 0) {
@@ -45,11 +54,12 @@ struct VocabularyListView: View {
                                 .scaledFont(.sm)
                         }
                         .buttonStyle(.bordered)
+                        .cursor(.pointingHand)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(colorScheme == .light ? Color.appCardBackground(isLight: true) : Color(nsColor: .textBackgroundColor))
-                    Divider()
+                    .background(Color.appCardBackground(isLight: colorScheme == .light))
+                    ThemeDivider()
                 }
                 detailContent
             }

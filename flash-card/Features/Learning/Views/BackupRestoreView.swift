@@ -12,6 +12,7 @@ import UniformTypeIdentifiers
 struct BackupRestoreView: View {
     @ObservedObject var viewModel: ContentViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var showImportConfirmation = false
     @State private var pendingImportURL: URL?
     @State private var showImportSQLConfirmation = false
@@ -36,11 +37,12 @@ struct BackupRestoreView: View {
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
+                .cursor(.pointingHand)
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)
             .padding(.bottom, 16)
-            Divider()
+            ThemeDivider()
 
             VStack(alignment: .leading, spacing: 20) {
                 Text("Sao lưu: copy database ra file .sqlite (khuyến nghị) hoặc ra JSON.")
@@ -51,18 +53,26 @@ struct BackupRestoreView: View {
                     Button(action: runExportSQL) {
                         Label("Sao lưu SQL...", systemImage: "internaldrive")
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.borderedProminent)
+                    .cursor(.pointingHand)
                     .tint(.green)
+                    .controlSize(.large)
                     .disabled(isExportingSQL)
                     Button(action: runExport) {
                         Label("Sao lưu JSON...", systemImage: "square.and.arrow.down")
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.bordered)
+                    .cursor(.pointingHand)
+                    .controlSize(.large)
                     .disabled(isExporting)
                 }
-                Divider()
+                ThemeDivider()
                     .padding(.vertical, 4)
                 Text("Phục hồi: thay toàn bộ dữ liệu bằng file đã chọn. Chỉ dùng khi bạn chắc chắn.")
                     .font(.body)
@@ -72,14 +82,22 @@ struct BackupRestoreView: View {
                     Button(action: runImportSQL) {
                         Label("Phục hồi từ file SQL...", systemImage: "internaldrive")
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.bordered)
+                    .cursor(.pointingHand)
+                    .controlSize(.large)
                     .disabled(isImportingSQL)
                     Button(action: runImport) {
                         Label("Phục hồi từ JSON...", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.bordered)
+                    .cursor(.pointingHand)
+                    .controlSize(.large)
                     .disabled(isImporting)
                 }
             }
@@ -95,7 +113,7 @@ struct BackupRestoreView: View {
             Spacer(minLength: 0)
         }
         .frame(width: 420, height: 380)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
         .overlay {
             ConfirmActionOverlay(
                 title: "Phục hồi từ JSON?",
