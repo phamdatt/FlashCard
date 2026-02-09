@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 extension Notification.Name {
     static let openKeyboardShortcuts = Notification.Name("OpenKeyboardShortcuts")
@@ -443,7 +444,8 @@ struct TopicsListView: View {
     let subject: Subject
     @FocusState private var isSearchFocused: Bool
     @Environment(\.colorScheme) private var colorScheme
-    
+    @State private var reorderSourceTopicId: Int? = nil
+
     var filteredTopics: [Topic] {
         viewModel.filteredTopics(for: subject)
     }
@@ -565,8 +567,24 @@ struct TopicsListView: View {
                     }
                 }
             )) {
-                ForEach(filteredTopics) { topic in
-                    TopicRowView(topic: topic, subject: subject, practiceCount: viewModel.topicPracticeCounts[topic.id] ?? 0, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light, onDelete: { viewModel.topicToDelete = topic }, onRename: { viewModel.startRenameTopic(topic) })
+                ForEach(Array(filteredTopics.enumerated()), id: \.element.id) { index, topic in
+                    TopicRowView(
+                        topic: topic,
+                        subject: subject,
+                        practiceCount: viewModel.topicPracticeCounts[topic.id] ?? 0,
+                        isSelected: viewModel.selectedTopic?.id == topic.id,
+                        isLight: colorScheme == .light,
+                        onDelete: { viewModel.topicToDelete = topic },
+                        onRename: { viewModel.startRenameTopic(topic) },
+                        showReorderHandle: viewModel.searchText.isEmpty,
+                        rowIndex: index,
+                        reorderSourceTopicId: $reorderSourceTopicId,
+                        onReorderDrop: { draggedTopicId, dropIndex in
+                            guard let srcIndex = filteredTopics.firstIndex(where: { $0.id == draggedTopicId }), srcIndex != dropIndex else { return }
+                            viewModel.reorderTopics(subject: subject, from: IndexSet(integer: srcIndex), to: dropIndex)
+                            reorderSourceTopicId = nil
+                        }
+                    )
                     .listRowBackground(viewModel.selectedTopic?.id == topic.id ? Color.gray.opacity(colorScheme == .light ? 0.2 : 0.25) : Color.clear)
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -673,6 +691,45 @@ struct TopicsListView: View {
     }
 }
 
+// Handle "giữ lâu rồi kéo": chỉ khi giữ ~0.5s vào icon thì kéo mới có tác dụng (tránh kéo nhầm).
+private struct LongPressDragHandle: View {
+    let topicId: Int
+    @Binding var allowedSourceTopicId: Int?
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let size: CGFloat = 44
+        let canDrag = allowedSourceTopicId == topicId
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(colorScheme == .dark ? 0.25 : 0.12))
+                .frame(width: size, height: size)
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(canDrag ? .primary : .secondary)
+        }
+        .frame(width: size, height: size)
+        .contentShape(Rectangle())
+        .onDrag {
+            guard canDrag else { return NSItemProvider(object: " " as NSString) }
+            return NSItemProvider(object: "\(topicId)" as NSString)
+        }
+        .overlay {
+            Color.clear
+                .frame(width: size, height: size)
+                .contentShape(Rectangle())
+                .onTapGesture { /* chặn tap để không chọn row */ }
+                .onLongPressGesture(minimumDuration: 0.5) {
+                    allowedSourceTopicId = topicId
+                }
+                .opacity(canDrag ? 0 : 1)
+                .allowsHitTesting(!canDrag)
+        }
+        .cursor(.pointingHand)
+        .help("Giữ lâu ~0,5 s vào đây rồi kéo để đổi thứ tự chủ đề")
+    }
+}
+
 // Topic row – content only; selection background is handled by listRowBackground
 private struct TopicRowView: View {
     let topic: Topic
@@ -682,12 +739,19 @@ private struct TopicRowView: View {
     let isLight: Bool
     let onDelete: () -> Void
     let onRename: () -> Void
+    var showReorderHandle: Bool = false
+    var rowIndex: Int = 0
+    @Binding var reorderSourceTopicId: Int?
+    var onReorderDrop: ((Int, Int) -> Void)? = nil
 
     private var isReadingSubject: Bool { subject.name == "Bài đọc" }
     private var hasPracticed: Bool { practiceCount > 0 }
 
     var body: some View {
         HStack(spacing: 12) {
+            if showReorderHandle {
+                LongPressDragHandle(topicId: topic.id, allowedSourceTopicId: $reorderSourceTopicId)
+            }
             ZStack {
                 Circle()
                     .fill(isSelected ? Color.gray.opacity(isLight ? 0.2 : 0.25) : Color.gray.opacity(isLight ? 0.1 : 0.15))
@@ -726,6 +790,16 @@ private struct TopicRowView: View {
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         .tag(topic)
+        .onDrop(of: showReorderHandle ? [.plainText] : [], isTargeted: nil) { providers in
+            guard showReorderHandle, let onReorderDrop = onReorderDrop, let provider = providers.first else { return false }
+            provider.loadObject(ofClass: NSString.self) { obj, _ in
+                DispatchQueue.main.async {
+                    guard let str = (obj as? String)?.trimmingCharacters(in: .whitespaces), !str.isEmpty, let draggedId = Int(str) else { return }
+                    onReorderDrop(draggedId, rowIndex)
+                }
+            }
+            return true
+        }
         .contextMenu {
             Button(action: onRename) {
                 HStack {
