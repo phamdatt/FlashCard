@@ -7,6 +7,13 @@
 
 import SwiftUI
 import Combine
+import AppKit
+import UserNotifications
+
+extension Notification.Name {
+    /// Posted when user taps the "Ôn tập" reminder notification → mở app và chuyển màn Ôn tập.
+    static let openReviewFromNotification = Notification.Name("openReviewFromNotification")
+}
 
 // MARK: - Appearance Manager
 enum AppearanceMode: String, CaseIterable {
@@ -79,11 +86,28 @@ class AppearanceManager: ObservableObject {
 
 private let hasCompletedOnboardingKey = "hasCompletedOnboarding"
 
+// AppDelegate: nhận khi user bấm vào notification → kích hoạt app và post notification để mở màn Ôn tập.
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().delegate = self
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.notification.request.identifier == ReviewReminderManager.notificationIdentifier {
+            NSApp.activate(ignoringOtherApps: true)
+            NotificationCenter.default.post(name: .openReviewFromNotification, object: nil)
+        }
+        completionHandler()
+    }
+}
+
 @main
 struct flash_cardApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appearanceManager = AppearanceManager()
     @StateObject private var fontSizeManager = FontSizeManager()
     @AppStorage(hasCompletedOnboardingKey) private var hasCompletedOnboarding = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -99,6 +123,11 @@ struct flash_cardApp: App {
             .environmentObject(appearanceManager)
             .environmentObject(fontSizeManager)
             .applyGlobalFontSize(fontSizeManager: fontSizeManager)
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    ReviewReminderManager.scheduleReminderIfNeeded()
+                }
+            }
         }
         .commands {
             CommandGroup(after: .textEditing) {

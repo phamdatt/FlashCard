@@ -26,6 +26,7 @@ struct ReviewMistakesView: View {
                     topicId: section.topicId,
                     subjectId: section.subjectId,
                     subjectName: section.subjectName,
+                    topicIds: nil,
                     viewModel: viewModel,
                     onBack: {
                         selectedSection = nil
@@ -320,8 +321,24 @@ struct FlashcardReviewView: View {
     let topicId: Int
     let subjectId: Int
     let subjectName: String
+    /// Khi ôn "cần ôn hôm nay" mỗi thẻ có thể thuộc topic khác nhau; truyền topicId cho từng thẻ. Nil = dùng topicId cho tất cả.
+    let topicIds: [Int]?
     let viewModel: ContentViewModel
     let onBack: () -> Void
+    /// Loại phiên (để ghi mistake_records): "Review Mistakes" hoặc "Review".
+    let practiceType: String
+
+    init(flashcards: [Flashcard], sectionName: String, topicId: Int, subjectId: Int, subjectName: String, topicIds: [Int]? = nil, viewModel: ContentViewModel, onBack: @escaping () -> Void, practiceType: String = "Review Mistakes") {
+        self.flashcards = flashcards
+        self.sectionName = sectionName
+        self.topicId = topicId
+        self.subjectId = subjectId
+        self.subjectName = subjectName
+        self.topicIds = topicIds
+        self.viewModel = viewModel
+        self.onBack = onBack
+        self.practiceType = practiceType
+    }
 
     @State private var flashcardsWithOptions: [Flashcard] = []
     @State private var currentIndex: Int = 0
@@ -341,9 +358,15 @@ struct FlashcardReviewView: View {
             if showCompletion || currentIndex >= flashcardsWithOptions.count {
                 reviewCompletionView
             } else {
-                multipleChoiceReviewView
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    multipleChoiceReviewView
+                    Spacer(minLength: 0)
+                }
+                .frame(maxHeight: .infinity)
             }
         }
+        .frame(maxHeight: .infinity)
         .onAppear {
             if flashcardsWithOptions.isEmpty {
                 flashcardsWithOptions = flashcards.count >= 4
@@ -389,10 +412,13 @@ struct FlashcardReviewView: View {
             .padding(.vertical, 6)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(colorScheme == .light ? 0.08 : 0.12)))
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
+
+    /// Padding ngang thống nhất với FlashcardDetailView (multipleChoiceView dùng hPadding 20 khi không compact).
+    private static let contentHorizontalPadding: CGFloat = 20
 
     private var multipleChoiceReviewView: some View {
         VStack(spacing: 0) {
@@ -413,7 +439,8 @@ struct FlashcardReviewView: View {
                     }
                     ProgressView(value: Double(currentIndex), total: Double(max(flashcardsWithOptions.count, 1)))
                 }
-                .padding()
+                .padding(.horizontal, Self.contentHorizontalPadding)
+                .padding(.vertical, 12)
 
                 FlashcardDetailView(
                     flashcard: flashcard,
@@ -502,7 +529,8 @@ struct FlashcardReviewView: View {
         progress = SRSAlgorithm().calculateNextReview(progress: progress, quality: quality)
         DatabaseManager.shared.saveFlashcardProgress(progress)
         if !isCorrect {
-            DatabaseManager.shared.recordMistake(flashcardId: flashcard.id, practiceType: "Review Mistakes", topicId: topicId)
+            let tid = (topicIds != nil && currentIndex < topicIds!.count) ? topicIds![currentIndex] : topicId
+            DatabaseManager.shared.recordMistake(flashcardId: flashcard.id, practiceType: practiceType, topicId: tid)
         }
         completedCount += 1
         if isCorrect { correctCount += 1 }

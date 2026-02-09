@@ -82,6 +82,12 @@ Image(systemName: "checkmark.circle.fill")
                     .font(.app(.subheadline))
                     .foregroundStyle(.secondary)
 
+                #if os(macOS)
+                Text("Trên macOS: gõ đáp án thay cho nói")
+                    .font(.app(.caption))
+                    .foregroundStyle(.secondary)
+                #endif
+
                 Text(flashcard.questionDisplayText)
                     .scaledFont(.display)
                     .fontWeight(.bold)
@@ -260,9 +266,9 @@ Image(systemName: "checkmark.circle.fill")
     
     private func showTextInputDialog(completion: @escaping (String) -> Void) {
         let alert = NSAlert()
-        alert.messageText = "Nhập câu bạn đã đọc"
-        alert.informativeText = "Trên macOS chưa hỗ trợ nhận diện giọng nói tự động. Bạn hãy gõ lại câu bạn vừa đọc (đáp án) để kiểm tra."
-        
+        alert.messageText = "Gõ đáp án thay cho nói"
+        alert.informativeText = "Trên macOS không hỗ trợ nhận diện giọng nói. Gõ đáp án (câu bạn vừa đọc) để kiểm tra."
+
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 400, height: 24))
         input.placeholderString = "Gõ đáp án..."
         alert.accessoryView = input

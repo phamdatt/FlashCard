@@ -203,17 +203,33 @@ class ContentViewModel: ObservableObject {
         }
     }
 
-    // Filter topics based on search text (topic name), sorted by name
+    /// Topics for display: when not searching, keep DB order (for drag reorder); when searching, filter and sort by name.
     func filteredTopics(for subject: Subject) -> [Topic] {
-        let list: [Topic]
         if searchText.isEmpty {
-            list = subject.topics
-        } else {
-            list = subject.topics.filter { topic in
-                topic.name.localizedCaseInsensitiveContains(searchText)
+            return subject.topics
+        }
+        let list = subject.topics.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// Reorder topics within a subject (persists to DB and reloads data).
+    func reorderTopics(subject: Subject, from source: IndexSet, to destination: Int) {
+        var list = subject.topics
+        list.move(fromOffsets: source, toOffset: destination)
+        let topicIds = list.map(\.id)
+        do {
+            try database.updateTopicSortOrder(subjectId: subject.id, topicIdsInOrder: topicIds)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        loadLearningData()
+        if let updated = subjects.first(where: { $0.id == subject.id }) {
+            selectedSubject = updated
+            if let tid = selectedTopic?.id, let t = updated.topics.first(where: { $0.id == tid }) {
+                selectedTopic = t
             }
         }
-        return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
     /// Search in flashcard question/answer within the given subject. Returns (topic, flashcard) pairs.

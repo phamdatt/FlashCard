@@ -232,6 +232,35 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .cursor(.pointingHand)
 
+                // Nhắc ôn tập (local notification)
+                HStack(spacing: 8) {
+                    Image(systemName: "bell.badge.fill")
+                        .scaledFont(.xl2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
+                    Text("Nhắc ôn tập")
+                        .scaledFont(.sm)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    Toggle("", isOn: Binding(
+                        get: { ReviewReminderManager.isEnabled },
+                        set: { ReviewReminderManager.isEnabled = $0 }
+                    ))
+                    .labelsHidden()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
+                )
+                .accessibilityLabel("Nhắc ôn tập")
+                .accessibilityHint("Bật thông báo hàng ngày: Có X từ cần ôn hôm nay")
+
                 // Keyboard shortcuts
                 Button(action: {
                     if viewModel.isPracticeSessionActive {
@@ -526,7 +555,7 @@ struct TopicsListView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List(filteredTopics, selection: Binding(
+            List(selection: Binding(
                 get: { viewModel.selectedTopic },
                 set: { newTopic in
                     var t = Transaction()
@@ -535,15 +564,22 @@ struct TopicsListView: View {
                         viewModel.setSelectedTopic(newTopic)
                     }
                 }
-            )) { topic in
-                TopicRowView(topic: topic, subject: subject, practiceCount: viewModel.topicPracticeCounts[topic.id] ?? 0, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light, onDelete: { viewModel.topicToDelete = topic }, onRename: { viewModel.startRenameTopic(topic) })
-                .listRowBackground(viewModel.selectedTopic?.id == topic.id ? Color.gray.opacity(colorScheme == .light ? 0.2 : 0.25) : Color.clear)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    var t = Transaction()
-                    t.disablesAnimations = true
-                    withTransaction(t) {
-                        viewModel.setSelectedTopic(topic)
+            )) {
+                ForEach(filteredTopics) { topic in
+                    TopicRowView(topic: topic, subject: subject, practiceCount: viewModel.topicPracticeCounts[topic.id] ?? 0, isSelected: viewModel.selectedTopic?.id == topic.id, isLight: colorScheme == .light, onDelete: { viewModel.topicToDelete = topic }, onRename: { viewModel.startRenameTopic(topic) })
+                    .listRowBackground(viewModel.selectedTopic?.id == topic.id ? Color.gray.opacity(colorScheme == .light ? 0.2 : 0.25) : Color.clear)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        var t = Transaction()
+                        t.disablesAnimations = true
+                        withTransaction(t) {
+                            viewModel.setSelectedTopic(topic)
+                        }
+                    }
+                }
+                .onMove { source, dest in
+                    if viewModel.searchText.isEmpty {
+                        viewModel.reorderTopics(subject: subject, from: source, to: dest)
                     }
                 }
             }
@@ -1602,7 +1638,7 @@ struct FlashcardDetailView: View {
             }
             if !isPracticeMode { Spacer() }
         }
-        .padding()
+        .padding(EdgeInsets(top: 16, leading: isPracticeMode ? 20 : 16, bottom: 16, trailing: isPracticeMode ? 20 : 16))
         .background(GeometryReader { g in Color.clear.preference(key: WidthPreferenceKey.self, value: g.size.width) })
         .onPreferenceChange(WidthPreferenceKey.self) { contentWidth = $0 }
 
@@ -1711,7 +1747,8 @@ struct FlashcardDetailView: View {
     // Multiple choice question view — dùng contentWidth (không GeometryReader bọc ngoài) để scroll được khi embed trong practice
     private var multipleChoiceView: some View {
         let isCompact = contentWidth < 420 || isPracticeMode
-        let hPadding: CGFloat = isCompact ? 12 : 20
+        /// Khi practice (review/ôn sai), outer đã padding 20 nên không cộng thêm; khi xem thường thì dùng hPadding.
+        let hPadding: CGFloat = isPracticeMode ? 0 : (isCompact ? 12 : 20)
         let cardPadding: CGFloat = isCompact ? 12 : 16
         let questionFont: Font.TailwindSize = isCompact ? .xl3 : .display
         let optionPadding: CGFloat = isCompact ? 12 : 16
@@ -1720,13 +1757,15 @@ struct FlashcardDetailView: View {
         return VStack(spacing: spacing) {
                 // Question card
                 VStack(spacing: isCompact ? 10 : 16) {
-                    HStack {
+                    HStack(alignment: .center) {
                         Text("Câu hỏi")
                             .scaledFont(isCompact ? .lg : .xl)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                         Spacer(minLength: 8)
                         SpeakButton(text: flashcard.question, fontSize: isCompact ? 18 : 24)
+                            .frame(width: isCompact ? 28 : 32, height: isCompact ? 28 : 32, alignment: .trailing)
+                            .contentShape(Rectangle())
                     }
 
                     SmartCopyDefineText(text: flashcard.questionDisplayTextWithPhonetic, flashcards: topic.flashcards)
@@ -2185,6 +2224,9 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openKeyboardShortcuts)) { _ in
             viewModel.showKeyboardShortcutsSheet = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openReviewFromNotification)) { _ in
+            viewModel.switchToReviewMode()
         }
     }
     

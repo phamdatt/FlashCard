@@ -28,6 +28,8 @@ struct StatisticsDashboardView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var statistics: LearningStatistics?
     @State private var selectedTimeRange: TimeRange = .week
+    @State private var topMistakeFlashcards: [(Flashcard, Int)] = []
+    @State private var longestSinceReview: [(Flashcard, String)] = []
 
     enum TimeRange: String, CaseIterable {
         case week = "Tuần"
@@ -96,6 +98,14 @@ struct StatisticsDashboardView: View {
                         sectionDivider
                         StatisticsSection(title: "Độ chính xác theo môn học", icon: "folder.fill", minHeight: contentMinHeight) {
                             accuracyBySubject(stats: stats)
+                        }
+                        sectionDivider
+                        StatisticsSection(title: "Từ sai nhiều nhất (30 ngày)", icon: "xmark.circle.fill", minHeight: nil) {
+                            topMistakesSection
+                        }
+                        sectionDivider
+                        StatisticsSection(title: "Từ lâu chưa ôn", icon: "clock.arrow.circlepath", minHeight: nil) {
+                            longestSinceReviewSection
                         }
                     }
                     .background(cardBackground)
@@ -380,6 +390,107 @@ struct StatisticsDashboardView: View {
 
     private func loadStatistics() {
         statistics = DatabaseManager.shared.getLearningStatistics()
+        topMistakeFlashcards = DatabaseManager.shared.getTopMistakeFlashcards(limit: 15)
+        longestSinceReview = DatabaseManager.shared.getFlashcardsLongestSinceReview(limit: 15)
+    }
+
+    private var topMistakesSection: some View {
+        Group {
+            if topMistakeFlashcards.isEmpty {
+                emptyState(
+                    title: "Chưa có từ sai",
+                    icon: "checkmark.circle",
+                    message: "Luyện tập để ghi nhận từ cần ôn lại"
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(topMistakeFlashcards.enumerated()), id: \.element.0.id) { index, item in
+                        let (card, count) = item
+                        HStack(spacing: 12) {
+                            Text("\(index + 1).")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 20, alignment: .trailing)
+                            Text(card.questionDisplayText)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .lineLimit(1)
+                            Text("→")
+                                .font(.system(size: 11)).foregroundStyle(.tertiary)
+                            Text(card.answer)
+                                .font(.system(size: 12, weight: .regular, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Spacer(minLength: 8)
+                            Text("\(count) lần")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Capsule().fill(Color.accuracyGradientNeeds))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+                .padding(sectionPadding)
+            }
+        }
+    }
+
+    private var longestSinceReviewSection: some View {
+        Group {
+            if longestSinceReview.isEmpty {
+                emptyState(
+                    title: "Chưa có dữ liệu",
+                    icon: "clock",
+                    message: "Ôn tập để có từ trong danh sách"
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(longestSinceReview.enumerated()), id: \.element.0.id) { index, item in
+                        let (card, dateStr) = item
+                        HStack(spacing: 12) {
+                            Text("\(index + 1).")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 20, alignment: .trailing)
+                            Text(card.questionDisplayText)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .lineLimit(1)
+                            Text("→")
+                                .font(.system(size: 11)).foregroundStyle(.tertiary)
+                            Text(card.answer)
+                                .font(.system(size: 12, weight: .regular, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Spacer(minLength: 8)
+                            Text(formatReviewDate(dateStr))
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+                .padding(sectionPadding)
+            }
+        }
+    }
+
+    private func formatReviewDate(_ iso: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: iso) {
+            let d = Calendar.current.dateComponents([.day, .month, .year], from: date)
+            if let day = d.day, let month = d.month, let year = d.year {
+                return String(format: "%02d/%02d/%d", day, month, year)
+            }
+        }
+        return iso
     }
 }
 

@@ -8,6 +8,23 @@
 import SwiftUI
 import AppKit
 
+// Sort options for vocabulary list
+enum VocabularySortOption: String, CaseIterable {
+    case orderInDB = "Thứ tự trong DB"
+    case wordAZ = "Từ gốc A–Z"
+    case meaningAZ = "Nghĩa A–Z"
+    case learnedFirst = "Đã học trước"
+    case mistakeFirst = "Từ sai trước"
+}
+
+// Filter options for vocabulary list
+enum VocabularyFilterOption: String, CaseIterable {
+    case all = "Tất cả"
+    case learnedOnly = "Chỉ đã học"
+    case unlearnedOnly = "Chỉ chưa học"
+    case mistakesOnly = "Chỉ từ sai"
+}
+
 struct VocabularyListView: View {
     @ObservedObject var viewModel: ContentViewModel
     let topic: Topic
@@ -16,11 +33,37 @@ struct VocabularyListView: View {
 
     @Environment(\.colorScheme) private var colorScheme
 
+    @State private var sortOption: VocabularySortOption = .orderInDB
+    @State private var filterOption: VocabularyFilterOption = .all
+
     private var isLight: Bool { colorScheme == .light }
+
+    /// Filtered and sorted list for display (uses topic.flashcards + progress/mistake from DB).
+    private var displayedFlashcards: [Flashcard] {
+        let learnedIds = Set(DatabaseManager.shared.getLearnedFlashcardIds())
+        let mistakeIds = Set(DatabaseManager.shared.getMistakeFlashcards(days: 30))
+        var list = topic.flashcards
+        switch filterOption {
+        case .all: break
+        case .learnedOnly: list = list.filter { learnedIds.contains($0.id) }
+        case .unlearnedOnly: list = list.filter { !learnedIds.contains($0.id) }
+        case .mistakesOnly: list = list.filter { mistakeIds.contains($0.id) }
+        }
+        switch sortOption {
+        case .orderInDB: break
+        case .wordAZ: list.sort { $0.questionDisplayText.localizedStandardCompare($1.questionDisplayText) == .orderedAscending }
+        case .meaningAZ: list.sort { $0.answer.localizedStandardCompare($1.answer) == .orderedAscending }
+        case .learnedFirst: list.sort { learnedIds.contains($0.id) && !learnedIds.contains($1.id) }
+        case .mistakeFirst: list.sort { mistakeIds.contains($0.id) && !mistakeIds.contains($1.id) }
+        }
+        return list
+    }
 
     var body: some View {
         HSplitView {
-            List(topic.flashcards) { flashcard in
+            VStack(spacing: 0) {
+                vocabularySortFilterBar
+                List(displayedFlashcards) { flashcard in
                 vocabularyRow(flashcard: flashcard)
                     .contentShape(Rectangle())
                     .listRowBackground(
@@ -35,16 +78,17 @@ struct VocabularyListView: View {
                             let newIds = ids.contains(flashcard.id)
                                 ? ids.filter { $0 != flashcard.id }
                                 : ids.union([flashcard.id])
-                            let newSet = Set(topic.flashcards.filter { newIds.contains($0.id) })
+                            let newSet = Set(displayedFlashcards.filter { newIds.contains($0.id) })
                             viewModel.setSelectedFlashcards(newSet)
                         } else {
                             viewModel.setSelectedFlashcards([flashcard])
                         }
                     }
             }
-            .frame(minWidth: 250, idealWidth: 300, maxWidth: 400)
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            }
+            .frame(minWidth: 250, idealWidth: 300, maxWidth: 400)
             .background(Color.appBackgroundPage(isLight: isLight))
 
             VStack(spacing: 0) {
@@ -72,6 +116,34 @@ struct VocabularyListView: View {
             }
             .frame(minWidth: 400)
         }
+    }
+
+    private var vocabularySortFilterBar: some View {
+        HStack(spacing: 12) {
+            Picker("Sắp xếp", selection: $sortOption) {
+                ForEach(VocabularySortOption.allCases, id: \.self) { opt in
+                    Text(opt.rawValue).tag(opt)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .scaledFont(.sm)
+            Picker("Lọc", selection: $filterOption) {
+                ForEach(VocabularyFilterOption.allCases, id: \.self) { opt in
+                    Text(opt.rawValue).tag(opt)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .scaledFont(.sm)
+            Spacer()
+            Text("\(displayedFlashcards.count) từ")
+                .scaledFont(.xs)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.appBackgroundControl(isLight: isLight))
     }
 
     private func vocabularyRow(flashcard: Flashcard) -> some View {
@@ -230,6 +302,13 @@ struct VocabularyListView: View {
                 "Chưa có từ vựng",
                 systemImage: "text.badge.plus",
                 description: Text("Nhấn \"Thêm từ\" hoặc \"Import\" ở góc phải để thêm từ vựng vào chủ đề này.")
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if displayedFlashcards.isEmpty {
+            ContentUnavailableView(
+                "Không có từ nào theo bộ lọc",
+                systemImage: "line.3.horizontal.decrease.circle",
+                description: Text("Thử đổi bộ lọc hoặc cách sắp xếp ở trên.")
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let flashcard = viewModel.selectedFlashcard {

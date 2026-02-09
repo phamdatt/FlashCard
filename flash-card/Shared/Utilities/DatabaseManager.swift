@@ -667,6 +667,97 @@ class DatabaseManager {
         return generateOptions(for: flashcards)
     }
 
+    /// Loads a single flashcard by id from vocabularies. Returns nil if not found.
+    func loadFlashcard(byId id: Int) -> Flashcard? {
+        guard db != nil else { return nil }
+        let hasNotes = hasColumn(table: "vocabularies", column: "notes")
+        let hasRadical = hasColumn(table: "vocabularies", column: "radical")
+        let hasPhonetic = hasColumn(table: "vocabularies", column: "phonetic")
+        var cols = "id, question, answer, hint"
+        if hasNotes { cols += ", notes" }
+        if hasRadical { cols += ", radical" }
+        if hasPhonetic { cols += ", phonetic" }
+        let sql = "SELECT \(cols) FROM vocabularies WHERE id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return nil }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int(stmt, 1, Int32(id))
+        guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
+        let question = String(cString: sqlite3_column_text(stmt, 1))
+        let answer = String(cString: sqlite3_column_text(stmt, 2))
+        let hint: String? = sqlite3_column_text(stmt, 3).map { String(cString: $0) }
+        var notes: String? = nil
+        var radical: String? = nil
+        var phonetic: String? = nil
+        var idx: Int32 = 4
+        if hasNotes { notes = sqlite3_column_text(stmt, idx).map { String(cString: $0) }; idx += 1 }
+        if hasRadical { radical = sqlite3_column_text(stmt, idx).map { String(cString: $0) }; idx += 1 }
+        if hasPhonetic { phonetic = sqlite3_column_text(stmt, idx).map { String(cString: $0) } }
+        return Flashcard(
+            id: id,
+            question: question,
+            answer: answer,
+            hint: hint,
+            options: nil,
+            correctAnswer: nil,
+            exerciseType: Flashcard.exerciseTypeLabel,
+            notes: notes,
+            radical: radical,
+            phonetic: phonetic
+        )
+    }
+
+    /// Top flashcards by mistake count (last 30 days). Returns (flashcard, mistakeCount) ordered by count descending.
+    func getTopMistakeFlashcards(limit: Int = 20) -> [(Flashcard, Int)] {
+        guard db != nil else { return [] }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+        let cutoffStr = formatter.string(from: cutoff)
+        let sql = """
+            SELECT flashcard_id, COUNT(*) as cnt FROM mistake_records
+            WHERE practice_date >= ?
+            GROUP BY flashcard_id ORDER BY cnt DESC LIMIT ?
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        sqlite3_bind_text(stmt, 1, (cutoffStr as NSString).utf8String, -1, nil)
+        sqlite3_bind_int(stmt, 2, Int32(limit))
+        var result: [(Flashcard, Int)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let fid = Int(sqlite3_column_int(stmt, 0))
+            let cnt = Int(sqlite3_column_int(stmt, 1))
+            if let card = loadFlashcard(byId: fid) {
+                result.append((card, cnt))
+            }
+        }
+        sqlite3_finalize(stmt)
+        return result
+    }
+
+    /// Flashcards with oldest last_review_date (longest since review). Returns (flashcard, lastReviewDateString) ordered by oldest first.
+    func getFlashcardsLongestSinceReview(limit: Int = 20) -> [(Flashcard, String)] {
+        guard db != nil else { return [] }
+        let sql = """
+            SELECT flashcard_id, last_review_date FROM flashcard_progress
+            WHERE total_reviews > 0 AND last_review_date IS NOT NULL AND last_review_date != ''
+            ORDER BY last_review_date ASC LIMIT ?
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        sqlite3_bind_int(stmt, 1, Int32(limit))
+        var result: [(Flashcard, String)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let fid = Int(sqlite3_column_int(stmt, 0))
+            let dateStr = String(cString: sqlite3_column_text(stmt, 1))
+            if let card = loadFlashcard(byId: fid) {
+                result.append((card, dateStr))
+            }
+        }
+        sqlite3_finalize(stmt)
+        return result
+    }
+
     // MARK: - Helpers
 
     /// Generates multiple-choice options for a list of flashcards (for use outside loadFlashcards, e.g. review mistakes).
@@ -772,6 +863,26 @@ class DatabaseManager {
         sqlite3_bind_int(stmt, 2, Int32(id))
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
+        }
+    }
+
+    /// Updates sort_order of topics within a subject. topicIdsInOrder = ordered topic ids. Throws on error.
+    func updateTopicSortOrder(subjectId: Int, topicIdsInOrder: [Int]) throws {
+        let db = try requireDB()
+        let sql = "UPDATE topics SET sort_order = ? WHERE id = ? AND subject_id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw DBError.prepareFailed(String(cString: sqlite3_errmsg(db)))
+        }
+        defer { sqlite3_finalize(stmt) }
+        for (index, topicId) in topicIdsInOrder.enumerated() {
+            sqlite3_reset(stmt)
+            sqlite3_bind_int(stmt, 1, Int32(index))
+            sqlite3_bind_int(stmt, 2, Int32(topicId))
+            sqlite3_bind_int(stmt, 3, Int32(subjectId))
+            guard sqlite3_step(stmt) == SQLITE_DONE else {
+                throw DBError.stepFailed(String(cString: sqlite3_errmsg(db)))
+            }
         }
     }
 
@@ -1358,6 +1469,20 @@ class DatabaseManager {
         }
         sqlite3_finalize(stmt)
         return count
+    }
+
+    /// Flashcard ids that have at least one review (for filter "đã học").
+    func getLearnedFlashcardIds() -> [Int] {
+        guard db != nil else { return [] }
+        let sql = "SELECT flashcard_id FROM flashcard_progress WHERE total_reviews > 0"
+        var stmt: OpaquePointer?
+        var ids: [Int] = []
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            ids.append(Int(sqlite3_column_int(stmt, 0)))
+        }
+        sqlite3_finalize(stmt)
+        return ids
     }
     
     private func getMasteredFlashcardsCount() -> Int {
