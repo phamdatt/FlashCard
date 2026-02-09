@@ -1642,16 +1642,10 @@ struct FlashcardDetailView: View {
         .background(GeometryReader { g in Color.clear.preference(key: WidthPreferenceKey.self, value: g.size.width) })
         .onPreferenceChange(WidthPreferenceKey.self) { contentWidth = $0 }
 
-        Group {
-            if isPracticeMode {
-                inner
-            } else {
-                ScrollView {
-                    inner
-                }
-                .scrollBounceBehavior(.basedOnSize)
-            }
+        ScrollView {
+            inner
         }
+        .scrollBounceBehavior(.basedOnSize)
         .frame(minWidth: 280)
         .onAppear {
             if let progress = DatabaseManager.shared.getFlashcardProgress(flashcardId: flashcard.id), progress.totalReviews > 0 {
