@@ -1815,8 +1815,7 @@ struct FlashcardDetailView: View {
     // Multiple choice question view — dùng contentWidth (không GeometryReader bọc ngoài) để scroll được khi embed trong practice
     private var multipleChoiceView: some View {
         let isCompact = contentWidth < 420 || isPracticeMode
-        /// Khi practice (review/ôn sai), outer đã padding 20 nên không cộng thêm; khi xem thường thì dùng hPadding.
-        let hPadding: CGFloat = isPracticeMode ? 0 : (isCompact ? 12 : 20)
+        /// Không thêm padding ngang riêng để khối "Câu hỏi" căn trái bằng với header (icon + Tiếng Trung); dùng chung padding ngoài của inner.
         let cardPadding: CGFloat = isCompact ? 12 : 16
         let questionFont: Font.TailwindSize = isCompact ? .xl3 : .display
         let optionPadding: CGFloat = isCompact ? 12 : 16
@@ -1886,11 +1885,11 @@ struct FlashcardDetailView: View {
                         }
                         .buttonStyle(ScaleButtonStyle())
                         .cursor(.pointingHand)
+                        .keyboardShortcut(.return, modifiers: [])
                         .padding(.top, 8)
                     }
                 }
             }
-            .padding(.horizontal, hPadding)
     }
     
     private func multipleChoiceButton(option: String, horizontalPadding: CGFloat = 16, isCompact: Bool = false) -> some View {

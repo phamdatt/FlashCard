@@ -15,6 +15,8 @@ class SoundManager {
     private var correctSound: NSSound?
     private var incorrectSound: NSSound?
     private var successSound: NSSound?
+    private var countdownTickSound: NSSound?
+    private var recordingReadySound: NSSound?
 
     private init() {
         setupSounds()
@@ -34,6 +36,22 @@ class SoundManager {
 
         // Completion / success (celebratory, Duolingo-style)
         successSound = NSSound(named: "Hero") ?? NSSound(named: "Glass") ?? NSSound(named: "Tink")
+        // Countdown tick (ngắn, rõ)
+        countdownTickSound = NSSound(named: "Tink") ?? NSSound(named: "Pop")
+        // Bắt đầu ghi âm / sẵn sàng
+        recordingReadySound = NSSound(named: "Glass") ?? NSSound(named: "Ping") ?? NSSound(named: "Tink")
+    }
+
+    func playCountdownTick() {
+        DispatchQueue.main.async { [weak self] in
+            self?.stopAndPlay(self?.countdownTickSound)
+        }
+    }
+
+    func playRecordingReady() {
+        DispatchQueue.main.async { [weak self] in
+            self?.stopAndPlay(self?.recordingReadySound)
+        }
     }
 
     private func stopAndPlay(_ sound: NSSound?) {

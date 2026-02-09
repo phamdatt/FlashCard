@@ -119,8 +119,8 @@ struct Flashcard: Identifiable, Hashable, Codable {
         return "\(questionDisplayText) (\(p))"
     }
 
-    /// True if this flashcard has pinyin in question (for Điền pinyin mode).
-    var hasPinyin: Bool { pinyinFromQuestion != nil }
+    /// True if this flashcard has pinyin for Điền pinyin mode: cột phonetic hoặc pinyin trong question (dạng "汉字 (pinyin)").
+    var hasPinyin: Bool { (displayPhonetic ?? "").isEmpty == false }
 
     init(id: Int = 0, question: String, answer: String, hint: String? = nil, options: [String]? = nil, correctAnswer: String? = nil, exerciseType: String = Flashcard.exerciseTypeLabel, notes: String? = nil, radical: String? = nil, phonetic: String? = nil) {
         self.id = id

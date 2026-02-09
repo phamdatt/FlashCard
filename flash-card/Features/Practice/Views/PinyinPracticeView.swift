@@ -2,7 +2,7 @@
 //  PinyinPracticeView.swift
 //  flash-card
 //
-//  Fill-in-pinyin mode: show 汉字, user types pinyin. Only cards with pinyin in question are used.
+//  Fill-in-pinyin mode: show 汉字, user types pinyin. Uses cột phonetic (hoặc pinyin trong question) để kiểm tra.
 //
 
 import SwiftUI
@@ -30,7 +30,7 @@ struct PinyinPracticeView: View {
             ContentUnavailableView(
                 "Không có từ có pinyin",
                 systemImage: "character.bubble",
-                description: Text("Chủ đề này chưa có từ vựng Tiếng Trung có pinyin (dạng \"汉字 (pinyin)\") để luyện điền pinyin.")
+                description: Text("Chủ đề này chưa có từ vựng Tiếng Trung có pinyin (cột Phiên âm hoặc dạng \"汉字 (pinyin)\") để luyện điền pinyin.")
             )
         } else if showCompletion {
             completionView
@@ -46,7 +46,7 @@ struct PinyinPracticeView: View {
 
     private var practiceView: some View {
         let flashcard = flashcards[currentIndex]
-        let correctPinyin = flashcard.pinyinFromQuestion ?? ""
+        let correctPinyin = flashcard.displayPhonetic ?? ""
         return ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 24) {
@@ -194,6 +194,7 @@ struct PinyinPracticeView: View {
             }
             .buttonStyle(ScaleButtonStyle())
             .cursor(.pointingHand)
+            .keyboardShortcut(.return, modifiers: [])
             .padding(.horizontal, 40)
             .padding(.top, 8)
         } else {
@@ -210,6 +211,7 @@ struct PinyinPracticeView: View {
             .buttonStyle(ScaleButtonStyle())
             .cursor(.pointingHand)
             .disabled(userPinyin.isEmpty)
+            .keyboardShortcut(.return, modifiers: [])
             .padding(.horizontal, 40)
             .padding(.top, 8)
         }
@@ -239,7 +241,7 @@ struct PinyinPracticeView: View {
         guard !userPinyin.isEmpty else { return }
 
         let flashcard = flashcards[currentIndex]
-        guard let correctPinyin = flashcard.pinyinFromQuestion else { return }
+        guard let correctPinyin = flashcard.displayPhonetic, !correctPinyin.isEmpty else { return }
 
         let userNorm = normalizeForPinyinComparison(userPinyin)
         let correctNorm = normalizeForPinyinComparison(correctPinyin)

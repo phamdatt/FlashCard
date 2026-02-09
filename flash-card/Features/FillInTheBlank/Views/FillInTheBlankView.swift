@@ -174,6 +174,7 @@ Image(systemName: "checkmark.circle.fill")
                 .buttonStyle(ScaleButtonStyle())
                 .cursor(.pointingHand)
                 .disabled(userAnswer.isEmpty)
+                .keyboardShortcut(.return, modifiers: [])
                 .padding(.horizontal, 40)
             } else {
                 Button(action: {
@@ -190,6 +191,7 @@ Image(systemName: "checkmark.circle.fill")
                 }
                 .buttonStyle(ScaleButtonStyle())
                 .cursor(.pointingHand)
+                .keyboardShortcut(.return, modifiers: [])
                 .padding(.horizontal, 40)
             }
         }
