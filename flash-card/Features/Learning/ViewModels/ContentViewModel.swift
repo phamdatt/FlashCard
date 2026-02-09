@@ -203,14 +203,17 @@ class ContentViewModel: ObservableObject {
         }
     }
 
-    // Filter topics based on search text (topic name)
+    // Filter topics based on search text (topic name), sorted by name
     func filteredTopics(for subject: Subject) -> [Topic] {
+        let list: [Topic]
         if searchText.isEmpty {
-            return subject.topics
+            list = subject.topics
+        } else {
+            list = subject.topics.filter { topic in
+                topic.name.localizedCaseInsensitiveContains(searchText)
+            }
         }
-        return subject.topics.filter { topic in
-            topic.name.localizedCaseInsensitiveContains(searchText)
-        }
+        return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
     /// Search in flashcard question/answer within the given subject. Returns (topic, flashcard) pairs.

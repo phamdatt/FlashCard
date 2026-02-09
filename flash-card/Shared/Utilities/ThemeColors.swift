@@ -34,6 +34,14 @@ extension Color {
     static let appTextBackgroundDark = Color(red: 0.10, green: 0.10, blue: 0.12)
     static let appTintDark = Color(red: 56/255, green: 62/255, blue: 56/255)
 
+    /// Nền popup/sheet (sửa tên, xoá chủ đề) — dark gray giống reference (#3A3A3C).
+    static let appPopupBackgroundDark = Color(red: 58/255, green: 58/255, blue: 60/255)
+
+    /// Vàng nhạt cho bóng đèn / gợi ý (icon + chữ).
+    static let hintYellowLight = Color(red: 0.85, green: 0.72, blue: 0.22)
+    static let hintYellowDark = Color(red: 0.92, green: 0.82, blue: 0.35)
+    static func hintYellow(isLight: Bool) -> Color { isLight ? hintYellowLight : hintYellowDark }
+
     // MARK: - Semantic (isLight = true khi colorScheme == .light)
     static func appCardBackground(isLight: Bool) -> Color {
         isLight ? appCardBackgroundLight : appCardBackgroundDark

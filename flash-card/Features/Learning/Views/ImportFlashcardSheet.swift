@@ -12,6 +12,7 @@ import UniformTypeIdentifiers
 struct ImportFlashcardSheet: View {
     @ObservedObject var viewModel: ContentViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedFileURL: URL?
     @State private var selectedTopicId: Int?
     @State private var parsedRows: [(question: String, answer: String, hint: String?, notes: String?, radical: String?, phonetic: String?)] = []
@@ -52,6 +53,7 @@ struct ImportFlashcardSheet: View {
                     .buttonStyle(.bordered)
                     .cursor(.pointingHand)
                     .controlSize(.large)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                     if let url = selectedFileURL {
                         Text(url.lastPathComponent)
                             .lineLimit(1)
@@ -101,6 +103,7 @@ struct ImportFlashcardSheet: View {
                 .buttonStyle(.bordered)
                 .cursor(.pointingHand)
                 .controlSize(.large)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
                 Button(action: { performImportAndClose() }) {
                     Text("Import")
                         .padding(.horizontal, 18)
@@ -109,13 +112,15 @@ struct ImportFlashcardSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .cursor(.pointingHand)
-                .tint(.green)
+                .tint(.blue)
                 .controlSize(.large)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
                 .disabled(targetTopic == nil || parsedRows.isEmpty)
             }
         }
         .padding(24)
         .frame(width: 440, height: 320)
+        .background(colorScheme == .dark ? Color.appPopupBackgroundDark : Color.clear)
         .onChange(of: selectedFileURL) { _, url in
             if let url = url {
                 parseFile(at: url)

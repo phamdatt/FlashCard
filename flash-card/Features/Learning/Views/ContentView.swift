@@ -451,7 +451,7 @@ struct TopicsListView: View {
                     .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
-                            .stroke(isSearchFocused ? Color.green : Color.appBorder(isLight: colorScheme == .light), lineWidth: isSearchFocused ? 2 : 1)
+                            .stroke(isSearchFocused ? Color.blue : Color.appBorder(isLight: colorScheme == .light), lineWidth: isSearchFocused ? 2 : 1)
                     )
             )
             .padding(.horizontal, 16)
@@ -549,7 +549,6 @@ struct TopicsListView: View {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .tint(.green)
         }
     }
 
@@ -693,10 +692,17 @@ private struct TopicRowView: View {
         .tag(topic)
         .contextMenu {
             Button(action: onRename) {
-                Label("Sửa tên", systemImage: "pencil")
+                HStack {
+                    Image(systemName: "pencil")
+                    Text("Sửa tên")
+                }
+                .foregroundStyle(.primary)
             }
             Button(role: .destructive, action: onDelete) {
-                Label("Xoá chủ đề", systemImage: "trash")
+                HStack {
+                    Image(systemName: "trash")
+                    Text("Xoá chủ đề")
+                }
             }
         }
     }
@@ -768,6 +774,7 @@ struct AddTopicSheet: View {
                 .buttonStyle(.bordered)
                 .cursor(.pointingHand)
                 .controlSize(.large)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 Spacer()
 
@@ -786,11 +793,12 @@ struct AddTopicSheet: View {
                 .cursor(.pointingHand)
                 .tint(.accentColor)
                 .controlSize(.large)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
         .padding(24)
         .frame(width: 400, height: 280)
-        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
+        .background(colorScheme == .dark ? Color.appPopupBackgroundDark : Color.appBackgroundPage(isLight: true))
         .onAppear { isFocused = true }
     }
 }
@@ -848,6 +856,7 @@ struct RenameTopicSheet: View {
                 .buttonStyle(.bordered)
                 .cursor(.pointingHand)
                 .controlSize(.large)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 Spacer()
                 Button(action: { viewModel.renameTopic() }) {
@@ -863,11 +872,12 @@ struct RenameTopicSheet: View {
                 .cursor(.pointingHand)
                 .tint(.accentColor)
                 .controlSize(.large)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
         .padding(24)
         .frame(width: 400, height: 240)
-        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
+        .background(colorScheme == .dark ? Color.appPopupBackgroundDark : Color.appBackgroundPage(isLight: true))
         .onAppear { isFocused = true }
     }
 }
@@ -1470,7 +1480,7 @@ struct HintExpandableBox: View {
                             Text("Gợi ý")
                                 .font(.app(.subheadline))
                                 .fontWeight(.semibold)
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Color.hintYellow(isLight: isLight))
                             SmartCopyDefineText(text: hint, flashcards: flashcards)
                                 .font(.app(.callout))
                                 .foregroundStyle(.secondary)
@@ -1493,20 +1503,21 @@ struct HintExpandableBox: View {
                 } else {
                     HStack(spacing: 8) {
                         Image(systemName: "lightbulb.fill")
-                            .foregroundStyle(.green)
+                            .font(.app(.title2))
+                            .foregroundStyle(.white)
                         Text("Gợi ý")
                             .font(.app(.headline))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(.white)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.green.opacity(isLight ? 0.38 : 0.28))
+            .background(Color.appCardBackground(isLight: isLight))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.green.opacity(isLight ? 0.45 : 0.4), lineWidth: 1.5)
+                    .strokeBorder(Color.appBorderStrong(isLight: isLight), lineWidth: 1.5)
             )
             .cornerRadius(8)
         }
@@ -1537,7 +1548,7 @@ struct FlashcardDetailView: View {
     @State private var selectedAnswer: String? = nil
     @State private var showResult = false
     @State private var nextReviewDateString: String? = nil
-    @State private var hintExpanded = false
+    @State private var hintExpanded = true
     @State private var contentWidth: CGFloat = 400
 
     private var isPracticeMode: Bool { onAnswered != nil }

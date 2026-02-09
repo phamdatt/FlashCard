@@ -24,7 +24,7 @@ struct SpeedCardsPracticeView: View {
     @State private var timeRemaining: Double = 10
     @State private var timer: Timer?
     @State private var showSummary: Bool = false
-    @State private var hintExpanded: Bool = false
+    @State private var hintExpanded: Bool = true
 
     private let totalTime: Double = 10
 
@@ -40,7 +40,7 @@ struct SpeedCardsPracticeView: View {
         } else if currentIndex < flashcards.count {
             cardView
                 .id(currentIndex)
-                .onChange(of: currentIndex) { _, _ in hintExpanded = false }
+                .onChange(of: currentIndex) { _, _ in hintExpanded = true }
         } else {
             summaryView
                 .onAppear {
@@ -145,7 +145,8 @@ struct SpeedCardsPracticeView: View {
                                         } else {
                                             HStack(spacing: 6) {
                                                 Image(systemName: "lightbulb.fill")
-                                                    .foregroundStyle(.green)
+                                                    .font(.app(.body))
+                                                    .foregroundStyle(.white)
                                                 Text("Gợi ý")
                                                     .font(.app(.subheadline))
                                                     .foregroundStyle(.secondary)
@@ -154,7 +155,7 @@ struct SpeedCardsPracticeView: View {
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(12)
-                                    .background(Color.green.opacity(colorScheme == .light ? 0.1 : 0.15))
+                                    .background(Color.appCardBackground(isLight: colorScheme == .light))
                                     .cornerRadius(8)
                                 }
                                 .buttonStyle(.plain)

@@ -48,6 +48,7 @@ struct ConfirmActionOverlay: View {
                         .keyboardShortcut(.escape)
                         .buttonStyle(.bordered)
                         .cursor(.pointingHand)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
 
                         Button(destructiveTitle, role: .destructive) {
                             onConfirm()
@@ -57,11 +58,12 @@ struct ConfirmActionOverlay: View {
                         .buttonStyle(.borderedProminent)
                         .cursor(.pointingHand)
                         .tint(.red)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
                 .padding(24)
                 .frame(width: 380, alignment: .topLeading)
-                .background(Color.appBackgroundPage(isLight: colorScheme == .light))
+                .background(colorScheme == .dark ? Color.appPopupBackgroundDark : Color.appBackgroundPage(isLight: true))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)

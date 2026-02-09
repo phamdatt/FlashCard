@@ -79,7 +79,7 @@ struct VocabularyListView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
                     Text(Flashcard.exerciseTypeLabel)
-                        .font(.app(.caption))
+                        .scaledFont(.sm)
                         .fontWeight(.medium)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 5)
@@ -92,7 +92,7 @@ struct VocabularyListView: View {
                 HStack(alignment: .top, spacing: 8) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Từ gốc")
-                            .font(.app(.caption2))
+                            .scaledFont(.sm)
                             .foregroundStyle(.tertiary)
                         Text(flashcard.question)
                             .scaledFont(.sm)
@@ -101,31 +101,31 @@ struct VocabularyListView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Image(systemName: "arrow.right")
-                        .font(.app(.caption))
+                        .scaledFont(.sm)
                         .foregroundStyle(.secondary)
                         .padding(.top, 2)
                     if let phonetic = flashcard.displayPhonetic, !phonetic.isEmpty {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Phiên âm")
-                                .font(.app(.caption2))
+                                .scaledFont(.sm)
                                 .foregroundStyle(.tertiary)
                             Text(phonetic)
-                                .font(.app(.subheadline))
+                                .scaledFont(.sm)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Image(systemName: "arrow.right")
-                            .font(.app(.caption))
+                            .scaledFont(.sm)
                             .foregroundStyle(.secondary)
                             .padding(.top, 2)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Ý nghĩa")
-                            .font(.app(.caption2))
+                            .scaledFont(.sm)
                             .foregroundStyle(.tertiary)
                         Text(flashcard.answer)
-                            .font(.app(.subheadline))
+                            .scaledFont(.sm)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
@@ -138,14 +138,14 @@ struct VocabularyListView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 4) {
                             Image(systemName: "lightbulb.fill")
-                                .font(.app(.subheadline))
-                                .foregroundStyle(.green)
+                                .scaledFont(.sm)
+                                .foregroundStyle(.white)
                             Text("Gợi ý")
-                                .font(.app(.subheadline))
+                                .scaledFont(.sm)
                                 .foregroundStyle(.secondary)
                         }
                         Text(hint)
-                            .font(.app(.subheadline))
+                            .scaledFont(.sm)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -156,11 +156,11 @@ struct VocabularyListView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 4) {
                             Text("Bộ thủ")
-                                .font(.app(.subheadline))
+                                .scaledFont(.sm)
                                 .foregroundStyle(.secondary)
                         }
                         Text(radical)
-                            .font(.app(.callout))
+                            .scaledFont(.sm)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -171,11 +171,11 @@ struct VocabularyListView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 4) {
                             Text("Ghi chú")
-                                .font(.app(.subheadline))
+                                .scaledFont(.sm)
                                 .foregroundStyle(.secondary)
                         }
                         Text(notes)
-                            .font(.app(.callout))
+                            .scaledFont(.sm)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -189,7 +189,7 @@ struct VocabularyListView: View {
                 if isFlashcardLearned(flashcard) {
                     Image(systemName: "checkmark.circle.fill")
                         .scaledFont(.sm)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.green)
                         .help("Đã học")
                         .accessibilityLabel("Đã học")
                 }

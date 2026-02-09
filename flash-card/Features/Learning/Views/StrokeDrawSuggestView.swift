@@ -187,10 +187,11 @@ struct StrokeDrawSuggestView: View {
                 Spacer()
                 Button(action: suggestWords) {
                     Label("Gợi ý từ", systemImage: "lightbulb.fill")
+                        .font(.app(.body))
                 }
                 .buttonStyle(.borderedProminent)
                 .cursor(.pointingHand)
-                .tint(.green)
+                .tint(Color.hintYellow(isLight: colorScheme == .light))
             }
             .padding(.horizontal)
 
