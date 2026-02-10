@@ -12,6 +12,14 @@ import AppKit
 class SoundManager {
     static let shared = SoundManager()
 
+    private static let practiceSoundEnabledKey = "practiceSoundEnabled"
+
+    /// Bật/tắt âm thanh khi chọn đáp án (đúng/sai) và khi kết thúc practice. Mặc định bật.
+    static var practiceSoundEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: practiceSoundEnabledKey) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: practiceSoundEnabledKey) }
+    }
+
     private var correctSound: NSSound?
     private var incorrectSound: NSSound?
     private var successSound: NSSound?
@@ -60,18 +68,21 @@ class SoundManager {
     }
 
     func playCorrect() {
+        guard Self.practiceSoundEnabled else { return }
         DispatchQueue.main.async { [weak self] in
             self?.stopAndPlay(self?.correctSound)
         }
     }
 
     func playIncorrect() {
+        guard Self.practiceSoundEnabled else { return }
         DispatchQueue.main.async { [weak self] in
             self?.stopAndPlay(self?.incorrectSound)
         }
     }
 
     func playSuccess() {
+        guard Self.practiceSoundEnabled else { return }
         DispatchQueue.main.async { [weak self] in
             self?.stopAndPlay(self?.successSound)
         }

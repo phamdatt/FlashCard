@@ -95,7 +95,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         if response.notification.request.identifier == ReviewReminderManager.notificationIdentifier {
             NSApp.activate(ignoringOtherApps: true)
-            NotificationCenter.default.post(name: .openReviewFromNotification, object: nil)
+            ReviewReminderManager.pendingOpenReviewFromNotification = true
+            // Delay post so ContentView is mounted when app was launched by tapping notification
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                NotificationCenter.default.post(name: .openReviewFromNotification, object: nil)
+            }
         }
         completionHandler()
     }

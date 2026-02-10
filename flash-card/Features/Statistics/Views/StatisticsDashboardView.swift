@@ -28,12 +28,16 @@ struct StatisticsDashboardView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var statistics: LearningStatistics?
     @State private var selectedTimeRange: TimeRange = .week
+    @State private var chartDateFrom: Date = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+    @State private var chartDateTo: Date = Date()
+    @State private var selectedBarDay: DailyPractice?
     @State private var topMistakeFlashcards: [(Flashcard, Int)] = []
     @State private var longestSinceReview: [(Flashcard, String)] = []
 
     enum TimeRange: String, CaseIterable {
         case week = "Tuần"
         case month = "Tháng"
+        case custom = "Tùy chọn"
         case all = "Tất cả"
     }
 
@@ -117,23 +121,42 @@ struct StatisticsDashboardView: View {
         }
         .background(pageBackground)
         .onAppear { loadStatistics() }
-        .onChange(of: selectedTimeRange) { _, _ in loadStatistics() }
+        .onChange(of: selectedTimeRange) { _, _ in
+            loadStatistics()
+            selectedBarDay = nil
+        }
+        .onChange(of: chartDateFrom) { _, _ in selectedBarDay = nil }
+        .onChange(of: chartDateTo) { _, _ in selectedBarDay = nil }
     }
 
     private var headerSection: some View {
-        HStack {
-            Text("Thống kê học tập")
-                .font(.system(size: 26, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-            Spacer()
-            Picker("", selection: $selectedTimeRange) {
-                ForEach(TimeRange.allCases, id: \.self) { range in
-                    Text(range.rawValue).tag(range)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Thống kê học tập")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Picker("", selection: $selectedTimeRange) {
+                    ForEach(TimeRange.allCases, id: \.self) { range in
+                        Text(range.rawValue).tag(range)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .controlSize(.large)
+                .frame(width: 280)
             }
-            .pickerStyle(.segmented)
-            .controlSize(.large)
-            .frame(width: 220)
+            if selectedTimeRange == .custom {
+                HStack(spacing: 16) {
+                    DatePicker("Từ ngày", selection: $chartDateFrom, displayedComponents: .date)
+                        .labelsHidden()
+                    Text("→")
+                        .foregroundStyle(.secondary)
+                    DatePicker("Đến ngày", selection: $chartDateTo, displayedComponents: .date)
+                        .labelsHidden()
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+            }
         }
         .padding(sectionPadding)
         .background(Color.appBackgroundControl(isLight: !isDark))
@@ -176,6 +199,7 @@ struct StatisticsDashboardView: View {
     }
 
     // MARK: - Bar Chart (vertical bars by day – gradient, rounded top, consistent spacing)
+    @ViewBuilder
     private func progressBarChart(stats: LearningStatistics) -> some View {
         let filtered = filterHistory(stats.practiceHistory)
         let displayData = Array(filtered.prefix(14))
@@ -186,14 +210,14 @@ struct StatisticsDashboardView: View {
             endPoint: .top
         )
 
-        return Group {
-            if displayData.isEmpty {
-                emptyState(
-                    title: "Chưa có dữ liệu",
-                    icon: "chart.bar.doc.horizontal",
-                    message: "Luyện tập theo thời gian đã chọn để xem biểu đồ"
-                )
-            } else {
+        if displayData.isEmpty {
+            emptyState(
+                title: "Chưa có dữ liệu",
+                icon: "chart.bar.doc.horizontal",
+                message: "Luyện tập theo thời gian đã chọn để xem biểu đồ"
+            )
+            .frame(minHeight: contentMinHeight)
+        } else {
                 VStack(alignment: .leading, spacing: 24) {
                     // Y-axis hint
                     HStack(alignment: .bottom, spacing: 0) {
@@ -219,6 +243,12 @@ struct StatisticsDashboardView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .frame(minWidth: 36)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    selectedBarDay = selectedBarDay?.id == day.id ? nil : day
+                                }
+                                .help("\(day.totalPracticed) từ đã học — \(Int(day.accuracy * 100))% đúng. Bấm để xem chi tiết.")
+                                .cursor(.pointingHand)
                             }
                         }
                         .frame(height: barChartHeight + 26)
@@ -234,11 +264,36 @@ struct StatisticsDashboardView: View {
                                 .frame(minWidth: 36)
                         }
                     }
+                    // Chi tiết ngày khi bấm vào cột
+                    if let day = selectedBarDay {
+                        HStack(spacing: 8) {
+                            Image(systemName: "text.book.closed.fill")
+                                .foregroundStyle(Color.progressGradientStart)
+                            Text(day.date, format: .dateTime.day().month(.abbreviated).year())
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            Text("—")
+                                .foregroundStyle(.secondary)
+                            Text("\(day.totalPracticed) từ đã học")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                            Text("(\(Int(day.accuracy * 100))% đúng)")
+                                .font(.system(size: 12, weight: .regular, design: .rounded))
+                                .foregroundStyle(.tertiary)
+                            Spacer()
+                            Button("Đóng") {
+                                selectedBarDay = nil
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                        .padding(12)
+                        .background(mutedBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
                 }
                 .padding(sectionPadding)
-            }
+                .frame(minHeight: contentMinHeight)
         }
-        .frame(minHeight: contentMinHeight)
     }
 
     // MARK: - Accuracy by Topic (grid)
@@ -376,6 +431,10 @@ struct StatisticsDashboardView: View {
         case .month:
             let cutoff = calendar.date(byAdding: .day, value: -30, to: now) ?? now
             return history.filter { $0.date >= cutoff }
+        case .custom:
+            let start = calendar.startOfDay(for: chartDateFrom)
+            let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: chartDateTo)) ?? chartDateTo
+            return history.filter { $0.date >= start && $0.date < end }
         case .all:
             return history
         }

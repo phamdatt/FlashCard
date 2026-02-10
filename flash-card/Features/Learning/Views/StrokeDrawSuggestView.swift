@@ -93,6 +93,69 @@ struct DrawingCanvasView: NSViewRepresentable {
     }
 }
 
+// MARK: - SwiftUI-only drawing canvas (dùng trong sheet, tránh AppKit)
+struct SwiftUIDrawingCanvas: View {
+    @Binding var strokes: [[CGPoint]]
+    @State private var currentStroke: [CGPoint] = []
+    @GestureState private var dragLocation: CGPoint?
+    private let strokeWidth: CGFloat = 3
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                Color.appBackgroundText(isLight: colorScheme == .light)
+                canvasContent(in: geo.size)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .updating($dragLocation) { value, state, _ in
+                                state = value.location
+                            }
+                            .onChanged { value in
+                                let p = value.location
+                                if currentStroke.isEmpty {
+                                    currentStroke = [p]
+                                } else if let last = currentStroke.last, hypot(p.x - last.x, p.y - last.y) > 2 {
+                                    currentStroke.append(p)
+                                }
+                            }
+                            .onEnded { _ in
+                                if currentStroke.count > 1 {
+                                    strokes.append(currentStroke)
+                                }
+                                currentStroke = []
+                            }
+                    )
+            }
+        }
+    }
+
+    private func canvasContent(in size: CGSize) -> some View {
+        ZStack {
+            ForEach(Array(strokes.enumerated()), id: \.offset) { _, stroke in
+                strokePath(stroke)
+                    .stroke(Color.primary, style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round, lineJoin: .round))
+            }
+            if !currentStroke.isEmpty {
+                strokePath(currentStroke)
+                    .stroke(Color.primary, style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round, lineJoin: .round))
+            }
+        }
+        .frame(width: size.width, height: size.height)
+    }
+
+    private func strokePath(_ points: [CGPoint]) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        for p in points.dropFirst() {
+            path.addLine(to: p)
+        }
+        return path
+    }
+}
+
 // MARK: - Main View: Canvas + Suggest
 
 struct StrokeDrawSuggestView: View {

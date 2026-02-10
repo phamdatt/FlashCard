@@ -27,12 +27,13 @@ struct FlashcardMainView: View {
         case speaking = "Luyện nói"
         case fillInTheBlank = "Điền từ"
         case fillInPinyin = "Điền pinyin"
+        case meaningToHanzi = "Nghĩa → Hán tự"
 
-        /// Chỉ Tiếng Trung mới có mode Điền pinyin
+        /// Chỉ Tiếng Trung mới có Điền pinyin và Nghĩa → Hán tự
         static func availableTypes(subjectName: String?) -> [PracticeType] {
             let all: [PracticeType] = [.multipleChoice, .matching, .speedCards, .speaking, .fillInTheBlank]
             guard subjectName == "Tiếng Trung" else { return all }
-            return all + [.fillInPinyin]
+            return all + [.fillInPinyin, .meaningToHanzi]
         }
 
         var icon: String {
@@ -43,6 +44,7 @@ struct FlashcardMainView: View {
             case .speaking: return "mic.fill"
             case .fillInTheBlank: return "pencil.and.list.clipboard"
             case .fillInPinyin: return "character.bubble"
+            case .meaningToHanzi: return "character.cursor.ibeam"
             }
         }
     }
@@ -446,6 +448,19 @@ struct FlashcardMainView: View {
                 )
             case .fillInPinyin:
                 PinyinPracticeView(
+                    flashcards: shuffledFlashcards,
+                    topicId: topic.id,
+                    onComplete: { correctCount, total in
+                        score = correctCount
+                        totalAnswered = total
+                    },
+                    onReset: {
+                        recordPracticeIfNeeded()
+                        resetPractice()
+                    }
+                )
+            case .meaningToHanzi:
+                MeaningToHanziPracticeView(
                     flashcards: shuffledFlashcards,
                     topicId: topic.id,
                     onComplete: { correctCount, total in

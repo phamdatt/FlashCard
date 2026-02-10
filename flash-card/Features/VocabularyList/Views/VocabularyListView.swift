@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 // Sort options for vocabulary list
 enum VocabularySortOption: String, CaseIterable {
@@ -35,6 +36,11 @@ struct VocabularyListView: View {
 
     @State private var sortOption: VocabularySortOption = .orderInDB
     @State private var filterOption: VocabularyFilterOption = .all
+    /// Index trong displayedFlashcards của item được bấm lần trước (không giữ Shift) — dùng cho chọn theo vùng Shift+click.
+    @State private var selectionAnchorIndex: Int? = nil
+    @State private var isExportingCSV = false
+    /// Khi set: mở sheet rồi gắn NSSavePanel vào cửa sổ sheet để user chọn nơi lưu.
+    @State private var pendingCSVExport: (filename: String, data: Data)? = nil
 
     private var isLight: Bool { colorScheme == .light }
 
@@ -73,17 +79,18 @@ struct VocabularyListView: View {
                     )
                     .onTapGesture {
                         let shiftPressed = NSEvent.modifierFlags.contains(.shift)
+                        guard let clickedIndex = displayedFlashcards.firstIndex(where: { $0.id == flashcard.id }) else { return }
                         var t = Transaction()
                         t.disablesAnimations = true
                         withTransaction(t) {
                             if shiftPressed {
-                                let ids = viewModel.selectedFlashcardIds
-                                let newIds = ids.contains(flashcard.id)
-                                    ? ids.filter { $0 != flashcard.id }
-                                    : ids.union([flashcard.id])
-                                let newSet = Set(displayedFlashcards.filter { newIds.contains($0.id) })
-                                viewModel.setSelectedFlashcards(newSet)
+                                let anchor = selectionAnchorIndex ?? clickedIndex
+                                let low = min(anchor, clickedIndex)
+                                let high = max(anchor, clickedIndex)
+                                let rangeSelection = Array(displayedFlashcards[low...high])
+                                viewModel.setSelectedFlashcards(Set(rangeSelection))
                             } else {
+                                selectionAnchorIndex = clickedIndex
                                 viewModel.setSelectedFlashcards([flashcard])
                             }
                         }
@@ -120,6 +127,64 @@ struct VocabularyListView: View {
             }
             .frame(minWidth: 400)
         }
+        .sheet(isPresented: Binding(
+            get: { pendingCSVExport != nil },
+            set: { if !$0 { pendingCSVExport = nil } }
+        )) {
+            csvExportSheetContent
+        }
+    }
+
+    @ViewBuilder
+    private var csvExportSheetContent: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+            Text("Đang mở hộp thoại lưu file...")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(minWidth: 280, minHeight: 120)
+        .onAppear {
+            guard let pending = pendingCSVExport else { return }
+            let filename = pending.filename
+            let data = pending.data
+            NSApp.activate(ignoringOtherApps: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                let panel = NSSavePanel()
+                panel.canCreateDirectories = true
+                panel.nameFieldStringValue = filename
+                panel.title = "Lưu file CSV"
+                panel.prompt = "Lưu"
+                panel.message = "Chọn nơi lưu file CSV."
+                panel.allowedContentTypes = [UTType(filenameExtension: "csv", conformingTo: .plainText) ?? .plainText]
+                let window = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible })
+                if let win = window {
+                    panel.beginSheetModal(for: win) { response in
+                        pendingCSVExport = nil
+                        isExportingCSV = false
+                        guard response == .OK, let url = panel.url else { return }
+                        do {
+                            try data.write(to: url)
+                            viewModel.backupSaveResultMessage = "Đã lưu CSV: \(url.lastPathComponent)"
+                        } catch {
+                            viewModel.errorMessage = "Không ghi được file: \(error.localizedDescription)"
+                        }
+                    }
+                } else {
+                    let response = panel.runModal()
+                    pendingCSVExport = nil
+                    isExportingCSV = false
+                    guard response == .OK, let url = panel.url else { return }
+                    do {
+                        try data.write(to: url)
+                        viewModel.backupSaveResultMessage = "Đã lưu CSV: \(url.lastPathComponent)"
+                    } catch {
+                        viewModel.errorMessage = "Không ghi được file: \(error.localizedDescription)"
+                    }
+                }
+            }
+        }
     }
 
     private var vocabularySortFilterBar: some View {
@@ -144,10 +209,70 @@ struct VocabularyListView: View {
             Text("\(displayedFlashcards.count) từ")
                 .scaledFont(.xs)
                 .foregroundStyle(.secondary)
+            Button(action: exportVocabularyCSV) {
+                Label("Xuất CSV", systemImage: "square.and.arrow.up")
+                    .scaledFont(.sm)
+            }
+            .buttonStyle(.bordered)
+            .disabled(displayedFlashcards.isEmpty || isExportingCSV)
+            .cursor(.pointingHand)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Color.appBackgroundControl(isLight: isLight))
+    }
+
+    private func csvEscape(_ s: String) -> String {
+        if s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r") {
+            return "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        }
+        return s
+    }
+
+    private func exportVocabularyCSV() {
+        let items = displayedFlashcards
+        guard !items.isEmpty else { return }
+        let csvContent = buildCSVContent(flashcards: items)
+        let filename = "tu-vung-\(topic.name.replacingOccurrences(of: " ", with: "-"))-\(dateStringForExport()).csv"
+        guard let data = csvContent.data(using: .utf8) else { return }
+        isExportingCSV = true
+        pendingCSVExport = (filename, data)
+    }
+
+    private func buildCSVContent(flashcards: [Flashcard]) -> String {
+        let isChinese = viewModel.selectedSubject?.name == "Tiếng Trung"
+        if isChinese {
+            let header = "Từ Hán,Nghĩa,Loại từ,Ghi chú,Bộ Thủ,Phiên âm"
+            let rows = flashcards.map { fc in
+                [
+                    csvEscape(fc.questionDisplayText),
+                    csvEscape(fc.answer),
+                    csvEscape(""), // Loại từ — chưa có trong model, để trống
+                    csvEscape(fc.notes ?? ""),
+                    csvEscape(fc.radical ?? ""),
+                    csvEscape(fc.displayPhonetic ?? "")
+                ].joined(separator: ",")
+            }
+            return ([header] + rows).joined(separator: "\n")
+        } else {
+            let header = "Từ gốc,Nghĩa,Phiên âm,Gợi ý,Ghi chú"
+            let rows = flashcards.map { fc in
+                [
+                    csvEscape(fc.questionDisplayText),
+                    csvEscape(fc.answer),
+                    csvEscape(fc.displayPhonetic ?? ""),
+                    csvEscape(fc.hint ?? ""),
+                    csvEscape(fc.notes ?? "")
+                ].joined(separator: ",")
+            }
+            return ([header] + rows).joined(separator: "\n")
+        }
+    }
+
+    private func dateStringForExport() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd-HHmm"
+        return f.string(from: Date())
     }
 
     private func vocabularyRow(flashcard: Flashcard) -> some View {

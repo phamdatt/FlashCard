@@ -9,6 +9,7 @@ import Foundation
 import UserNotifications
 
 private let reviewReminderEnabledKey = "reviewReminderEnabled"
+private let pendingOpenReviewFromNotificationKey = "pendingOpenReviewFromNotification"
 
 enum ReviewReminderManager {
     /// Identifier của notification nhắc ôn (để AppDelegate biết khi user bấm vào).
@@ -58,5 +59,11 @@ enum ReviewReminderManager {
 
     static func cancelReminder() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [notificationIdentifier])
+    }
+
+    /// Set when user taps the review notification; ContentView clears it after switching to review.
+    static var pendingOpenReviewFromNotification: Bool {
+        get { UserDefaults.standard.bool(forKey: pendingOpenReviewFromNotificationKey) }
+        set { UserDefaults.standard.set(newValue, forKey: pendingOpenReviewFromNotificationKey) }
     }
 }

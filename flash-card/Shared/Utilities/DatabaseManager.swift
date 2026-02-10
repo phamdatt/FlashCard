@@ -1332,23 +1332,26 @@ class DatabaseManager {
         sqlite3_finalize(stmt)
     }
     
-    /// Flashcard ids due for review today (next_review_date <= today).
+    /// Flashcard ids due for review today (next_review_date nằm trong hôm nay hoặc đã quá hạn).
+    /// So sánh với đầu ngày mai (local) để thẻ đúng hẹn "hôm nay" luôn được tính, không phụ thuộc giờ.
     func getDueFlashcards() -> [Int] {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let nowStr = formatter.string(from: Date())
-        
+        let calendar = Calendar.current
+        let startOfTomorrow = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: Date()) ?? Date())
+        let boundStr = formatter.string(from: startOfTomorrow)
+
         let sql = """
             SELECT flashcard_id FROM flashcard_progress
-            WHERE next_review_date <= ?
+            WHERE next_review_date < ?
             ORDER BY next_review_date ASC
         """
         var stmt: OpaquePointer?
         var flashcardIds: [Int] = []
-        
+
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
-        sqlite3_bind_text(stmt, 1, (nowStr as NSString).utf8String, -1, nil)
-        
+        sqlite3_bind_text(stmt, 1, (boundStr as NSString).utf8String, -1, nil)
+
         while sqlite3_step(stmt) == SQLITE_ROW {
             flashcardIds.append(Int(sqlite3_column_int(stmt, 0)))
         }
