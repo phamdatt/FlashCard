@@ -26,14 +26,16 @@ struct FlashcardMainView: View {
         case speedCards = "Thẻ nhớ nhanh"
         case speaking = "Luyện nói"
         case fillInTheBlank = "Điền từ"
+        case listening = "Nghe → chọn"
         case fillInPinyin = "Điền pinyin"
         case meaningToHanzi = "Nghĩa → Hán tự"
+        case similarLooking = "Từ dễ nhầm"
 
-        /// Chỉ Tiếng Trung mới có Điền pinyin và Nghĩa → Hán tự
+        /// Tiếng Anh & Tiếng Trung: Trắc nghiệm, Nối, Thẻ nhanh, Nói, Điền từ, Nghe→chọn. Chỉ Tiếng Trung thêm: Điền pinyin, Nghĩa→Hán tự, Từ dễ nhầm.
         static func availableTypes(subjectName: String?) -> [PracticeType] {
-            let all: [PracticeType] = [.multipleChoice, .matching, .speedCards, .speaking, .fillInTheBlank]
+            let all: [PracticeType] = [.multipleChoice, .matching, .speedCards, .speaking, .fillInTheBlank, .listening]
             guard subjectName == "Tiếng Trung" else { return all }
-            return all + [.fillInPinyin, .meaningToHanzi]
+            return all + [.fillInPinyin, .meaningToHanzi, .similarLooking]
         }
 
         var icon: String {
@@ -43,8 +45,10 @@ struct FlashcardMainView: View {
             case .speedCards: return "bolt.fill"
             case .speaking: return "mic.fill"
             case .fillInTheBlank: return "pencil.and.list.clipboard"
+            case .listening: return "speaker.wave.2.fill"
             case .fillInPinyin: return "character.bubble"
             case .meaningToHanzi: return "character.cursor.ibeam"
+            case .similarLooking: return "eye.trianglebadge.exclamationmark"
             }
         }
     }
@@ -472,6 +476,39 @@ struct FlashcardMainView: View {
                         resetPractice()
                     }
                 )
+            case .listening:
+                ListeningPracticeView(
+                    flashcards: shuffledFlashcards,
+                    topic: topic,
+                    topicId: topic.id,
+                    subjectName: viewModel.selectedSubject?.name ?? "",
+                    subjectIcon: viewModel.selectedSubject?.displayIcon,
+                    onComplete: { correctCount, total in
+                        score = correctCount
+                        totalAnswered = total
+                    },
+                    onReset: {
+                        recordPracticeIfNeeded()
+                        resetPractice()
+                    }
+                )
+            case .similarLooking:
+                SimilarLookingPracticeView(
+                    flashcards: shuffledFlashcards,
+                    topic: topic,
+                    topicId: topic.id,
+                    subjectName: viewModel.selectedSubject?.name ?? "",
+                    subjectIcon: viewModel.selectedSubject?.displayIcon,
+                    radicalForCharacter: viewModel.radicalForCharacter,
+                    onComplete: { correctCount, total in
+                        score = correctCount
+                        totalAnswered = total
+                    },
+                    onReset: {
+                        recordPracticeIfNeeded()
+                        resetPractice()
+                    }
+                )
             }
         }
     }
@@ -481,11 +518,14 @@ struct FlashcardMainView: View {
         totalAnswered > 0 ? Int((Double(score) / Double(totalAnswered)) * 100) : 0
     }
 
-    /// Count of cards to review for selected source (for Điền pinyin: only cards that have pinyin)
+    /// Count of cards to review for selected source (for Điền pinyin: only cards that have pinyin; for Từ dễ nhầm: only cards with similar-looking chars)
     private var practicePoolCount: Int {
         let pool = practicePool()
         if selectedPracticeType == .fillInPinyin {
             return pool.filter(\.hasPinyin).count
+        }
+        if selectedPracticeType == .similarLooking {
+            return pool.filter { SimilarLookingData.hasSimilarLookingCharacter($0.questionDisplayText) }.count
         }
         return pool.count
     }
@@ -522,6 +562,9 @@ struct FlashcardMainView: View {
         var pool = practicePool()
         if selectedPracticeType == .fillInPinyin {
             pool = pool.filter(\.hasPinyin)
+        }
+        if selectedPracticeType == .similarLooking {
+            pool = pool.filter { SimilarLookingData.hasSimilarLookingCharacter($0.questionDisplayText) }
         }
         let countToUse = min(selectedWordCount, pool.count)
 

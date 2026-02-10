@@ -33,6 +33,7 @@ struct StatisticsDashboardView: View {
     @State private var selectedBarDay: DailyPractice?
     @State private var topMistakeFlashcards: [(Flashcard, Int)] = []
     @State private var longestSinceReview: [(Flashcard, String)] = []
+    @State private var subjectStats: [SubjectStats] = []
 
     enum TimeRange: String, CaseIterable {
         case week = "Tuần"
@@ -184,18 +185,74 @@ struct StatisticsDashboardView: View {
         .padding(.top, 48)
     }
 
-    // MARK: - Overview Cards (larger, 2x2 grid)
+    // MARK: - Overview Cards (Tất cả + theo môn: gọn, hiện đại)
     private func overviewCards(stats: LearningStatistics) -> some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible(), spacing: 20),
-            GridItem(.flexible(), spacing: 20)
-        ], spacing: 20) {
-            StatCard(title: "Tổng từ", value: "\(stats.totalFlashcards)", icon: "book.fill", gradient: [.progressGradientStart, .progressGradientEnd])
-            StatCard(title: "Đã học", value: "\(stats.learnedFlashcards)", icon: "checkmark.circle.fill", gradient: [.accuracyGradientHigh, .accuracyGradientLow])
-            StatCard(title: "Đã thuộc", value: "\(stats.masteredFlashcards)", icon: "star.fill", gradient: [.accuracyGradientMid, .accuracyGradientMid.opacity(0.8)])
-            StatCard(title: "Cần ôn", value: "\(stats.dueFlashcards)", icon: "clock.fill", gradient: [.accuracyGradientNeeds, .accuracyGradientNeeds.opacity(0.8)])
+        VStack(alignment: .leading, spacing: 20) {
+            // Tổng quan — 4 card chính
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 16),
+                GridItem(.flexible(), spacing: 16)
+            ], spacing: 16) {
+                StatCard(title: "Tổng từ", value: "\(stats.totalFlashcards)", icon: "book.fill", gradient: [.progressGradientStart, .progressGradientEnd])
+                StatCard(title: "Đã học", value: "\(stats.learnedFlashcards)", icon: "checkmark.circle.fill", gradient: [.accuracyGradientHigh, .accuracyGradientLow])
+                StatCard(title: "Đã thuộc", value: "\(stats.masteredFlashcards)", icon: "star.fill", gradient: [.accuracyGradientMid, .accuracyGradientMid.opacity(0.8)])
+                StatCard(title: "Cần ôn", value: "\(stats.dueFlashcards)", icon: "clock.fill", gradient: [.accuracyGradientNeeds, .accuracyGradientNeeds.opacity(0.8)])
+            }
+
+            // Theo môn — một dòng gọn mỗi môn
+            if !subjectStats.isEmpty {
+                VStack(spacing: 0) {
+                    Text("Theo môn học")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                        .textCase(.uppercase)
+                        .tracking(0.6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, 12)
+
+                    VStack(spacing: 8) {
+                        ForEach(subjectStats) { sub in
+                            subjectOverviewRow(sub: sub)
+                        }
+                    }
+                }
+            }
         }
         .padding(sectionPadding)
+    }
+
+    /// Một dòng tinh gọn: tên môn + 4 chỉ số (Tổng · Đã học · Đã thuộc · Cần ôn).
+    private func subjectOverviewRow(sub: SubjectStats) -> some View {
+        HStack(spacing: 20) {
+            Text(sub.name)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(.primary)
+                .frame(width: 100, alignment: .leading)
+
+            HStack(spacing: 16) {
+                miniStat(value: sub.total, label: "Tổng")
+                miniStat(value: sub.learned, label: "Đã học")
+                miniStat(value: sub.mastered, label: "Đã thuộc")
+                miniStat(value: sub.due, label: "Cần ôn")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(mutedBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func miniStat(value: Int, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(value)")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+            Text(label)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.tertiary)
+        }
+        .frame(minWidth: 44, alignment: .leading)
     }
 
     // MARK: - Bar Chart (vertical bars by day – gradient, rounded top, consistent spacing)
@@ -451,6 +508,16 @@ struct StatisticsDashboardView: View {
         statistics = DatabaseManager.shared.getLearningStatistics()
         topMistakeFlashcards = DatabaseManager.shared.getTopMistakeFlashcards(limit: 15)
         longestSinceReview = DatabaseManager.shared.getFlashcardsLongestSinceReview(limit: 15)
+        subjectStats = viewModel.subjects.map { subject in
+            SubjectStats(
+                id: subject.id,
+                name: subject.name,
+                total: DatabaseManager.shared.getTotalFlashcardsCount(subjectId: subject.id),
+                learned: DatabaseManager.shared.getLearnedFlashcardsCount(subjectId: subject.id),
+                mastered: DatabaseManager.shared.getMasteredFlashcardsCount(subjectId: subject.id),
+                due: DatabaseManager.shared.getDueFlashcards(subjectId: subject.id).count
+            )
+        }
     }
 
     private var topMistakesSection: some View {

@@ -137,9 +137,13 @@ Image(systemName: "checkmark.circle.fill")
 
                     VStack(spacing: 12) {
                         HStack {
-                            Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .font(.app(.title2))
-                                .foregroundStyle(isCorrect ? .green : .red)
+                            if isCorrect {
+                                GreenCheckmarkView(size: 28)
+                            } else {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.app(.title2))
+                                    .foregroundStyle(.red)
+                            }
                             Text(isCorrect ? "Chính xác!" : "Chưa đúng")
                                 .font(.app(.title2))
                                 .fontWeight(.semibold)

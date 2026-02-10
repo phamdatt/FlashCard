@@ -145,9 +145,7 @@ Image(systemName: "checkmark.circle.fill")
                 .overlay(
                     Group {
                         if isMatched {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(.green.opacity(0.8))
+                            GreenCheckmarkView(size: 24)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                                 .padding(8)
                         }
@@ -191,9 +189,7 @@ Image(systemName: "checkmark.circle.fill")
                 .overlay(
                     Group {
                         if isMatched {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(.green.opacity(0.8))
+                            GreenCheckmarkView(size: 24)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                                 .padding(8)
                         }

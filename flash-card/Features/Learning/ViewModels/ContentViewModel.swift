@@ -73,8 +73,14 @@ class ContentViewModel: ObservableObject {
     @Published var newReadingTitle = ""
     @Published var newReadingContent = ""
 
-    // Streak
+    // Streak & daily goal
     @Published var streakInfo = StreakInfo(currentStreak: 0, longestStreak: 0, didPracticeToday: false)
+    @Published var wordsPracticedToday: Int = 0
+    private let dailyGoalKey = "dailyReviewGoal"
+    var dailyReviewGoal: Int {
+        get { UserDefaults.standard.object(forKey: dailyGoalKey) as? Int ?? 10 }
+        set { UserDefaults.standard.set(newValue, forKey: dailyGoalKey) }
+    }
     
     // SRS Views
     @Published var showReviewMode = false
@@ -766,6 +772,7 @@ class ContentViewModel: ObservableObject {
 
     func loadStreakInfo() {
         streakInfo = database.getStreakInfo()
+        wordsPracticedToday = database.getWordsPracticedToday()
     }
 
     func recordPractice(practiceType: String, topicId: Int, correct: Int, total: Int) {

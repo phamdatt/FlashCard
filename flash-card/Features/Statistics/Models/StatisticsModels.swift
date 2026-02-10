@@ -20,6 +20,16 @@ struct LearningStatistics: Codable {
     let streakInfo: StreakInfo
 }
 
+/// Thống kê theo từng môn (Tiếng Anh, Tiếng Trung, …) để phân biệt trong tổng quan.
+struct SubjectStats: Identifiable {
+    let id: Int
+    let name: String
+    let total: Int
+    let learned: Int
+    let mastered: Int
+    let due: Int
+}
+
 struct DailyPractice: Identifiable, Codable {
     let id: Int
     let date: Date

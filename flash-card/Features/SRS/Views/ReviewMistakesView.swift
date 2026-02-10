@@ -468,15 +468,7 @@ struct FlashcardReviewView: View {
         let accuracy = completedCount > 0 ? Int((Double(correctCount) / Double(completedCount)) * 100) : 0
         return VStack(spacing: 36) {
             Spacer()
-            ZStack {
-                Circle()
-                    .fill(Color.green.opacity(0.12))
-                    .frame(width: 100, height: 100)
-                Image(systemName: "checkmark.circle.fill")
-                    .scaledFont(.hero)
-                    .foregroundStyle(.green)
-                    .symbolEffect(.bounce)
-            }
+            GreenCheckmarkView(size: 64)
             VStack(spacing: 10) {
                 Text("Hoàn thành ôn tập!")
                     .scaledFont(.xl3)

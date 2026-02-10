@@ -34,7 +34,7 @@ struct SidebarView: View {
         .environment(\.fontSizeMultiplier, fontSizeManager.fontSizeMultiplier)
         .scrollContentBackground(colorScheme == .dark ? .hidden : .visible)
         .background(colorScheme == .dark ? Color.appDarkBackground : Color.clear)
-        .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
+        .navigationSplitViewColumnWidth(min: 240, ideal: 250, max: 300)
         .navigationTitle("Menu")
         .tint(.green)
         .safeAreaInset(edge: .bottom) {
@@ -55,6 +55,7 @@ struct SidebarView: View {
                 .fontWeight(.medium)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
+                .truncationMode(.tail)
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             Spacer()
             Image(systemName: "chevron.right")
@@ -178,6 +179,7 @@ struct SidebarView: View {
                                 .scaledFont(.xs)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                     }
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
@@ -185,10 +187,16 @@ struct SidebarView: View {
                     Spacer()
 
                     if viewModel.streakInfo.didPracticeToday {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .green : .secondary)
-                            .scaledFont(.sm)
-                            .frame(width: 44, alignment: .trailing)
+                        Group {
+                            if viewModel.streakInfo.currentStreak > 0 {
+                                GreenCheckmarkView(size: 20)
+                            } else {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                                    .scaledFont(.sm)
+                            }
+                        }
+                        .frame(width: 44, alignment: .trailing)
                     } else {
                         Text("Chưa học")
                             .scaledFont(.xs)
@@ -206,6 +214,26 @@ struct SidebarView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
                 )
+
+                // Mục tiêu ôn mỗi ngày
+                if viewModel.dailyReviewGoal > 0 {
+                    HStack(spacing: 8) {
+                        Image(systemName: "target")
+                            .scaledFont(.sm)
+                            .foregroundStyle(.secondary)
+                        Text("Đã ôn: \(viewModel.wordsPracticedToday)/\(viewModel.dailyReviewGoal) từ hôm nay")
+                            .scaledFont(.xs)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
+                    )
+                }
 
                 // Theme toggle
                 Button(action: {
@@ -230,6 +258,7 @@ struct SidebarView: View {
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
                         Spacer()
@@ -262,6 +291,7 @@ struct SidebarView: View {
                         .fontWeight(.medium)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
+                        .truncationMode(.tail)
                         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                     Spacer()
                     Toggle("", isOn: $reviewReminderEnabled)
@@ -292,6 +322,7 @@ struct SidebarView: View {
                         .fontWeight(.medium)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
+                        .truncationMode(.tail)
                         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                     Spacer()
                     Toggle("", isOn: $practiceSoundEnabled)
@@ -329,6 +360,7 @@ struct SidebarView: View {
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -366,6 +398,7 @@ struct SidebarView: View {
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -405,6 +438,7 @@ struct SidebarView: View {
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -444,6 +478,7 @@ struct SidebarView: View {
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -503,6 +538,7 @@ struct TopicsListView: View {
                 .textFieldStyle(.plain)
                 .scaledFont(.sm)
                 .focused($isSearchFocused)
+                .lineLimit(1)
             if !viewModel.searchText.isEmpty {
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -518,6 +554,7 @@ struct TopicsListView: View {
                 .transition(.scale.combined(with: .opacity))
             }
         }
+        .frame(minWidth: 0, maxWidth: .infinity)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
 .background(
@@ -557,6 +594,8 @@ struct TopicsListView: View {
                         .font(.app(.caption))
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                         .padding(.horizontal, 16)
                     List {
                         ForEach(Array(results.enumerated()), id: \.offset) { _, pair in
@@ -568,13 +607,16 @@ struct TopicsListView: View {
                                     Text(pair.topic.name)
                                         .scaledFont(.xs)
                                         .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
                                     Text(pair.flashcard.questionDisplayText)
                                         .scaledFont(.sm)
                                         .fontWeight(.medium)
                                         .foregroundStyle(.primary)
                                         .lineLimit(1)
+                                        .truncationMode(.tail)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                                 .padding(.vertical, 4)
                             }
                             .buttonStyle(.plain)
@@ -671,6 +713,7 @@ struct TopicsListView: View {
                     .scaledFont(.sm)
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .contentShape(Rectangle())
@@ -789,12 +832,11 @@ private struct TopicRowView: View {
 
     private var isReadingSubject: Bool { subject.name == "Bài đọc" }
     private var hasPracticed: Bool { practiceCount > 0 }
+    /// Topic được làm nhiều → hiển thị nổi bật (badge / viền).
+    private var isPracticedALot: Bool { practiceCount >= 5 }
 
     var body: some View {
         HStack(spacing: 12) {
-            if showReorderHandle {
-                LongPressDragHandle(topicId: topic.id, allowedSourceTopicId: $reorderSourceTopicId)
-            }
             ZStack {
                 Circle()
                     .fill(isSelected ? Color.gray.opacity(isLight ? 0.2 : 0.25) : Color.gray.opacity(isLight ? 0.1 : 0.15))
@@ -805,25 +847,44 @@ private struct TopicRowView: View {
             }
             .frame(width: 40)
             VStack(alignment: .leading, spacing: 4) {
-                Text(topic.name)
-                    .scaledFont(.sm)
-                    .fontWeight(isSelected ? .semibold : .medium)
-                    .foregroundStyle(.primary)
+                HStack(spacing: 6) {
+                    Text(topic.name)
+                        .scaledFont(.sm)
+                        .fontWeight(isSelected ? .semibold : .medium)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if isPracticedALot {
+                        Text("\(practiceCount)")
+                            .scaledFont(.xs)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.green))
+                    }
+                }
                 HStack(spacing: 6) {
                     Image(systemName: isReadingSubject ? "doc.richtext" : "rectangle.stack.fill")
                         .scaledFont(.xs)
+                        .foregroundStyle(.secondary)
                     Text(isReadingSubject ? "\(topic.readings.count) bài đọc" : "\(topic.flashcards.count) flashcards")
                         .scaledFont(.sm)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     Text("•")
                         .scaledFont(.xs)
                         .foregroundStyle(.secondary)
                     Text(hasPracticed ? "Đã làm" : "Chưa làm")
-                        .scaledFont(.xs)
+                        .scaledFont(.sm)
                         .foregroundStyle(hasPracticed ? .green : .secondary)
+                        .lineLimit(1)
                 }
-                .foregroundStyle(.secondary)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             }
-            Spacer()
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            Spacer(minLength: 8)
             Image(systemName: "chevron.right")
                 .scaledFont(.xs)
                 .fontWeight(.semibold)
@@ -831,6 +892,8 @@ private struct TopicRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        .clipped()
         .contentShape(Rectangle())
         .tag(topic)
         .onDrop(of: showReorderHandle ? [.plainText] : [], isTargeted: nil) { providers in
@@ -1703,7 +1766,6 @@ struct FlashcardDetailView: View {
     @State private var nextReviewDateString: String? = nil
     @State private var hintExpanded = true
     @State private var contentWidth: CGFloat = 400
-    @State private var showStrokeOrderSheet = false
 
     private var isPracticeMode: Bool { onAnswered != nil }
 
@@ -1754,18 +1816,11 @@ struct FlashcardDetailView: View {
             } else {
                 traditionalFlashcardView
             }
-            if !isPracticeMode && subjectName == "Tiếng Trung" && !flashcard.questionDisplayText.isEmpty {
-                strokeOrderSection
-            }
             if !isPracticeMode { Spacer() }
         }
         .padding(EdgeInsets(top: 16, leading: isPracticeMode ? 20 : 16, bottom: 16, trailing: isPracticeMode ? 20 : 16))
         .background(GeometryReader { g in Color.clear.preference(key: WidthPreferenceKey.self, value: g.size.width) })
         .onPreferenceChange(WidthPreferenceKey.self) { contentWidth = $0 }
-        .sheet(isPresented: $showStrokeOrderSheet) {
-            StrokeOrderSheet(characters: flashcard.questionDisplayText, onDismiss: { showStrokeOrderSheet = false })
-                .environmentObject(fontSizeManager)
-        }
 
         ScrollView {
             inner
@@ -1863,49 +1918,6 @@ struct FlashcardDetailView: View {
         }
     }
 
-    /// Khối "Cách viết hán tự" (chỉ Tiếng Trung, có ít nhất 1 ký tự): số nét + nút mở sheet thứ tự nét.
-    private var strokeOrderSection: some View {
-        let word = flashcard.questionDisplayText
-        let isLight = colorScheme == .light
-        let strokeDescriptions: [(Character, Int?)] = word.map { ch in (ch, StrokeCountData.strokeCount(for: ch)) }
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "hand.draw.fill")
-                    .font(.app(.title3))
-                    .foregroundStyle(.secondary)
-                Text("Cách viết hán tự")
-                    .font(.app(.headline))
-                    .fontWeight(.semibold)
-            }
-            Text(strokeOrderHintText(strokeDescriptions))
-                .font(.app(.subheadline))
-                .foregroundStyle(.secondary)
-            Button(action: { showStrokeOrderSheet = true }) {
-                Label("Xem thứ tự nét (kiểu Hanzi)", systemImage: "list.number")
-                    .font(.app(.subheadline))
-                    .fontWeight(.medium)
-            }
-            .buttonStyle(.borderedProminent)
-            .cursor(.pointingHand)
-            .tint(.accentColor)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.appCardBackground(isLight: isLight))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.appBorder(isLight: isLight), lineWidth: 1)
-        )
-        .cornerRadius(10)
-    }
-
-    private func strokeOrderHintText(_ pairs: [(Character, Int?)]) -> String {
-        let parts = pairs.map { ch, count in
-            count.map { "\(ch)(\($0) nét)" } ?? "\(ch)(? nét)"
-        }
-        return "Từ gốc: " + parts.joined(separator: ", ")
-    }
-    
     // Multiple choice question view — dùng contentWidth (không GeometryReader bọc ngoài) để scroll được khi embed trong practice
     private var multipleChoiceView: some View {
         let isCompact = contentWidth < 420 || isPracticeMode
@@ -2072,10 +2084,7 @@ struct FlashcardDetailView: View {
                 
                 if showResult {
                     if isCorrect {
-                        Image(systemName: "checkmark.circle.fill")
-                            .scaledFont(isCompact ? .base : .lg)
-                            .foregroundStyle(.green)
-                            .symbolEffect(.bounce.up, value: showResult)
+                        GreenCheckmarkView(size: isCompact ? 22 : 28)
                             .shadow(color: .green.opacity(0.5), radius: 4)
                     } else if isSelected && !isCorrect {
                         Image(systemName: "xmark.circle.fill")
@@ -2254,40 +2263,15 @@ struct ContentView: View {
     @EnvironmentObject var appearanceManager: AppearanceManager
     @Environment(\.colorScheme) private var colorScheme
 
-    /// Ngưỡng width: dưới đây thì chỉ hiển thị cột detail (cột 3).
-    private let narrowWindowThreshold: CGFloat = 900
-    /// Chiều rộng / cao tối thiểu của cửa sổ (không cho kéo nhỏ hơn).
-    private let minWindowWidth: CGFloat = 400
-    private let minWindowHeight: CGFloat = 420
-
     var body: some View {
-        GeometryReader { geo in
-            NavigationSplitView(columnVisibility: $columnVisibility) {
-                SidebarView(viewModel: viewModel)
-            } content: {
-                middleColumn
-            } detail: {
-                detailColumn
-            }
-            .background(colorScheme == .dark ? Color.appDarkBackground : Color.clear)
-            .onChange(of: geo.size.width) { _, width in
-                if width < narrowWindowThreshold {
-                    if columnVisibility != .detailOnly {
-                        columnVisibility = .detailOnly
-                    }
-                } else {
-                    updateColumnVisibility(animated: true)
-                }
-            }
-            .onAppear {
-                if geo.size.width < narrowWindowThreshold {
-                    columnVisibility = .detailOnly
-                }
-            }
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            SidebarView(viewModel: viewModel)
+        } content: {
+            middleColumn
+        } detail: {
+            detailColumn
         }
-        .onAppear {
-            setWindowMinSizeIfNeeded()
-        }
+        .background(colorScheme == .dark ? Color.appDarkBackground : Color.clear)
         .applyFontSizeScaling(multiplier: fontSizeManager.fontSizeMultiplier)
         .onChange(of: viewModel.isInSpecialMode) { oldValue, newValue in
             // Only update if actually changed to avoid unnecessary animations
@@ -2440,17 +2424,17 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .navigationSplitViewColumnWidth(min: 260, ideal: 320, max: 420)
+            .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
         } else if let subject = viewModel.selectedSubject {
             TopicsListView(viewModel: viewModel, subject: subject)
-                .navigationSplitViewColumnWidth(min: 260, ideal: 320, max: 420)
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
         } else {
             ContentUnavailableView(
                 "Chọn môn học",
                 systemImage: "book.fill",
                 description: Text("Chọn một môn học từ sidebar")
             )
-            .navigationSplitViewColumnWidth(min: 260, ideal: 320, max: 420)
+            .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
         }
     }
     
@@ -2484,8 +2468,8 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .frame(minWidth: 380)
-        .navigationSplitViewColumnWidth(min: 380, ideal: 600, max: .infinity)
+        .frame(minWidth: 400)
+        .navigationSplitViewColumnWidth(min: 400, ideal: 600, max: .infinity)
         .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
     
@@ -2493,8 +2477,6 @@ struct ContentView: View {
     
     private func updateColumnVisibility(animated: Bool) {
         let newVisibility: NavigationSplitViewVisibility = viewModel.isInSpecialMode ? .doubleColumn : .all
-
-        // Use transaction for smoother animation
         if animated {
             var transaction = Transaction(animation: .easeInOut(duration: 0.15))
             transaction.disablesAnimations = false
@@ -2503,16 +2485,6 @@ struct ContentView: View {
             }
         } else {
             columnVisibility = newVisibility
-        }
-    }
-
-    /// Chặn kéo cửa sổ quá nhỏ: đặt minSize cho window.
-    private func setWindowMinSizeIfNeeded() {
-        let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible })
-        guard let w = window else { return }
-        let minSize = NSSize(width: minWindowWidth, height: minWindowHeight)
-        if w.minSize != minSize {
-            w.minSize = minSize
         }
     }
 }
@@ -2556,246 +2528,6 @@ struct SpeechAccentSheetView: View {
         .onAppear {
             selectedAccent = speechManager.preferredEnglishAccent
         }
-    }
-}
-
-// MARK: - Cách viết hán tự theo thứ tự (kiểu Hanzi app)
-struct StrokeOrderSheet: View {
-    let characters: String
-    let onDismiss: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var selectedCharIndex: Int = 0
-    @State private var currentStrokeIndex: Int = 0
-    @State private var strokes: [[CGPoint]] = []
-    @State private var isAutoPlaying: Bool = false
-    @State private var autoPlayTick: Int = 0
-
-    private var isLight: Bool { colorScheme == .light }
-    private var characterList: [Character] { Array(characters) }
-    private var selectedCharacter: Character? {
-        guard selectedCharIndex >= 0, selectedCharIndex < characterList.count else { return nil }
-        return characterList[selectedCharIndex]
-    }
-    private var strokeOrder: [StrokeType] {
-        guard let ch = selectedCharacter else { return [] }
-        return StrokeOrderData.strokeOrder(for: ch) ?? []
-    }
-    private var strokeCount: Int? {
-        selectedCharacter.flatMap { StrokeCountData.strokeCount(for: $0) }
-    }
-
-    var body: some View {
-        if characters.isEmpty {
-            emptyView
-        } else {
-            mainContent
-        }
-    }
-
-    private var emptyView: some View {
-        VStack(spacing: 12) {
-            Text("Không có ký tự để xem thứ tự nét.")
-                .font(.app(.body))
-            Button("Đóng", action: onDismiss)
-                .buttonStyle(.borderedProminent)
-        }
-        .padding(24)
-        .frame(minWidth: 280)
-    }
-
-    private var mainContent: some View {
-        VStack(spacing: 0) {
-            header
-            if characterList.count > 1 {
-                characterPicker
-            }
-            characterDisplay
-            strokeOrderSteps
-            canvasSection
-            bottomBar
-        }
-        .frame(width: 440)
-        .frame(minHeight: 520)
-        .background(Color.appBackgroundPage(isLight: isLight))
-        .onReceive(Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()) { _ in
-            if isAutoPlaying { autoPlayTick += 1 }
-        }
-        .onChange(of: autoPlayTick) { _, _ in
-            if isAutoPlaying, strokeOrder.count > 1 {
-                currentStrokeIndex = (currentStrokeIndex + 1) % strokeOrder.count
-            }
-        }
-        .onChange(of: selectedCharIndex) { _, _ in
-            isAutoPlaying = false
-        }
-        .onDisappear {
-            isAutoPlaying = false
-        }
-    }
-
-    private var header: some View {
-        HStack {
-            Text("Cách viết hán tự theo thứ tự")
-                .font(.app(.title2))
-                .fontWeight(.semibold)
-            Spacer()
-            Button(action: onDismiss) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .cursor(.pointingHand)
-        }
-        .padding(12)
-    }
-
-    private var characterPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(Array(characterList.enumerated()), id: \.offset) { index, ch in
-                    Button(action: {
-                        selectedCharIndex = index
-                        currentStrokeIndex = 0
-                        strokes = []
-                    }) {
-                        Text(String(ch))
-                            .font(.system(size: 24, weight: .semibold))
-                            .frame(width: 44, height: 44)
-                            .background(selectedCharIndex == index ? Color.accentColor.opacity(0.2) : Color.appCardBackground(isLight: isLight))
-                            .cornerRadius(8)
-                    }
-                    .buttonStyle(.plain)
-                    .cursor(.pointingHand)
-                }
-            }
-            .padding(.horizontal, 12)
-        }
-        .padding(.bottom, 8)
-    }
-
-    private var characterDisplay: some View {
-        Group {
-            if let ch = selectedCharacter {
-                Text(String(ch))
-                    .font(.system(size: 72, weight: .bold))
-                    .padding(.vertical, 8)
-                if let count = strokeCount {
-                    Text("\(count) nét")
-                        .font(.app(.subheadline))
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    private var strokeOrderSteps: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !strokeOrder.isEmpty {
-                HStack {
-                    Text("Thứ tự nét:")
-                        .font(.app(.subheadline))
-                        .fontWeight(.semibold)
-                    Spacer()
-                    if strokeOrder.count > 1 {
-                        HStack(spacing: 8) {
-                            Button(action: { isAutoPlaying.toggle() }) {
-                                Label(isAutoPlaying ? "Dừng" : "Tự động chạy", systemImage: isAutoPlaying ? "stop.fill" : "play.fill")
-                                    .font(.app(.caption))
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(isAutoPlaying ? .orange : .accentColor)
-                            .cursor(.pointingHand)
-                            HStack(spacing: 4) {
-                                Button(action: { currentStrokeIndex = max(0, currentStrokeIndex - 1) }) {
-                                    Image(systemName: "chevron.left.circle.fill")
-                                        .font(.title3)
-                                }
-                                .buttonStyle(.plain)
-                                .cursor(.pointingHand)
-                                Text("Nét \(currentStrokeIndex + 1)/\(strokeOrder.count)")
-                                    .font(.app(.caption))
-                                    .foregroundStyle(.secondary)
-                                Button(action: { currentStrokeIndex = min(strokeOrder.count - 1, currentStrokeIndex + 1) }) {
-                                    Image(systemName: "chevron.right.circle.fill")
-                                        .font(.title3)
-                                }
-                                .buttonStyle(.plain)
-                                .cursor(.pointingHand)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 12)
-                if currentStrokeIndex < strokeOrder.count {
-                    let stroke = strokeOrder[currentStrokeIndex]
-                    HStack(spacing: 6) {
-                        Text("Nét \(currentStrokeIndex + 1):")
-                            .font(.app(.subheadline))
-                            .fontWeight(.medium)
-                        Text(stroke.chineseName)
-                            .font(.system(size: 20, weight: .semibold))
-                        Text("— \(stroke.vietnameseName)")
-                            .font(.app(.subheadline))
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.accentColor.opacity(0.1))
-                    .cornerRadius(8)
-                }
-                Text("Quy tắc: Ngang → Sổ → Phẩy → Mác → Chấm; trái trước phải sau, trên trước dưới sau.")
-                    .font(.app(.caption))
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 12)
-            } else if let ch = selectedCharacter, let count = strokeCount {
-                Text("Chữ \"\(String(ch))\": \(count) nét. Thứ tự nét chi tiết chưa có trong từ điển; luyện viết theo quy tắc chung.")
-                    .font(.app(.subheadline))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-            }
-        }
-        .padding(.vertical, 8)
-    }
-
-    private var canvasSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Luyện viết")
-                .font(.app(.subheadline))
-                .fontWeight(.semibold)
-                .padding(.horizontal, 12)
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.appBackgroundText(isLight: isLight))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.appBorder(isLight: isLight), lineWidth: 1)
-                    )
-                SwiftUIDrawingCanvas(strokes: $strokes)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .frame(height: 200)
-            .padding(.horizontal, 12)
-        }
-    }
-
-    private var bottomBar: some View {
-        HStack(spacing: 12) {
-            Text("Số nét đã vẽ: \(strokes.count)")
-                .font(.app(.subheadline))
-                .foregroundStyle(.secondary)
-            Button("Xoá hết") {
-                strokes = []
-            }
-            .buttonStyle(.bordered)
-            .cursor(.pointingHand)
-            Spacer()
-            Button("Xong", action: onDismiss)
-                .buttonStyle(.borderedProminent)
-                .cursor(.pointingHand)
-        }
-        .padding(12)
     }
 }
 

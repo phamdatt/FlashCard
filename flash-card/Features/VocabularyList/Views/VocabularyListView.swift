@@ -33,6 +33,7 @@ struct VocabularyListView: View {
     @Binding var showDeleteMultipleFlashcardsConfirmation: Bool
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var sortOption: VocabularySortOption = .orderInDB
     @State private var filterOption: VocabularyFilterOption = .all
@@ -41,6 +42,8 @@ struct VocabularyListView: View {
     @State private var isExportingCSV = false
     /// Khi set: mở sheet rồi gắn NSSavePanel vào cửa sổ sheet để user chọn nơi lưu.
     @State private var pendingCSVExport: (filename: String, data: Data)? = nil
+    /// Id các thẻ đến hạn ôn (hiển thị icon "Cần ôn"); cập nhật onAppear / khi topic đổi.
+    @State private var dueFlashcardIds: Set<Int> = []
 
     private var isLight: Bool { colorScheme == .light }
 
@@ -132,6 +135,11 @@ struct VocabularyListView: View {
             set: { if !$0 { pendingCSVExport = nil } }
         )) {
             csvExportSheetContent
+        }
+        .onAppear { loadDueFlashcardIds() }
+        .onChange(of: topic.id) { _, _ in loadDueFlashcardIds() }
+        .onChange(of: scenePhase) { _, new in
+            if new == .active { loadDueFlashcardIds() }
         }
     }
 
@@ -388,18 +396,16 @@ struct VocabularyListView: View {
 
             HStack(spacing: 4) {
                 if isFlashcardLearned(flashcard) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .scaledFont(.sm)
-                        .foregroundStyle(.green)
+                    GreenCheckmarkView(size: 18)
                         .help("Đã học")
                         .accessibilityLabel("Đã học")
                 }
-                if needsImprovement(flashcard) {
-                    Image(systemName: "arrow.clockwise.circle.fill")
-                        .scaledFont(.sm)
-                        .foregroundStyle(.teal)
-                        .help("Cần ôn lại")
-                        .accessibilityLabel("Cần ôn lại")
+                if isDueForReview(flashcard) {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.orange)
+                        .help("Đến hạn ôn")
+                        .accessibilityLabel("Đến hạn ôn")
                 }
             }
             .padding(.top, 2)
@@ -470,8 +476,12 @@ struct VocabularyListView: View {
         return false
     }
 
-    private func needsImprovement(_ flashcard: Flashcard) -> Bool {
-        let mistakeIds = DatabaseManager.shared.getMistakeFlashcards(days: 30)
-        return mistakeIds.contains(flashcard.id)
+    /// Thẻ đến hạn ôn (trong danh sách cần ôn hôm nay). Ôn xong thì icon biến mất.
+    private func isDueForReview(_ flashcard: Flashcard) -> Bool {
+        dueFlashcardIds.contains(flashcard.id)
+    }
+
+    private func loadDueFlashcardIds() {
+        dueFlashcardIds = Set(DatabaseManager.shared.getDueFlashcards())
     }
 }
