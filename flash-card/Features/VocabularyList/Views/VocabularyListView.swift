@@ -73,15 +73,19 @@ struct VocabularyListView: View {
                     )
                     .onTapGesture {
                         let shiftPressed = NSEvent.modifierFlags.contains(.shift)
-                        if shiftPressed {
-                            let ids = viewModel.selectedFlashcardIds
-                            let newIds = ids.contains(flashcard.id)
-                                ? ids.filter { $0 != flashcard.id }
-                                : ids.union([flashcard.id])
-                            let newSet = Set(displayedFlashcards.filter { newIds.contains($0.id) })
-                            viewModel.setSelectedFlashcards(newSet)
-                        } else {
-                            viewModel.setSelectedFlashcards([flashcard])
+                        var t = Transaction()
+                        t.disablesAnimations = true
+                        withTransaction(t) {
+                            if shiftPressed {
+                                let ids = viewModel.selectedFlashcardIds
+                                let newIds = ids.contains(flashcard.id)
+                                    ? ids.filter { $0 != flashcard.id }
+                                    : ids.union([flashcard.id])
+                                let newSet = Set(displayedFlashcards.filter { newIds.contains($0.id) })
+                                viewModel.setSelectedFlashcards(newSet)
+                            } else {
+                                viewModel.setSelectedFlashcards([flashcard])
+                            }
                         }
                     }
             }

@@ -40,6 +40,33 @@ struct SidebarView: View {
     }
     
     // MARK: - Sections
+    private func sidebarRowContent(icon: String, title: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .scaledFont(.xl2)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 22 * fontSizeManager.fontSizeMultiplier)
+            Text(title)
+                .scaledFont(.sm)
+                .fontWeight(.medium)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .scaledFont(.xs)
+                .fontWeight(.semibold)
+                .foregroundStyle(.tertiary)
+                .frame(width: 44, alignment: .trailing)
+        }
+        .padding(8)
+        .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
+        )
+    }
     
     private var learningSection: some View {
         Section {
@@ -48,42 +75,31 @@ struct SidebarView: View {
                     if viewModel.isPracticeSessionActive {
                         viewModel.pendingSidebarAction = .switchToSubject(id: subject.id)
                     } else {
-                        viewModel.selectSubject(subject)
-                        viewModel.switchToLearningMode()
+                        var t = Transaction()
+                        t.disablesAnimations = true
+                        withTransaction(t) {
+                            viewModel.selectSubject(subject)
+                            viewModel.switchToLearningMode()
+                        }
                     }
                 }) {
-                    Label(subject.name, systemImage: subject.displayIcon)
-                        .scaledFont(.sm)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 12)
+                    sidebarRowContent(icon: subject.displayIcon, title: subject.name)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .cursor(.pointingHand)
+                .listRowBackground(Color.clear)
             }
         } header: {
-            Text("Học tập").scaledFont(.sm).fontWeight(.semibold).foregroundStyle(.secondary)
+            Text("Học tập")
+                .scaledFont(.sm)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
         }
     }
     
     private var reviewSection: some View {
         Section {
-            // Button(action: {
-            //     viewModel.switchToReviewMode()
-            // }) {
-            //     Label("Ôn tập SRS", systemImage: "repeat.circle.fill")
-            //         .scaledFont(.sm)
-            //         .padding(.vertical, 6)
-            //         .padding(.horizontal, 8)
-            //         .frame(maxWidth: .infinity, alignment: .leading)
-            // }
-            // .buttonStyle(.plain)
-            // .cursor(.pointingHand)
-            // .accessibilityLabel("Ôn tập SRS")
-            // .accessibilityHint("Mở màn ôn từ theo thuật toán lặp lại ngắt quãng")
-
             Button(action: {
                 if viewModel.isPracticeSessionActive {
                     viewModel.pendingSidebarAction = .switchToReviewMistakes
@@ -91,19 +107,19 @@ struct SidebarView: View {
                     viewModel.switchToReviewMistakes()
                 }
             }) {
-                Label("Ôn lại từ sai", systemImage: "xmark.circle.fill")
-                    .scaledFont(.sm)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 12)
+                sidebarRowContent(icon: "xmark.circle.fill", title: "Ôn lại từ sai")
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .cursor(.pointingHand)
             .accessibilityLabel("Ôn lại từ sai")
             .accessibilityHint("Mở danh sách từ đã trả lời sai để ôn lại")
+            .listRowBackground(Color.clear)
         } header: {
-            Text("Ôn tập").scaledFont(.sm).fontWeight(.semibold).foregroundStyle(.secondary)
+            Text("Ôn tập")
+                .scaledFont(.sm)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
         }
     }
     
@@ -116,25 +132,25 @@ struct SidebarView: View {
                     viewModel.switchToStatistics()
                 }
             }) {
-                Label("Thống kê", systemImage: "chart.line.uptrend.xyaxis")
-                    .scaledFont(.sm)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 12)
+                sidebarRowContent(icon: "chart.line.uptrend.xyaxis", title: "Thống kê")
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .cursor(.pointingHand)
             .accessibilityLabel("Thống kê")
             .accessibilityHint("Xem thống kê học tập và streak")
+            .listRowBackground(Color.clear)
         } header: {
-            Text("Thống kê").scaledFont(.sm).fontWeight(.semibold).foregroundStyle(.secondary)
+            Text("Thống kê")
+                .scaledFont(.sm)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
         }
     }
     
     private var bottomSection: some View {
-        VStack(spacing: 8) {
-            VStack(spacing: 8) {
+        VStack(spacing: 12) {
+            VStack(spacing: 12) {
                 // Streak indicator
                 HStack(spacing: 10) {
                     Image(systemName: "flame.fill")
@@ -169,7 +185,7 @@ struct SidebarView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(viewModel.streakInfo.currentStreak > 0 ? .green : .secondary)
                             .scaledFont(.sm)
-                            .frame(minWidth: 16 * fontSizeManager.fontSizeMultiplier)
+                            .frame(width: 44, alignment: .trailing)
                     } else {
                         Text("Chưa học")
                             .scaledFont(.xs)
@@ -181,8 +197,7 @@ struct SidebarView: View {
                             .background(Capsule().fill(.orange))
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(12)
                 .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
@@ -220,18 +235,17 @@ struct SidebarView: View {
                             .scaledFont(.sm)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
-                            .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
+                            .frame(width: 44, alignment: .trailing)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
-                    )
-                }
-                .buttonStyle(.plain)
-                .cursor(.pointingHand)
+                .padding(12)
+                .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
+                )
+            }
+            .buttonStyle(.plain)
+            .cursor(.pointingHand)
 
                 // Nhắc ôn tập (local notification)
                 HStack(spacing: 8) {
@@ -246,14 +260,15 @@ struct SidebarView: View {
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    Spacer()
                     Toggle("", isOn: Binding(
                         get: { ReviewReminderManager.isEnabled },
                         set: { ReviewReminderManager.isEnabled = $0 }
                     ))
                     .labelsHidden()
+                    .frame(width: 44, alignment: .trailing)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(12)
                 .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
@@ -287,10 +302,9 @@ struct SidebarView: View {
                             .scaledFont(.xs)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
-                            .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
+                            .frame(width: 44, alignment: .trailing)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(12)
                     .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
@@ -325,10 +339,9 @@ struct SidebarView: View {
                             .scaledFont(.xs)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
-                            .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
+                            .frame(width: 44, alignment: .trailing)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(12)
                     .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
@@ -365,10 +378,9 @@ struct SidebarView: View {
                             .scaledFont(.xs)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
-                            .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
+                            .frame(width: 44, alignment: .trailing)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(12)
                     .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
@@ -405,10 +417,9 @@ struct SidebarView: View {
                             .scaledFont(.xs)
                             .fontWeight(.semibold)
                             .foregroundStyle(.tertiary)
-                            .frame(minWidth: 10 * fontSizeManager.fontSizeMultiplier)
+                            .frame(width: 44, alignment: .trailing)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(12)
                     .frame(minHeight: 50 * fontSizeManager.fontSizeMultiplier)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
@@ -422,8 +433,7 @@ struct SidebarView: View {
             }
             
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(12)
         .onAppear {
             // Auto-select first subject if none selected
             if viewModel.selectedSubject == nil, let firstSubject = viewModel.subjects.first {
@@ -2368,7 +2378,7 @@ struct ContentView: View {
         
         // Use transaction for smoother animation
         if animated {
-            var transaction = Transaction(animation: .easeInOut(duration: 0.3))
+            var transaction = Transaction(animation: .easeInOut(duration: 0.15))
             transaction.disablesAnimations = false
             withTransaction(transaction) {
                 columnVisibility = newVisibility
