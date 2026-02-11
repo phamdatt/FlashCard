@@ -217,6 +217,9 @@ Image(systemName: "checkmark.circle.fill")
                 onReset()
             }
         )
+        .onAppear {
+            onComplete(score, totalAnswered)
+        }
     }
 
     private func createQuestionWithBlank(flashcard: Flashcard) -> String {

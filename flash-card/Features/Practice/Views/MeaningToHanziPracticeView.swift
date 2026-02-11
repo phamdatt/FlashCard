@@ -233,6 +233,9 @@ struct MeaningToHanziPracticeView: View {
                 onReset()
             }
         )
+        .onAppear {
+            onComplete(score, totalAnswered)
+        }
     }
 
     private func normalizeHanzi(_ s: String) -> String {

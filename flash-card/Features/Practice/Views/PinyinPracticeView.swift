@@ -233,6 +233,9 @@ struct PinyinPracticeView: View {
                 onReset()
             }
         )
+        .onAppear {
+            onComplete(score, totalAnswered)
+        }
     }
 
     private func normalizeForPinyinComparison(_ s: String) -> String {

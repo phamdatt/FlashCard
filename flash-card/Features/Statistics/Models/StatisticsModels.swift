@@ -42,3 +42,27 @@ struct DailyPractice: Identifiable, Codable {
         return Double(correctAnswers) / Double(totalPracticed)
     }
 }
+
+/// Một phiên luyện tập (một lần bấm "Bắt đầu" → "Tiếp tục" kết thúc).
+struct PracticeSessionRecord: Identifiable {
+    let id: Int
+    let practiceDate: String // yyyy-MM-dd
+    let practiceType: String
+    let topicId: Int?
+    let topicName: String
+    let subjectName: String
+    let correctAnswers: Int
+    let totalQuestions: Int
+    
+    var accuracy: Double {
+        guard totalQuestions > 0 else { return 0.0 }
+        return Double(correctAnswers) / Double(totalQuestions)
+    }
+}
+
+/// Số từ đến hạn theo ngày (cho biểu đồ).
+struct DueCountByDay: Identifiable {
+    let id: String // date string
+    let date: Date
+    let count: Int
+}

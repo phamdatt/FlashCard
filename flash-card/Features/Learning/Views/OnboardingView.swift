@@ -2,10 +2,12 @@
 //  OnboardingView.swift
 //  flash-card
 //
-//  Onboarding on first launch: choose subject → topic → view cards.
+//  Onboarding: mỗi lần mở app hiện màn chào mừng trước khi vào.
 //
 
 import SwiftUI
+
+private let accent = Color.blue
 
 struct OnboardingView: View {
     var onComplete: () -> Void
@@ -17,78 +19,110 @@ struct OnboardingView: View {
         (icon: "rectangle.stack.fill", title: "Xem thẻ & ôn tập", detail: "Học từ vựng và ôn SRS khi cần")
     ]
 
+    private var isLight: Bool { colorScheme == .light }
+
     var body: some View {
+        ZStack {
+            Color.appBackgroundPage(isLight: isLight)
+                .ignoresSafeArea()
+            content
+        }
+        .frame(minWidth: 540, minHeight: 580)
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             Spacer()
-            VStack(spacing: 28) {
-                Image(systemName: "graduationcap.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(.green)
+                .frame(height: 56)
+            heroSection
+            Spacer()
+                .frame(height: 44)
+            stepsSection
+            Spacer(minLength: 0)
+            ctaSection
+        }
+    }
+
+    private var heroSection: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "graduationcap.fill")
+                .font(.system(size: 56, weight: .medium))
+                .foregroundStyle(accent)
+
+            VStack(spacing: 10) {
                 Text("Chào mừng đến với FlashCard")
-                    .font(.title)
-                    .fontWeight(.bold)
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
+
                 Text("Học từ vựng đơn giản: chọn môn, chọn chủ đề, xem thẻ và ôn tập.")
-                    .font(.body)
+                    .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(4)
             }
-            .padding(.horizontal, 40)
-
-            VStack(alignment: .leading, spacing: 20) {
-                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                    HStack(alignment: .top, spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.green.opacity(colorScheme == .dark ? 0.25 : 0.15))
-                                .frame(width: 44, height: 44)
-                            Image(systemName: step.icon)
-                                .font(.system(size: 20))
-                                .foregroundStyle(.green)
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(step.title)
-                                .font(.headline)
-                            Text(step.detail)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
-                    )
-                }
-            }
-            .padding(.horizontal, 32)
-            .padding(.top, 36)
-
-            Spacer()
-
-            HStack(spacing: 16) {
-                Button("Bỏ qua") {
-                    onComplete()
-                }
-                .buttonStyle(.plain)
-                .cursor(.pointingHand)
-                .foregroundStyle(.secondary)
-                Spacer()
-                Button("Bắt đầu") {
-                    onComplete()
-                }
-                .buttonStyle(.borderedProminent)
-                .cursor(.pointingHand)
-                .tint(.green)
-            }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 48)
+            .padding(.horizontal, 48)
         }
-        .frame(minWidth: 480, minHeight: 520)
-        .background(Color.appBackgroundPage(isLight: colorScheme == .light))
+    }
+
+    private var stepsSection: some View {
+        VStack(spacing: 10) {
+            ForEach(Array(steps.enumerated()), id: \.offset) { _, step in
+                stepRow(step: step)
+            }
+        }
+        .padding(.horizontal, 48)
+    }
+
+    private func stepRow(step: (icon: String, title: String, detail: String)) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            Image(systemName: step.icon)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(accent)
+                .frame(width: 36, height: 36)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(step.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Text(step.detail)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.appCardBackground(isLight: isLight))
+        )
+    }
+
+    private var ctaSection: some View {
+        VStack(spacing: 14) {
+            Button(action: onComplete) {
+                Text("Bắt đầu")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .cursor(.pointingHand)
+            .padding(.horizontal, 48)
+
+            Button(action: onComplete) {
+                Text("Bỏ qua")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .cursor(.pointingHand)
+        }
+        .padding(.bottom, 52)
     }
 }
 
@@ -96,7 +130,7 @@ struct OnboardingView: View {
 struct OnboardingView_Previews: PreviewProvider {
     static var previews: some View {
         OnboardingView(onComplete: {})
-            .frame(width: 520, height: 560)
+            .frame(width: 560, height: 600)
     }
 }
 #endif

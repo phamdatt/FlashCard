@@ -1547,7 +1547,46 @@ class DatabaseManager {
         sqlite3_finalize(stmt)
         return flashcardIds
     }
-    
+
+    /// Ids của từ đã sai (trong mistake_records) thuộc chủ đề topicId.
+    func getFlashcardIdsWithMistakes(topicId: Int) -> Set<Int> {
+        guard let db = db else { return [] }
+        let sql = "SELECT DISTINCT flashcard_id FROM mistake_records WHERE topic_id = ?"
+        var stmt: OpaquePointer?
+        var ids = Set<Int>()
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        sqlite3_bind_int(stmt, 1, Int32(topicId))
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            ids.insert(Int(sqlite3_column_int(stmt, 0)))
+        }
+        sqlite3_finalize(stmt)
+        return ids
+    }
+
+    /// Ids của từ yếu trong chủ đề: ít ôn (total_reviews < 3) hoặc độ chính xác thấp (< 60%).
+    func getWeakFlashcardIds(topicId: Int) -> Set<Int> {
+        guard let db = db else { return [] }
+        let sql = """
+            SELECT v.id FROM vocabularies v
+            LEFT JOIN flashcard_progress fp ON fp.flashcard_id = v.id
+            WHERE v.topic_id = ?
+            AND (
+                fp.id IS NULL
+                OR fp.total_reviews < 3
+                OR (CAST(fp.correct_reviews AS REAL) / NULLIF(fp.total_reviews, 0)) < 0.6
+            )
+            """
+        var stmt: OpaquePointer?
+        var ids = Set<Int>()
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        sqlite3_bind_int(stmt, 1, Int32(topicId))
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            ids.insert(Int(sqlite3_column_int(stmt, 0)))
+        }
+        sqlite3_finalize(stmt)
+        return ids
+    }
+
     // MARK: - Statistics
 
     /// Aggregated learning stats (card counts, learned, due, accuracy, practice history, streak).
@@ -1780,5 +1819,75 @@ class DatabaseManager {
         }
         sqlite3_finalize(stmt)
         return history.reversed() // Oldest first
+    }
+
+    /// Lịch sử phiên luyện tập: từng phiên (ngày, loại, chủ đề, điểm). limit mặc định 50.
+    func getPracticeSessionHistory(limit: Int = 50) -> [PracticeSessionRecord] {
+        guard let db = db else { return [] }
+        let sql = """
+            SELECT ps.id, ps.practice_date, ps.practice_type, ps.topic_id, ps.correct_answers, ps.total_questions,
+                   COALESCE(t.name, '—') as topic_name,
+                   COALESCE(s.name, '—') as subject_name
+            FROM practice_sessions ps
+            LEFT JOIN topics t ON ps.topic_id = t.id
+            LEFT JOIN subjects s ON t.subject_id = s.id
+            ORDER BY ps.practice_date DESC, ps.id DESC
+            LIMIT ?
+            """
+        var stmt: OpaquePointer?
+        var list: [PracticeSessionRecord] = []
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        sqlite3_bind_int(stmt, 1, Int32(limit))
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let id = Int(sqlite3_column_int(stmt, 0))
+            let dateStr = String(cString: sqlite3_column_text(stmt, 1))
+            let typeStr = String(cString: sqlite3_column_text(stmt, 2))
+            let topicId: Int? = sqlite3_column_type(stmt, 3) == SQLITE_NULL ? nil : Int(sqlite3_column_int(stmt, 3))
+            let correct = Int(sqlite3_column_int(stmt, 4))
+            let total = Int(sqlite3_column_int(stmt, 5))
+            let topicName = String(cString: sqlite3_column_text(stmt, 6))
+            let subjectName = String(cString: sqlite3_column_text(stmt, 7))
+            list.append(PracticeSessionRecord(
+                id: id,
+                practiceDate: dateStr,
+                practiceType: typeStr,
+                topicId: topicId,
+                topicName: topicName,
+                subjectName: subjectName,
+                correctAnswers: correct,
+                totalQuestions: total
+            ))
+        }
+        sqlite3_finalize(stmt)
+        return list
+    }
+
+    /// Số từ đến hạn theo từng ngày (14 ngày tới). Dùng cho biểu đồ ôn.
+    func getDueCountPerDay(days: Int = 14) -> [DueCountByDay] {
+        guard let db = db else { return [] }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let calendar = Calendar.current
+        var result: [DueCountByDay] = []
+        let today = calendar.startOfDay(for: Date())
+        for offset in 0..<days {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+            let dayStr = formatter.string(from: day)
+            // Count cards with next_review_date <= end of this day (so "due by this day")
+            let sql = """
+                SELECT COUNT(*) FROM flashcard_progress
+                WHERE date(next_review_date) <= ?
+                """
+            var stmt: OpaquePointer?
+            var count = 0
+            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { continue }
+            sqlite3_bind_text(stmt, 1, (dayStr as NSString).utf8String, -1, nil)
+            if sqlite3_step(stmt) == SQLITE_ROW {
+                count = Int(sqlite3_column_int(stmt, 0))
+            }
+            sqlite3_finalize(stmt)
+            result.append(DueCountByDay(id: dayStr, date: day, count: count))
+        }
+        return result
     }
 }

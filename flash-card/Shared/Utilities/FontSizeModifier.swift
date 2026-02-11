@@ -87,6 +87,11 @@ extension Font {
     static func app(_ style: Font.TextStyle) -> Font {
         .system(style, design: appFontDesign)
     }
+
+    /// Font cố định theo point, không scale theo Cài đặt cỡ chữ. Dùng cho sidebar, section header, v.v.
+    static func appFixed(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: appFontDesign)
+    }
 }
 
 // MARK: - Scaled font modifier (breakpoint-based)

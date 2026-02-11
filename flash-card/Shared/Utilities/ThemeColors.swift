@@ -8,6 +8,20 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Layout constants (đồng bộ radius, spacing)
+enum AppLayout {
+    static let cornerRadiusSmall: CGFloat = 6
+    static let cornerRadiusMedium: CGFloat = 8
+    static let cornerRadiusLarge: CGFloat = 10
+    static let cornerRadiusCard: CGFloat = 12
+    static let sidebarRowPaddingH: CGFloat = 8
+    static let sidebarSectionSpacing: CGFloat = 6
+    /// Padding đồng nhất cho cột sidebar: trái, phải, trên, dưới.
+    static let sidebarPadding: CGFloat = 8
+    /// Chiều rộng vùng icon/chevron để padding trái-phải cân đối.
+    static let sidebarIconAreaWidth: CGFloat = 24
+}
+
 extension Color {
     // MARK: - Light mode
     static let appCardBackgroundLight = Color(red: 252/255, green: 251/255, blue: 249/255)
@@ -74,6 +88,14 @@ extension Color {
     /// Chữ phụ (secondary) – dùng khi cần đồng bộ với theme.
     static func appTextSecondary(isLight: Bool) -> Color {
         isLight ? Color(nsColor: .secondaryLabelColor) : Color(white: 0.65)
+    }
+    /// Nền row được chọn trong sidebar — xám nhẹ, không xanh nhạt.
+    static func appSidebarSelected(isLight: Bool) -> Color {
+        isLight ? Color.primary.opacity(0.06) : Color.white.opacity(0.09)
+    }
+    /// Nền row khi hover (sidebar / list).
+    static func appRowHover(isLight: Bool) -> Color {
+        isLight ? Color.primary.opacity(0.04) : Color.white.opacity(0.06)
     }
 }
 

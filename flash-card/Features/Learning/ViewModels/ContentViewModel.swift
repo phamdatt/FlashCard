@@ -76,11 +76,13 @@ class ContentViewModel: ObservableObject {
     // Streak & daily goal
     @Published var streakInfo = StreakInfo(currentStreak: 0, longestStreak: 0, didPracticeToday: false)
     @Published var wordsPracticedToday: Int = 0
+    @Published var dueFlashcardsCount: Int = 0
     private let dailyGoalKey = "dailyReviewGoal"
     var dailyReviewGoal: Int {
         get { UserDefaults.standard.object(forKey: dailyGoalKey) as? Int ?? 10 }
         set { UserDefaults.standard.set(newValue, forKey: dailyGoalKey) }
     }
+
     
     // SRS Views
     @Published var showReviewMode = false
@@ -160,9 +162,10 @@ class ContentViewModel: ObservableObject {
         showReviewMode = false
         showReviewMistakes = false
         showStatistics = false
+        loadStreakInfo()
         // Don't clear selectedSubject - keep it active
     }
-    
+
     func switchToReviewMode() {
         // Batch updates to avoid multiple view updates
         // Keep selectedSubject active, only clear selectedTopic
@@ -773,6 +776,7 @@ class ContentViewModel: ObservableObject {
     func loadStreakInfo() {
         streakInfo = database.getStreakInfo()
         wordsPracticedToday = database.getWordsPracticedToday()
+        dueFlashcardsCount = database.getDueFlashcards().count
     }
 
     func recordPractice(practiceType: String, topicId: Int, correct: Int, total: Int) {

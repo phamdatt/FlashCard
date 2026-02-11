@@ -37,68 +37,86 @@ struct VocabularyListView: View {
 
     @State private var sortOption: VocabularySortOption = .orderInDB
     @State private var filterOption: VocabularyFilterOption = .all
-    /// Index trong displayedFlashcards của item được bấm lần trước (không giữ Shift) — dùng cho chọn theo vùng Shift+click.
+    /// Index trong cachedDisplayedFlashcards của item được bấm lần trước (không giữ Shift) — dùng cho chọn theo vùng Shift+click.
     @State private var selectionAnchorIndex: Int? = nil
     @State private var isExportingCSV = false
     /// Khi set: mở sheet rồi gắn NSSavePanel vào cửa sổ sheet để user chọn nơi lưu.
     @State private var pendingCSVExport: (filename: String, data: Data)? = nil
     /// Id các thẻ đến hạn ôn (hiển thị icon "Cần ôn"); cập nhật onAppear / khi topic đổi.
     @State private var dueFlashcardIds: Set<Int> = []
+    /// Cache learned/mistake ids để tránh gọi DB mỗi lần body re-render.
+    @State private var cachedLearnedIds: Set<Int> = []
+    @State private var cachedMistakeIds: Set<Int> = []
+    /// Danh sách đã filter + sort (dùng cached ids).
+    @State private var cachedDisplayedFlashcards: [Flashcard] = []
 
     private var isLight: Bool { colorScheme == .light }
 
-    /// Filtered and sorted list for display (uses topic.flashcards + progress/mistake from DB).
-    private var displayedFlashcards: [Flashcard] {
-        let learnedIds = Set(DatabaseManager.shared.getLearnedFlashcardIds())
-        let mistakeIds = Set(DatabaseManager.shared.getMistakeFlashcards(days: 30))
-        var list = topic.flashcards
-        switch filterOption {
-        case .all: break
-        case .learnedOnly: list = list.filter { learnedIds.contains($0.id) }
-        case .unlearnedOnly: list = list.filter { !learnedIds.contains($0.id) }
-        case .mistakesOnly: list = list.filter { mistakeIds.contains($0.id) }
+    /// Cập nhật cache và danh sách hiển thị. Chạy DB trên background để tránh lag khi đổi topic.
+    private func refreshDisplayedFlashcards() {
+        let t = topic
+        let filter = filterOption
+        let sort = sortOption
+        cachedDisplayedFlashcards = t.flashcards
+        Task.detached(priority: .userInitiated) {
+            let learned = Set(DatabaseManager.shared.getLearnedFlashcardIds())
+            let mistakes = Set(DatabaseManager.shared.getMistakeFlashcards(days: 30))
+            let dueIds = Set(DatabaseManager.shared.getDueFlashcards())
+            var list = t.flashcards
+            switch filter {
+            case .all: break
+            case .learnedOnly: list = list.filter { learned.contains($0.id) }
+            case .unlearnedOnly: list = list.filter { !learned.contains($0.id) }
+            case .mistakesOnly: list = list.filter { mistakes.contains($0.id) }
+            }
+            switch sort {
+            case .orderInDB: break
+            case .wordAZ: list.sort { $0.questionDisplayText.localizedStandardCompare($1.questionDisplayText) == .orderedAscending }
+            case .meaningAZ: list.sort { $0.answer.localizedStandardCompare($1.answer) == .orderedAscending }
+            case .learnedFirst: list.sort { learned.contains($0.id) && !learned.contains($1.id) }
+            case .mistakeFirst: list.sort { mistakes.contains($0.id) && !mistakes.contains($1.id) }
+            }
+            await MainActor.run {
+                guard t.id == topic.id else { return }
+                cachedLearnedIds = learned
+                cachedMistakeIds = mistakes
+                dueFlashcardIds = dueIds
+                cachedDisplayedFlashcards = list
+            }
         }
-        switch sortOption {
-        case .orderInDB: break
-        case .wordAZ: list.sort { $0.questionDisplayText.localizedStandardCompare($1.questionDisplayText) == .orderedAscending }
-        case .meaningAZ: list.sort { $0.answer.localizedStandardCompare($1.answer) == .orderedAscending }
-        case .learnedFirst: list.sort { learnedIds.contains($0.id) && !learnedIds.contains($1.id) }
-        case .mistakeFirst: list.sort { mistakeIds.contains($0.id) && !mistakeIds.contains($1.id) }
-        }
-        return list
     }
 
     var body: some View {
         HSplitView {
             VStack(spacing: 0) {
                 vocabularySortFilterBar
-                List(displayedFlashcards) { flashcard in
-                vocabularyRow(flashcard: flashcard)
-                    .contentShape(Rectangle())
-                    .listRowBackground(
-                        viewModel.selectedFlashcardIds.contains(flashcard.id)
-                        ? Color.gray.opacity(isLight ? 0.2 : 0.25)
-                        : Color.clear
-                    )
-                    .onTapGesture {
-                        let shiftPressed = NSEvent.modifierFlags.contains(.shift)
-                        guard let clickedIndex = displayedFlashcards.firstIndex(where: { $0.id == flashcard.id }) else { return }
-                        var t = Transaction()
-                        t.disablesAnimations = true
-                        withTransaction(t) {
-                            if shiftPressed {
-                                let anchor = selectionAnchorIndex ?? clickedIndex
-                                let low = min(anchor, clickedIndex)
-                                let high = max(anchor, clickedIndex)
-                                let rangeSelection = Array(displayedFlashcards[low...high])
-                                viewModel.setSelectedFlashcards(Set(rangeSelection))
-                            } else {
-                                selectionAnchorIndex = clickedIndex
-                                viewModel.setSelectedFlashcards([flashcard])
+                List(cachedDisplayedFlashcards) { flashcard in
+                    vocabularyRow(flashcard: flashcard)
+                        .contentShape(Rectangle())
+                        .listRowBackground(
+                            viewModel.selectedFlashcardIds.contains(flashcard.id)
+                            ? Color.gray.opacity(isLight ? 0.2 : 0.25)
+                            : Color.clear
+                        )
+                        .onTapGesture {
+                            let shiftPressed = NSEvent.modifierFlags.contains(.shift)
+                            guard let clickedIndex = cachedDisplayedFlashcards.firstIndex(where: { $0.id == flashcard.id }) else { return }
+                            var t = Transaction()
+                            t.disablesAnimations = true
+                            withTransaction(t) {
+                                if shiftPressed {
+                                    let anchor = selectionAnchorIndex ?? clickedIndex
+                                    let low = min(anchor, clickedIndex)
+                                    let high = max(anchor, clickedIndex)
+                                    let rangeSelection = Array(cachedDisplayedFlashcards[low...high])
+                                    viewModel.setSelectedFlashcards(Set(rangeSelection))
+                                } else {
+                                    selectionAnchorIndex = clickedIndex
+                                    viewModel.setSelectedFlashcards([flashcard])
+                                }
                             }
                         }
-                    }
-            }
+                }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             }
@@ -136,10 +154,13 @@ struct VocabularyListView: View {
         )) {
             csvExportSheetContent
         }
-        .onAppear { loadDueFlashcardIds() }
-        .onChange(of: topic.id) { _, _ in loadDueFlashcardIds() }
+        .onAppear { refreshDisplayedFlashcards() }
+        .onChange(of: topic.id) { _, _ in refreshDisplayedFlashcards() }
+        .onChange(of: topic.flashcards.count) { _, _ in refreshDisplayedFlashcards() }
+        .onChange(of: sortOption) { _, _ in refreshDisplayedFlashcards() }
+        .onChange(of: filterOption) { _, _ in refreshDisplayedFlashcards() }
         .onChange(of: scenePhase) { _, new in
-            if new == .active { loadDueFlashcardIds() }
+            if new == .active { refreshDisplayedFlashcards() }
         }
     }
 
@@ -214,7 +235,7 @@ struct VocabularyListView: View {
             .pickerStyle(.menu)
             .scaledFont(.sm)
             Spacer()
-            Text("\(displayedFlashcards.count) từ")
+            Text("\(cachedDisplayedFlashcards.count) từ")
                 .scaledFont(.xs)
                 .foregroundStyle(.secondary)
             Button(action: exportVocabularyCSV) {
@@ -222,7 +243,7 @@ struct VocabularyListView: View {
                     .scaledFont(.sm)
             }
             .buttonStyle(.bordered)
-            .disabled(displayedFlashcards.isEmpty || isExportingCSV)
+            .disabled(cachedDisplayedFlashcards.isEmpty || isExportingCSV)
             .cursor(.pointingHand)
         }
         .padding(.horizontal, 12)
@@ -238,7 +259,7 @@ struct VocabularyListView: View {
     }
 
     private func exportVocabularyCSV() {
-        let items = displayedFlashcards
+        let items = cachedDisplayedFlashcards
         guard !items.isEmpty else { return }
         let csvContent = buildCSVContent(flashcards: items)
         let filename = "tu-vung-\(topic.name.replacingOccurrences(of: " ", with: "-"))-\(dateStringForExport()).csv"
@@ -439,7 +460,7 @@ struct VocabularyListView: View {
                 description: Text("Nhấn \"Thêm từ\" hoặc \"Import\" ở góc phải để thêm từ vựng vào chủ đề này.")
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if displayedFlashcards.isEmpty {
+        } else if cachedDisplayedFlashcards.isEmpty {
             ContentUnavailableView(
                 "Không có từ nào theo bộ lọc",
                 systemImage: "line.3.horizontal.decrease.circle",
@@ -481,7 +502,4 @@ struct VocabularyListView: View {
         dueFlashcardIds.contains(flashcard.id)
     }
 
-    private func loadDueFlashcardIds() {
-        dueFlashcardIds = Set(DatabaseManager.shared.getDueFlashcards())
-    }
 }

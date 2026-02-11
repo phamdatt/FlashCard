@@ -34,6 +34,8 @@ struct StatisticsDashboardView: View {
     @State private var topMistakeFlashcards: [(Flashcard, Int)] = []
     @State private var longestSinceReview: [(Flashcard, String)] = []
     @State private var subjectStats: [SubjectStats] = []
+    @State private var sessionHistory: [PracticeSessionRecord] = []
+    @State private var dueCountByDay: [DueCountByDay] = []
 
     enum TimeRange: String, CaseIterable {
         case week = "Tuần"
@@ -103,6 +105,14 @@ struct StatisticsDashboardView: View {
                         sectionDivider
                         StatisticsSection(title: "Độ chính xác theo môn học", icon: "folder.fill", minHeight: contentMinHeight) {
                             accuracyBySubject(stats: stats)
+                        }
+                        sectionDivider
+                        StatisticsSection(title: "Số từ đến hạn theo ngày", icon: "calendar.badge.clock", minHeight: contentMinHeight) {
+                            dueByDayChart
+                        }
+                        sectionDivider
+                        StatisticsSection(title: "Lịch sử phiên luyện tập", icon: "list.bullet.clipboard.fill", minHeight: nil) {
+                            sessionHistorySection
                         }
                         sectionDivider
                         StatisticsSection(title: "Từ sai nhiều nhất (30 ngày)", icon: "xmark.circle.fill", minHeight: nil) {
@@ -504,10 +514,109 @@ struct StatisticsDashboardView: View {
         return nil
     }
 
+    private var dueByDayChart: some View {
+        let maxCount = dueCountByDay.map(\.count).max() ?? 1
+        let barHeight: CGFloat = barChartHeight
+        return Group {
+            if dueCountByDay.isEmpty {
+                emptyState(
+                    title: "Chưa có dữ liệu",
+                    icon: "calendar",
+                    message: "Ôn tập với SRS để xem từ đến hạn theo ngày"
+                )
+                .frame(minHeight: contentMinHeight)
+            } else {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("14 ngày tới — số từ đã đến hạn ôn tính đến mỗi ngày")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    HStack(alignment: .bottom, spacing: 8) {
+                        ForEach(dueCountByDay) { day in
+                            VStack(spacing: 6) {
+                                Text("\(day.count)")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.progressGradientEnd, .progressGradientStart],
+                                            startPoint: .bottom,
+                                            endPoint: .top
+                                        )
+                                    )
+                                    .frame(height: max(4, barHeight * CGFloat(day.count) / CGFloat(max(1, maxCount))))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .frame(minWidth: 28)
+                            .help("\(day.date.formatted(date: .abbreviated, time: .omitted)): \(day.count) từ")
+                        }
+                    }
+                    .frame(height: barHeight + 28)
+                    HStack(spacing: 8) {
+                        ForEach(dueCountByDay) { day in
+                            Text(day.date.formatted(.dateTime.day()))
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundStyle(.tertiary)
+                                .frame(maxWidth: .infinity)
+                                .frame(minWidth: 28)
+                        }
+                    }
+                }
+                .padding(sectionPadding)
+                .frame(minHeight: contentMinHeight)
+            }
+        }
+    }
+
+    private var sessionHistorySection: some View {
+        Group {
+            if sessionHistory.isEmpty {
+                emptyState(
+                    title: "Chưa có phiên luyện tập",
+                    icon: "list.bullet.clipboard",
+                    message: "Bắt đầu luyện tập để xem lịch sử"
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(sessionHistory.prefix(30)) { session in
+                        HStack(spacing: 12) {
+                            Text(session.practiceDate)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 72, alignment: .leading)
+                            Text(session.practiceType)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .frame(width: 100, alignment: .leading)
+                            Text(session.topicName)
+                                .font(.system(size: 12, weight: .regular, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text("\(session.correctAnswers)/\(session.totalQuestions)")
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            Text("(\(Int(session.accuracy * 100))%)")
+                                .font(.system(size: 11, weight: .regular, design: .rounded))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(mutedBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+                .padding(sectionPadding)
+            }
+        }
+    }
+
     private func loadStatistics() {
         statistics = DatabaseManager.shared.getLearningStatistics()
         topMistakeFlashcards = DatabaseManager.shared.getTopMistakeFlashcards(limit: 15)
         longestSinceReview = DatabaseManager.shared.getFlashcardsLongestSinceReview(limit: 15)
+        sessionHistory = DatabaseManager.shared.getPracticeSessionHistory(limit: 50)
+        dueCountByDay = DatabaseManager.shared.getDueCountPerDay(days: 14)
         subjectStats = viewModel.subjects.map { subject in
             SubjectStats(
                 id: subject.id,
