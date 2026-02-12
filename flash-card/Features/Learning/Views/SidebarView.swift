@@ -28,7 +28,7 @@ struct SidebarView: View {
         .environment(\.fontSizeMultiplier, fontSizeManager.fontSizeMultiplier)
         .scrollContentBackground(colorScheme == .dark ? .hidden : .visible)
         .background(colorScheme == .dark ? Color.appDarkBackground : Color.clear)
-        .navigationSplitViewColumnWidth(min: 240, ideal: 250, max: 300)
+        .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
         .navigationTitle("Menu")
         .tint(.green)
         .safeAreaInset(edge: .bottom) {
