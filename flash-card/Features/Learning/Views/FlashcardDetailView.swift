@@ -269,7 +269,7 @@ struct FlashcardDetailView: View {
     private var multipleChoiceView: some View {
         let isCompact = contentWidth < 420 || isPracticeMode
         let cardPadding: CGFloat = isCompact ? 12 : 16
-        let questionFont: Font.TailwindSize = isCompact ? .xl3 : .display
+        let questionFont: Font.TailwindSize = .hero
         let optionPadding: CGFloat = isCompact ? 12 : 16
         let spacing: CGFloat = isCompact ? 12 : 25
 
@@ -290,7 +290,7 @@ struct FlashcardDetailView: View {
                     .scaledFont(questionFont)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.65)
+                    .minimumScaleFactor(0.9)
                     .lineLimit(3)
                     .padding(.horizontal, 8)
                     .padding(.vertical, isCompact ? 8 : 12)

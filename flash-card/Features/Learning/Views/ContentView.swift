@@ -73,7 +73,6 @@ struct ContentView: View {
         } detail: {
             detailColumn
         }
-        .navigationSplitViewStyle(.balanced)
         .background(colorScheme == .dark ? Color.appDarkBackground : Color.clear)
         .applyFontSizeScaling(multiplier: fontSizeManager.fontSizeMultiplier)
         .onChange(of: viewModel.isInSpecialMode) { oldValue, newValue in
@@ -231,10 +230,10 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 400)
+            .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
         } else if let subject = viewModel.selectedSubject {
             TopicsListView(viewModel: viewModel, subject: subject)
-                .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 400)
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
         } else {
             ContentUnavailableView {
                 Label("Chọn môn học", systemImage: "book.fill")
@@ -242,7 +241,7 @@ struct ContentView: View {
                 Text("Chọn một môn học từ sidebar")
                     .font(.app(.subheadline))
             }
-            .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 400)
+            .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
         }
     }
     
@@ -277,8 +276,8 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .frame(minWidth: 320)
-        .navigationSplitViewColumnWidth(min: 320, ideal: 500, max: .infinity)
+        .frame(minWidth: 400)
+        .navigationSplitViewColumnWidth(min: 400, ideal: 600, max: .infinity)
         .background(Color.appBackgroundPage(isLight: colorScheme == .light))
     }
     

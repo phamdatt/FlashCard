@@ -8,6 +8,13 @@
 import SwiftUI
 import AppKit
 
+private struct SidebarHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat? { nil }
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        value = nextValue()
+    }
+}
+
 struct SidebarView: View {
     @ObservedObject var viewModel: ContentViewModel
     @EnvironmentObject var appearanceManager: AppearanceManager
@@ -17,6 +24,23 @@ struct SidebarView: View {
     @State private var reviewReminderEnabled: Bool = ReviewReminderManager.isEnabled
     @State private var reminderHour: Int = ReviewReminderManager.reminderHour
     @State private var reminderMinute: Int = ReviewReminderManager.reminderMinute
+    @State private var showMoreSettingsPopover: Bool = false
+    @State private var availableHeight: CGFloat = 600
+
+    /// Số item hiển thị ngoài dựa trên chiều cao: streak luôn có, sao lưu + mở rộng luôn có.
+    /// Thêm theme, âm thanh, dailyGoal, dueNow khi đủ chỗ.
+    private var visibleOutsideItems: (theme: Bool, sound: Bool, dailyGoal: Bool, dueNow: Bool) {
+        if availableHeight >= 700 {
+            return (true, true, true, true)
+        }
+        if availableHeight >= 580 {
+            return (true, true, false, false)
+        }
+        if availableHeight >= 500 {
+            return (true, false, false, false)
+        }
+        return (false, false, false, false)
+    }
 
     var body: some View {
         List {
@@ -28,11 +52,20 @@ struct SidebarView: View {
         .environment(\.fontSizeMultiplier, fontSizeManager.fontSizeMultiplier)
         .scrollContentBackground(colorScheme == .dark ? .hidden : .visible)
         .background(colorScheme == .dark ? Color.appDarkBackground : Color.clear)
-        .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
+        .navigationSplitViewColumnWidth(min: 240, ideal: 250, max: 300)
         .navigationTitle("Menu")
         .tint(.green)
         .safeAreaInset(edge: .bottom) {
             bottomSection
+        }
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .preference(key: SidebarHeightPreferenceKey.self, value: geo.size.height)
+            }
+        )
+        .onPreferenceChange(SidebarHeightPreferenceKey.self) { height in
+            if let h = height { availableHeight = h }
         }
     }
 
@@ -201,17 +234,20 @@ struct SidebarView: View {
                 .padding(.bottom, AppLayout.sidebarPadding)
             VStack(spacing: AppLayout.sidebarPadding) {
                 streakBlock
-                dailyGoalBlock
-                if viewModel.dueFlashcardsCount > 0 {
+                if visibleOutsideItems.dailyGoal {
+                    dailyGoalBlock
+                }
+                if visibleOutsideItems.dueNow, viewModel.dueFlashcardsCount > 0 {
                     dueNowBlock
                 }
-                themeButton
-                reviewReminderRow
-                practiceSoundRow
-                keyboardShortcutsButton
-                speechAccentButton
-                strokeDrawButton
                 backupRestoreButton
+                if visibleOutsideItems.theme {
+                    themeButton
+                }
+                if visibleOutsideItems.sound {
+                    practiceSoundRow
+                }
+                moreSettingsButton
             }
             .padding(AppLayout.sidebarPadding)
         }
@@ -389,6 +425,17 @@ struct SidebarView: View {
         .cursor(.pointingHand)
     }
 
+    private var practiceSoundRow: some View {
+        compactRow(icon: "speaker.wave.2.fill", title: "Âm thanh") {
+            Toggle("", isOn: $practiceSoundEnabled)
+                .labelsHidden()
+                .onChange(of: practiceSoundEnabled) { _, new in
+                    SoundManager.practiceSoundEnabled = new
+                }
+        }
+        .accessibilityLabel("Âm thanh luyện tập")
+    }
+
     private var reviewReminderRow: some View {
         compactRow(icon: "bell.badge.fill", title: "Nhắc ôn") {
             HStack(spacing: 6) {
@@ -427,17 +474,6 @@ struct SidebarView: View {
             reminderHour = ReviewReminderManager.reminderHour
             reminderMinute = ReviewReminderManager.reminderMinute
         }
-    }
-
-    private var practiceSoundRow: some View {
-        compactRow(icon: "speaker.wave.2.fill", title: "Âm thanh ôn") {
-            Toggle("", isOn: $practiceSoundEnabled)
-                .labelsHidden()
-                .onChange(of: practiceSoundEnabled) { _, new in
-                    SoundManager.practiceSoundEnabled = new
-                }
-        }
-        .accessibilityLabel("Âm thanh luyện tập")
     }
 
     private var keyboardShortcutsButton: some View {
@@ -502,6 +538,213 @@ struct SidebarView: View {
         }
         .buttonStyle(.plain)
         .cursor(.pointingHand)
+    }
+
+    private var moreSettingsButton: some View {
+        Button(action: { showMoreSettingsPopover = true }) {
+            compactRow(icon: "ellipsis.circle", title: "Mở rộng") {
+                Image(systemName: "chevron.up")
+                    .font(.appFixed(12))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: AppLayout.sidebarIconAreaWidth, alignment: .trailing)
+            }
+        }
+        .buttonStyle(.plain)
+        .cursor(.pointingHand)
+        .popover(isPresented: $showMoreSettingsPopover, arrowEdge: .top) {
+            moreSettingsPopoverContent
+        }
+    }
+
+    @ViewBuilder
+    private var moreSettingsPopoverContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Cài đặt")
+                    .font(.appFixed(14, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                ThemeDivider()
+                VStack(spacing: 0) {
+                // Mục tiêu ôn
+                dailyGoalBlock
+                if viewModel.dueFlashcardsCount > 0 {
+                    ThemeDivider()
+                        .padding(.horizontal, 16)
+                    dueNowBlock
+                }
+                ThemeDivider()
+                    .padding(.horizontal, 16)
+                // Theme
+                Button(action: {
+                    showMoreSettingsPopover = false
+                    if viewModel.isPracticeSessionActive {
+                        viewModel.pendingSidebarAction = .cycleTheme
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            appearanceManager.cycleMode()
+                        }
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: appearanceManager.mode.icon)
+                            .font(.appFixed(14))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24, alignment: .center)
+                        Text(appearanceManager.mode.rawValue)
+                            .font(.appFixed(14, weight: .medium))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.appFixed(12))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                ThemeDivider()
+                    .padding(.horizontal, 16)
+                // Âm thanh
+                HStack(spacing: 8) {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.appFixed(14))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24, alignment: .center)
+                    Text("Âm thanh")
+                        .font(.appFixed(14, weight: .medium))
+                    Spacer()
+                    Toggle("", isOn: $practiceSoundEnabled)
+                        .labelsHidden()
+                        .onChange(of: practiceSoundEnabled) { _, new in
+                            SoundManager.practiceSoundEnabled = new
+                        }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .contentShape(Rectangle())
+                ThemeDivider()
+                    .padding(.horizontal, 16)
+                // Nhắc ôn
+                HStack(spacing: 8) {
+                    Image(systemName: "bell.badge.fill")
+                        .font(.appFixed(14))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24, alignment: .center)
+                    Text("Nhắc ôn")
+                        .font(.appFixed(14, weight: .medium))
+                    Spacer()
+                    Menu {
+                        ForEach(0..<24, id: \.self) { h in
+                            Section {
+                                ForEach([0, 15, 30, 45], id: \.self) { m in
+                                    Button(String(format: "%d:%02d", h, m)) {
+                                        reminderHour = h
+                                        reminderMinute = m
+                                        ReviewReminderManager.reminderHour = h
+                                        ReviewReminderManager.reminderMinute = m
+                                        if ReviewReminderManager.isEnabled {
+                                            ReviewReminderManager.scheduleReminder()
+                                        }
+                                    }
+                                }
+                            } header: { Text("\(h) giờ") }
+                        }
+                    } label: {
+                        Text(String(format: "%d:%02d", reminderHour, reminderMinute))
+                            .font(.appFixed(14))
+                            .foregroundStyle(.secondary)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                    Toggle("", isOn: $reviewReminderEnabled)
+                        .labelsHidden()
+                        .onChange(of: reviewReminderEnabled) { _, new in
+                            ReviewReminderManager.isEnabled = new
+                        }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .contentShape(Rectangle())
+                ThemeDivider()
+                    .padding(.horizontal, 16)
+                Button(action: {
+                    showMoreSettingsPopover = false
+                    if viewModel.isPracticeSessionActive { viewModel.pendingSidebarAction = .showKeyboardShortcuts }
+                    else { viewModel.showKeyboardShortcutsSheet = true }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "keyboard")
+                            .font(.appFixed(14))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24, alignment: .center)
+                        Text("Phím tắt")
+                            .font(.appFixed(14, weight: .medium))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.appFixed(12))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                ThemeDivider()
+                    .padding(.horizontal, 16)
+                Button(action: {
+                    showMoreSettingsPopover = false
+                    if viewModel.isPracticeSessionActive { viewModel.pendingSidebarAction = .showSpeechAccent }
+                    else { viewModel.showSpeechAccentSheet = true }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "speaker.wave.2")
+                            .font(.appFixed(14))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24, alignment: .center)
+                        Text("Giọng đọc (EN)")
+                            .font(.appFixed(14, weight: .medium))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.appFixed(12))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+                ThemeDivider()
+                    .padding(.horizontal, 16)
+                Button(action: {
+                    showMoreSettingsPopover = false
+                    if viewModel.isPracticeSessionActive { viewModel.pendingSidebarAction = .showStrokeDraw }
+                    else { viewModel.showStrokeDrawSuggestSheet = true }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "pencil.and.outline")
+                            .font(.appFixed(14))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24, alignment: .center)
+                        Text("Vẽ nét → từ")
+                            .font(.appFixed(14, weight: .medium))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.appFixed(12))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                .cursor(.pointingHand)
+            }
+        }
+        }
+        .frame(minWidth: 240, maxHeight: 400)
+        .padding(.vertical, 8)
+        .background(Color.appBackgroundControl(isLight: colorScheme == .light))
     }
 }
 
