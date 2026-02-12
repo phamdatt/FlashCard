@@ -20,6 +20,7 @@ struct SidebarView: View {
 
     var body: some View {
         List {
+            wordOfTheDaySection
             learningSection
             reviewSection
             statisticsSection
@@ -59,6 +60,50 @@ struct SidebarView: View {
             RoundedRectangle(cornerRadius: AppLayout.cornerRadiusMedium)
                 .fill(Color.appBackgroundControl(isLight: colorScheme == .light))
         )
+    }
+
+    /// Từ theo ngày: mỗi môn (Tiếng Anh, Tiếng Trung) 5–10 từ. Bấm vào → mở flow luyện tập.
+    @ViewBuilder
+    private var wordOfTheDaySection: some View {
+        let items = viewModel.wordOfTheDayBySubject
+        if !items.isEmpty {
+            Section {
+                ForEach(items, id: \.subject.id) { item in
+                    Button(action: {
+                        if viewModel.isPracticeSessionActive {
+                            viewModel.pendingSidebarAction = .switchToWordOfDay(subjectId: item.subject.id, topicId: item.topic.id, flashcardIds: item.flashcards.map(\.id))
+                        } else {
+                            var t = Transaction()
+                            t.disablesAnimations = true
+                            withTransaction(t) {
+                                viewModel.selectSubject(item.subject)
+                                viewModel.selectTopic(item.topic)
+                                viewModel.switchToLearningMode()
+                                if let first = item.flashcards.first { viewModel.selectFlashcard(first) }
+                                viewModel.wordOfDayToPractice = (item.topic, item.flashcards, item.subject)
+                            }
+                        }
+                    }) {
+                        sidebarRowContent(
+                            icon: item.subject.displayIcon,
+                            title: "\(item.flashcards.count) từ · \(item.subject.name)"
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .cursor(.pointingHand)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: AppLayout.sidebarPadding, leading: AppLayout.sidebarPadding, bottom: AppLayout.sidebarPadding, trailing: AppLayout.sidebarPadding))
+                }
+            } header: {
+                Text("Từ của ngày")
+                    .font(.appFixed(12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .tracking(0.5)
+                    .padding(.horizontal, AppLayout.sidebarPadding)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
     }
 
     private var learningSection: some View {

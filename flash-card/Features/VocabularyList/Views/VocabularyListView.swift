@@ -52,13 +52,13 @@ struct VocabularyListView: View {
 
     private var isLight: Bool { colorScheme == .light }
 
-    /// Cập nhật cache và danh sách hiển thị. Chạy DB trên background để tránh lag khi đổi topic.
+    /// Cập nhật cache và danh sách hiển thị. Chạy trên MainActor để tương thích Swift 6 concurrency.
     private func refreshDisplayedFlashcards() {
         let t = topic
         let filter = filterOption
         let sort = sortOption
         cachedDisplayedFlashcards = t.flashcards
-        Task.detached(priority: .userInitiated) {
+        Task { @MainActor in
             let learned = Set(DatabaseManager.shared.getLearnedFlashcardIds())
             let mistakes = Set(DatabaseManager.shared.getMistakeFlashcards(days: 30))
             let dueIds = Set(DatabaseManager.shared.getDueFlashcards())
@@ -76,13 +76,11 @@ struct VocabularyListView: View {
             case .learnedFirst: list.sort { learned.contains($0.id) && !learned.contains($1.id) }
             case .mistakeFirst: list.sort { mistakes.contains($0.id) && !mistakes.contains($1.id) }
             }
-            await MainActor.run {
-                guard t.id == topic.id else { return }
-                cachedLearnedIds = learned
-                cachedMistakeIds = mistakes
-                dueFlashcardIds = dueIds
-                cachedDisplayedFlashcards = list
-            }
+            guard t.id == topic.id else { return }
+            cachedLearnedIds = learned
+            cachedMistakeIds = mistakes
+            dueFlashcardIds = dueIds
+            cachedDisplayedFlashcards = list
         }
     }
 

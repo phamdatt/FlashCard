@@ -84,6 +84,8 @@ class AppearanceManager: ObservableObject {
     }
 }
 
+private let hasCompletedOnboardingKey = "hasCompletedOnboarding"
+
 // AppDelegate: nhận khi user bấm vào notification → kích hoạt app và post notification để mở màn Ôn tập.
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -108,18 +110,18 @@ struct flash_cardApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appearanceManager = AppearanceManager()
     @StateObject private var fontSizeManager = FontSizeManager()
-    @State private var showOnboarding = true
+    @AppStorage(hasCompletedOnboardingKey) private var hasCompletedOnboarding = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if showOnboarding {
-                    OnboardingView(onComplete: {
-                        showOnboarding = false
-                    })
-                } else {
+                if hasCompletedOnboarding {
                     ContentView()
+                } else {
+                    OnboardingView(onComplete: {
+                        hasCompletedOnboarding = true
+                    })
                 }
             }
             .environmentObject(appearanceManager)

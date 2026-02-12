@@ -42,8 +42,6 @@ class DatabaseManager {
         createSRSTables()
         createReadingPassagesTable()
         ensureReadingSubjectExists()
-        createSimilarLookingTable()
-        seedSimilarLookingGroupsIfNeeded()
     }
 
     deinit {
@@ -277,8 +275,6 @@ class DatabaseManager {
         dropOldReadingTablesIfNeeded()
         createReadingPassagesTable()
         ensureReadingSubjectExists()
-        createSimilarLookingTable()
-        seedSimilarLookingGroupsIfNeeded()
     }
 
     /// One-time migration: remove exercise_type and passage_id from vocabularies by recreating the table.
@@ -1124,109 +1120,6 @@ class DatabaseManager {
         sqlite3_exec(db, sql, nil, nil, nil)
     }
 
-    // MARK: - Similar-looking characters (Từ dễ nhầm)
-
-    private func createSimilarLookingTable() {
-        let sql = """
-            CREATE TABLE IF NOT EXISTS similar_looking_groups (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                group_id INTEGER NOT NULL,
-                character TEXT NOT NULL,
-                UNIQUE(group_id, character)
-            )
-        """
-        sqlite3_exec(db, sql, nil, nil, nil)
-    }
-
-    private static let defaultSimilarLookingGroups: [[Character]] = [
-        ["未", "末"],
-        ["己", "已", "巳"],
-        ["人", "入"],
-        ["日", "目"],
-        ["大", "太", "天"],
-        ["千", "干"],
-        ["土", "士"],
-        ["王", "玉"],
-        ["木", "本"],
-        ["白", "百"],
-        ["厂", "广"],
-        ["刀", "力"],
-        ["午", "牛"],
-        ["夫", "天"],
-        ["田", "由", "甲"],
-        ["贝", "见"],
-        ["鸟", "乌"],
-        ["今", "令"],
-        ["候", "侯"],
-        ["低", "底"],
-        ["拆", "折"],
-        ["免", "兔"],
-        ["问", "间"],
-        ["休", "体"],
-        ["喝", "渴"],
-        ["买", "卖"],
-        ["左", "右"],
-        ["心", "必"],
-        ["子", "了"],
-    ]
-
-    private func seedSimilarLookingGroupsIfNeeded() {
-        let key = "similar_looking_groups_seeded"
-        guard let db = db, !UserDefaults.standard.bool(forKey: key) else { return }
-        let sql = "INSERT OR IGNORE INTO similar_looking_groups (group_id, character) VALUES (?, ?)"
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
-        for (groupIndex, group) in Self.defaultSimilarLookingGroups.enumerated() {
-            let groupId = Int32(groupIndex + 1)
-            for ch in group {
-                let charStr = String(ch)
-                sqlite3_bind_int(stmt, 1, groupId)
-                sqlite3_bind_text(stmt, 2, (charStr as NSString).utf8String, -1, nil)
-                sqlite3_step(stmt)
-                sqlite3_reset(stmt)
-            }
-        }
-        sqlite3_finalize(stmt)
-        UserDefaults.standard.set(true, forKey: key)
-    }
-
-    /// Tất cả ký tự nằm trong các nhóm dễ nhầm (để filter nhanh).
-    func getSimilarLookingCharacters() -> Set<Character> {
-        guard let db = db else { return [] }
-        let sql = "SELECT DISTINCT character FROM similar_looking_groups"
-        var stmt: OpaquePointer?
-        var result = Set<Character>()
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            if let cStr = sqlite3_column_text(stmt, 0) {
-                let s = String(cString: cStr)
-                if let ch = s.first { result.insert(ch) }
-            }
-        }
-        sqlite3_finalize(stmt)
-        return result
-    }
-
-    /// Các nhóm ký tự dễ nhầm (mỗi nhóm là mảng ký tự).
-    func getSimilarLookingGroups() -> [[Character]] {
-        guard let db = db else { return [] }
-        let sql = "SELECT group_id, character FROM similar_looking_groups ORDER BY group_id, character"
-        var stmt: OpaquePointer?
-        var byGroup: [Int: [Character]] = [:]
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            let groupId = Int(sqlite3_column_int(stmt, 0))
-            if let cStr = sqlite3_column_text(stmt, 1) {
-                let s = String(cString: cStr)
-                if let ch = s.first {
-                    byGroup[groupId, default: []].append(ch)
-                }
-            }
-        }
-        sqlite3_finalize(stmt)
-        let maxKey = byGroup.keys.max() ?? 0
-        return (1...maxKey).compactMap { byGroup[$0] }.filter { !$0.isEmpty }
-    }
 
     /// Records a practice session (date, type, topic, correct/total) into practice_sessions.
     func recordPracticeSession(practiceDate: String, practiceType: String, topicId: Int, correct: Int, total: Int) {

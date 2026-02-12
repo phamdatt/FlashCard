@@ -257,7 +257,6 @@ struct ReadingDetailView: View {
                 SmartCopyDefineText(
                     text: passage.content,
                     flashcards: nil,
-                    singleTapToDefine: true,
                     defineTextFont: .system(size: 19, weight: .regular, design: .rounded),
                     defineTextColor: readingBodyColor
                 )

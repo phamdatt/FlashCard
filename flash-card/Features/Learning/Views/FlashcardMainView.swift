@@ -22,31 +22,31 @@ struct FlashcardMainView: View {
 
     enum PracticeType: String, CaseIterable {
         case multipleChoice = "Trắc nghiệm"
+        case flipCard = "Thẻ lật"
         case matching = "Nối cặp"
         case speaking = "Luyện nói"
         case fillInTheBlank = "Điền từ"
         case listening = "Nghe → chọn"
         case fillInPinyin = "Điền pinyin"
         case meaningToHanzi = "Nghĩa → Hán tự"
-        case similarLooking = "Từ dễ nhầm"
 
-        /// Tiếng Anh & Tiếng Trung: Trắc nghiệm, Nối, Nói, Điền từ, Nghe→chọn. Chỉ Tiếng Trung thêm: Điền pinyin, Nghĩa→Hán tự, Từ dễ nhầm.
+        /// Tiếng Anh & Tiếng Trung: Trắc nghiệm, Thẻ lật, Nối, Nói, Điền từ, Nghe→chọn. Chỉ Tiếng Trung thêm: Điền pinyin, Nghĩa→Hán tự.
         static func availableTypes(subjectName: String?) -> [PracticeType] {
-            let all: [PracticeType] = [.multipleChoice, .matching, .speaking, .fillInTheBlank, .listening]
+            let all: [PracticeType] = [.multipleChoice, .flipCard, .matching, .speaking, .fillInTheBlank, .listening]
             guard subjectName == "Tiếng Trung" else { return all }
-            return all + [.fillInPinyin, .meaningToHanzi, .similarLooking]
+            return all + [.fillInPinyin, .meaningToHanzi]
         }
 
         var icon: String {
             switch self {
             case .multipleChoice: return "list.bullet.circle.fill"
+            case .flipCard: return "rectangle.portrait.on.rectangle.portrait.angled"
             case .matching: return "arrow.left.arrow.right"
             case .speaking: return "mic.fill"
             case .fillInTheBlank: return "pencil.and.list.clipboard"
             case .listening: return "speaker.wave.2.fill"
             case .fillInPinyin: return "character.bubble"
             case .meaningToHanzi: return "character.cursor.ibeam"
-            case .similarLooking: return "eye.trianglebadge.exclamationmark"
             }
         }
     }
@@ -67,6 +67,8 @@ struct FlashcardMainView: View {
     /// Đã bấm Bắt đầu → đang trong phiên luyện tập (bấm Back sẽ confirm).
     @State private var practiceStarted: Bool = false
     @State private var showEndPracticeConfirmation: Bool = false
+    /// Đang trong flow Từ của ngày (Lật thẻ → Trắc nghiệm → Nối từ → Nghĩa→Hán tự).
+    @State private var isWordOfDayFlow: Bool = false
 
     enum PracticeSource: String, CaseIterable {
         case all = "Tất cả"
@@ -76,6 +78,22 @@ struct FlashcardMainView: View {
     }
     
     var body: some View {
+        mainContent
+            .modifier(FlashcardMainModifier(
+                viewModel: viewModel,
+                topic: topic,
+                selectedMode: $selectedMode,
+                practiceStarted: $practiceStarted,
+                selectedPracticeType: $selectedPracticeType,
+                showEditFlashcardSheet: $showEditFlashcardSheet,
+                showDeleteMultipleFlashcardsConfirmation: $showDeleteMultipleFlashcardsConfirmation,
+                showEndPracticeConfirmation: $showEndPracticeConfirmation,
+                openWordOfDayPracticeIfNeeded: openWordOfDayPracticeIfNeeded,
+                resetPractice: resetPractice
+            ))
+    }
+
+    private var mainContent: some View {
         VStack(spacing: 0) {
             headerSection
             ThemeDivider()
@@ -83,93 +101,6 @@ struct FlashcardMainView: View {
             modeContent
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .onChange(of: selectedMode) { _, newValue in
-            viewModel.isInPracticeMode = (newValue == .practice)
-            if newValue == .list {
-                practiceStarted = false
-                viewModel.isPracticeSessionActive = false
-            }
-        }
-        .onChange(of: practiceStarted) { _, started in
-            viewModel.isPracticeSessionActive = started
-        }
-        .onChange(of: viewModel.isPracticeSessionActive) { _, active in
-            if !active { practiceStarted = false }
-        }
-        .onAppear {
-            viewModel.isInPracticeMode = (selectedMode == .practice)
-        }
-        .onDisappear {
-            viewModel.isInPracticeMode = false
-        }
-        .onChange(of: topic.id) { _, _ in
-            // Reset when topic changes; nếu không phải Tiếng Trung thì bỏ chọn Điền pinyin
-            if selectedMode == .practice {
-                let available = PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name)
-                if !available.contains(selectedPracticeType) {
-                    selectedPracticeType = .multipleChoice
-                }
-                resetPractice()
-            }
-        }
-        .sheet(isPresented: $viewModel.showAddFlashcardSheet) {
-            AddFlashcardSheet(viewModel: viewModel)
-        }
-        .sheet(isPresented: $viewModel.showImportFlashcardSheet) {
-            ImportFlashcardSheet(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showEditFlashcardSheet) {
-            if let flashcard = viewModel.selectedFlashcard, let topic = viewModel.selectedTopic {
-                EditFlashcardSheet(flashcard: flashcard, topic: topic, viewModel: viewModel, onDismiss: { showEditFlashcardSheet = false })
-            }
-        }
-        .overlay {
-            ConfirmActionOverlay(
-                title: "Xóa từ vựng?",
-                message: viewModel.flashcardToDelete.map { "Từ \"\($0.question)\" sẽ bị xóa. Không thể hoàn tác." } ?? "",
-                destructiveTitle: "Xóa",
-                cancelTitle: "Huỷ",
-                isPresented: Binding(
-                    get: { viewModel.flashcardToDelete != nil },
-                    set: { if !$0 { viewModel.flashcardToDelete = nil } }
-                ),
-                onConfirm: {
-                    if let fc = viewModel.flashcardToDelete {
-                        viewModel.flashcardToDelete = nil
-                        viewModel.deleteFlashcard(fc)
-                    }
-                }
-            )
-        }
-        .overlay {
-            ConfirmActionOverlay(
-                title: "Xóa từ vựng đã chọn?",
-                message: "\(viewModel.selectedFlashcardIds.count) từ vựng sẽ bị xóa. Không thể hoàn tác.",
-                destructiveTitle: "Xóa",
-                cancelTitle: "Huỷ",
-                isPresented: $showDeleteMultipleFlashcardsConfirmation,
-                onConfirm: {
-                    viewModel.deleteSelectedFlashcards(topicId: topic.id)
-                    showDeleteMultipleFlashcardsConfirmation = false
-                }
-            )
-        }
-        .overlay {
-            ConfirmActionOverlay(
-                title: "Kết thúc luyện tập?",
-                message: "Bạn có chắc muốn thoát? Phiên luyện tập sẽ kết thúc.",
-                destructiveTitle: "Kết thúc",
-                cancelTitle: "Tiếp tục",
-                isPresented: $showEndPracticeConfirmation,
-                onConfirm: {
-                    showEndPracticeConfirmation = false
-                    practiceStarted = false
-                    viewModel.isPracticeSessionActive = false
-                    viewModel.selectedTopic = nil
-                    viewModel.selectedFlashcard = nil
-                }
-            )
-        }
     }
 
     private var headerSection: some View {
@@ -387,9 +318,43 @@ struct FlashcardMainView: View {
     // Practice mode view
     private var practiceView: some View {
         Group {
-            switch selectedPracticeType {
+            if isWordOfDayFlow, !shuffledFlashcards.isEmpty {
+                WordOfDayPracticeFlowView(
+                    flashcards: shuffledFlashcards,
+                    topic: topic,
+                    subjectName: viewModel.selectedSubject?.name ?? "",
+                    subjectIcon: viewModel.selectedSubject?.displayIcon,
+                    radicalForCharacter: viewModel.radicalForCharacter,
+                    topicId: topic.id,
+                    onComplete: {
+                        isWordOfDayFlow = false
+                        practiceStarted = false
+                        viewModel.isPracticeSessionActive = false
+                        viewModel.loadStreakInfo()
+                        resetPractice()
+                    }
+                )
+            } else {
+                switch selectedPracticeType {
             case .multipleChoice:
                 MultipleChoicePracticeView(
+                    flashcards: shuffledFlashcards,
+                    topic: topic,
+                    topicId: topic.id,
+                    subjectName: viewModel.selectedSubject?.name ?? "",
+                    subjectIcon: viewModel.selectedSubject?.displayIcon,
+                    radicalForCharacter: viewModel.radicalForCharacter,
+                    onComplete: { correctCount, total in
+                        score = correctCount
+                        totalAnswered = total
+                    },
+                    onReset: {
+                        recordPracticeIfNeeded()
+                        resetPractice()
+                    }
+                )
+            case .flipCard:
+                FlipCardPracticeView(
                     flashcards: shuffledFlashcards,
                     topic: topic,
                     topicId: topic.id,
@@ -486,23 +451,7 @@ struct FlashcardMainView: View {
                         resetPractice()
                     }
                 )
-            case .similarLooking:
-                SimilarLookingPracticeView(
-                    flashcards: shuffledFlashcards,
-                    topic: topic,
-                    topicId: topic.id,
-                    subjectName: viewModel.selectedSubject?.name ?? "",
-                    subjectIcon: viewModel.selectedSubject?.displayIcon,
-                    radicalForCharacter: viewModel.radicalForCharacter,
-                    onComplete: { correctCount, total in
-                        score = correctCount
-                        totalAnswered = total
-                    },
-                    onReset: {
-                        recordPracticeIfNeeded()
-                        resetPractice()
-                    }
-                )
+            }
             }
         }
     }
@@ -512,14 +461,11 @@ struct FlashcardMainView: View {
         totalAnswered > 0 ? Int((Double(score) / Double(totalAnswered)) * 100) : 0
     }
 
-    /// Count of cards to review for selected source (for Điền pinyin: only cards that have pinyin; for Từ dễ nhầm: only cards with similar-looking chars)
+    /// Count of cards to review for selected source (for Điền pinyin: only cards that have pinyin)
     private var practicePoolCount: Int {
         let pool = practicePool()
         if selectedPracticeType == .fillInPinyin {
             return pool.filter(\.hasPinyin).count
-        }
-        if selectedPracticeType == .similarLooking {
-            return pool.filter { SimilarLookingData.hasSimilarLookingCharacter($0.questionDisplayText) }.count
         }
         return pool.count
     }
@@ -562,9 +508,6 @@ struct FlashcardMainView: View {
         if selectedPracticeType == .fillInPinyin {
             pool = pool.filter(\.hasPinyin)
         }
-        if selectedPracticeType == .similarLooking {
-            pool = pool.filter { SimilarLookingData.hasSimilarLookingCharacter($0.questionDisplayText) }
-        }
         let countToUse = min(selectedWordCount, pool.count)
 
         shuffledFlashcards = Array(pool.shuffled().prefix(countToUse))
@@ -576,6 +519,20 @@ struct FlashcardMainView: View {
     
     private func resetPractice() {
         startPractice()
+    }
+
+    /// Mở mode Luyện tập với flow Từ của ngày (Lật thẻ → Trắc nghiệm → Nối từ → Nghĩa→Hán tự) khi viewModel.wordOfDayToPractice khớp topic.
+    private func openWordOfDayPracticeIfNeeded() {
+        guard let pending = viewModel.wordOfDayToPractice, pending.topic.id == topic.id else { return }
+        viewModel.wordOfDayToPractice = nil
+        selectedMode = .practice
+        shuffledFlashcards = pending.flashcards
+        currentIndex = 0
+        score = 0
+        totalAnswered = 0
+        practiceRecorded = false
+        isWordOfDayFlow = true
+        practiceStarted = true
     }
     
     private func recordPracticeIfNeeded() {
@@ -711,6 +668,173 @@ struct AddFlashcardSheet: View {
         viewModel.newFlashcardAnswer = ""
         viewModel.newFlashcardHint = ""
         viewModel.showAddFlashcardSheet = false
+    }
+}
+
+// MARK: - Modifier tách biệt để tránh compiler type-check timeout
+private struct FlashcardMainModifier: ViewModifier {
+    @ObservedObject var viewModel: ContentViewModel
+    let topic: Topic
+    @Binding var selectedMode: FlashcardMainView.ViewMode
+    @Binding var practiceStarted: Bool
+    @Binding var selectedPracticeType: FlashcardMainView.PracticeType
+    @Binding var showEditFlashcardSheet: Bool
+    @Binding var showDeleteMultipleFlashcardsConfirmation: Bool
+    @Binding var showEndPracticeConfirmation: Bool
+    let openWordOfDayPracticeIfNeeded: () -> Void
+    let resetPractice: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .modifier(FlashcardMainModifierLifecycle(
+                viewModel: viewModel,
+                topic: topic,
+                selectedMode: $selectedMode,
+                practiceStarted: $practiceStarted,
+                selectedPracticeType: $selectedPracticeType,
+                openWordOfDayPracticeIfNeeded: openWordOfDayPracticeIfNeeded,
+                resetPractice: resetPractice
+            ))
+            .modifier(FlashcardMainModifierSheets(
+                viewModel: viewModel,
+                showEditFlashcardSheet: $showEditFlashcardSheet
+            ))
+            .modifier(FlashcardMainModifierOverlays(
+                viewModel: viewModel,
+                topic: topic,
+                practiceStarted: $practiceStarted,
+                showDeleteMultipleFlashcardsConfirmation: $showDeleteMultipleFlashcardsConfirmation,
+                showEndPracticeConfirmation: $showEndPracticeConfirmation
+            ))
+    }
+}
+
+private struct FlashcardMainModifierLifecycle: ViewModifier {
+    @ObservedObject var viewModel: ContentViewModel
+    let topic: Topic
+    @Binding var selectedMode: FlashcardMainView.ViewMode
+    @Binding var practiceStarted: Bool
+    @Binding var selectedPracticeType: FlashcardMainView.PracticeType
+    let openWordOfDayPracticeIfNeeded: () -> Void
+    let resetPractice: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: selectedMode) { _, newValue in
+                viewModel.isInPracticeMode = (newValue == .practice)
+                if newValue == .list {
+                    practiceStarted = false
+                    viewModel.isPracticeSessionActive = false
+                }
+            }
+            .onChange(of: practiceStarted) { _, started in
+                viewModel.isPracticeSessionActive = started
+            }
+            .onChange(of: viewModel.isPracticeSessionActive) { _, active in
+                if !active { practiceStarted = false }
+            }
+            .onAppear {
+                viewModel.isInPracticeMode = (selectedMode == .practice)
+                openWordOfDayPracticeIfNeeded()
+            }
+            .onChange(of: viewModel.wordOfDayToPractice?.topic.id) { _, newId in
+                if newId == topic.id { openWordOfDayPracticeIfNeeded() }
+            }
+            .onDisappear { viewModel.isInPracticeMode = false }
+            .onChange(of: topic.id) { _, _ in
+                if selectedMode == .practice {
+                    let available = FlashcardMainView.PracticeType.availableTypes(subjectName: viewModel.selectedSubject?.name)
+                    if !available.contains(selectedPracticeType) {
+                        selectedPracticeType = .multipleChoice
+                    }
+                    resetPractice()
+                }
+            }
+    }
+}
+
+private struct FlashcardMainModifierSheets: ViewModifier {
+    @ObservedObject var viewModel: ContentViewModel
+    @Binding var showEditFlashcardSheet: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $viewModel.showAddFlashcardSheet) {
+                AddFlashcardSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $viewModel.showImportFlashcardSheet) {
+                ImportFlashcardSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showEditFlashcardSheet) {
+                if let flashcard = viewModel.selectedFlashcard, let topic = viewModel.selectedTopic {
+                    EditFlashcardSheet(flashcard: flashcard, topic: topic, viewModel: viewModel, onDismiss: { showEditFlashcardSheet = false })
+                }
+            }
+    }
+}
+
+private struct FlashcardMainModifierOverlays: ViewModifier {
+    @ObservedObject var viewModel: ContentViewModel
+    let topic: Topic
+    @Binding var practiceStarted: Bool
+    @Binding var showDeleteMultipleFlashcardsConfirmation: Bool
+    @Binding var showEndPracticeConfirmation: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .overlay { deleteFlashcardOverlay }
+            .overlay { deleteMultipleOverlay }
+            .overlay { endPracticeOverlay }
+    }
+
+    private var deleteFlashcardOverlay: some View {
+        ConfirmActionOverlay(
+            title: "Xóa từ vựng?",
+            message: viewModel.flashcardToDelete.map { "Từ \"\($0.question)\" sẽ bị xóa. Không thể hoàn tác." } ?? "",
+            destructiveTitle: "Xóa",
+            cancelTitle: "Huỷ",
+            isPresented: Binding(
+                get: { viewModel.flashcardToDelete != nil },
+                set: { if !$0 { viewModel.flashcardToDelete = nil } }
+            ),
+            onConfirm: {
+                if let fc = viewModel.flashcardToDelete {
+                    viewModel.flashcardToDelete = nil
+                    viewModel.deleteFlashcard(fc)
+                }
+            }
+        )
+    }
+
+    private var deleteMultipleOverlay: some View {
+        ConfirmActionOverlay(
+            title: "Xóa từ vựng đã chọn?",
+            message: "\(viewModel.selectedFlashcardIds.count) từ vựng sẽ bị xóa. Không thể hoàn tác.",
+            destructiveTitle: "Xóa",
+            cancelTitle: "Huỷ",
+            isPresented: $showDeleteMultipleFlashcardsConfirmation,
+            onConfirm: {
+                viewModel.deleteSelectedFlashcards(topicId: topic.id)
+                showDeleteMultipleFlashcardsConfirmation = false
+            }
+        )
+    }
+
+    private var endPracticeOverlay: some View {
+        ConfirmActionOverlay(
+            title: "Kết thúc luyện tập?",
+            message: "Bạn có chắc muốn thoát? Phiên luyện tập sẽ kết thúc.",
+            destructiveTitle: "Kết thúc",
+            cancelTitle: "Tiếp tục",
+            isPresented: $showEndPracticeConfirmation,
+            onConfirm: {
+                showEndPracticeConfirmation = false
+                practiceStarted = false
+                viewModel.isPracticeSessionActive = false
+                viewModel.selectedTopic = nil
+                viewModel.selectedFlashcard = nil
+            }
+        )
     }
 }
 

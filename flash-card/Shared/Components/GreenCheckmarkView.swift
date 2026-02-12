@@ -23,11 +23,15 @@ struct GreenCheckmarkView: View {
     }
 }
 
-#Preview {
-    HStack(spacing: 16) {
-        GreenCheckmarkView(size: 18)
-        GreenCheckmarkView(size: 22)
-        GreenCheckmarkView(size: 28)
+#if DEBUG
+struct GreenCheckmarkView_Previews: PreviewProvider {
+    static var previews: some View {
+        HStack(spacing: 16) {
+            GreenCheckmarkView(size: 18)
+            GreenCheckmarkView(size: 22)
+            GreenCheckmarkView(size: 28)
+        }
+        .padding()
     }
-    .padding()
 }
+#endif

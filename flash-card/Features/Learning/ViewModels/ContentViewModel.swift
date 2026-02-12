@@ -21,6 +21,7 @@ enum DetailRoute: Equatable {
 /// Hành động bấm ở sidebar khi đang practice; confirm xong mới thực hiện.
 enum PendingSidebarAction: Equatable {
     case switchToSubject(id: Int)
+    case switchToWordOfDay(subjectId: Int, topicId: Int, flashcardIds: [Int])
     case switchToReviewMistakes
     case switchToStatistics
     case showKeyboardShortcuts
@@ -108,6 +109,10 @@ class ContentViewModel: ObservableObject {
     // Loading state (initial load / reload)
     @Published var isLoading = false
 
+    /// Khi non-nil: FlashcardMainView của topic đó sẽ mở mode Luyện tập với danh sách thẻ.
+    @Published var wordOfDayToPractice: (topic: Topic, flashcards: [Flashcard], subject: Subject)?
+    /// Seed random mỗi lần mở app → topic và từ được chọn khác nhau mỗi phiên.
+    private let wordOfDaySessionSeed: Int
     /// Practice session count per topic id (for "Đã làm" / "Chưa làm" badge).
     @Published var topicPracticeCounts: [Int: Int] = [:]
     /// Radical (部首) lookup for Tiếng Trung: character (汉字) -> bộ thủ. Built from topic "部首" under subject "Tiếng Trung".
@@ -204,6 +209,7 @@ class ContentViewModel: ObservableObject {
 
     init(databaseForTesting: DatabaseManager? = nil) {
         self.testDatabase = databaseForTesting
+        self.wordOfDaySessionSeed = Int.random(in: 0..<Int.max)
         isLoading = true
         DispatchQueue.main.async { [weak self] in
             self?.loadLearningData()
@@ -239,6 +245,27 @@ class ContentViewModel: ObservableObject {
                 selectedTopic = t
             }
         }
+    }
+
+    /// Từ theo ngày: mỗi môn (Tiếng Anh, Tiếng Trung) 5–10 từ. Random topic mỗi lần mở app.
+    var wordOfTheDayBySubject: [(subject: Subject, topic: Topic, flashcards: [Flashcard])] {
+        let vocabSubjects = ["Tiếng Anh", "Tiếng Trung"]
+        var result: [(Subject, Topic, [Flashcard])] = []
+        for subject in subjects where vocabSubjects.contains(subject.name) {
+            let topicsWithCards = subject.topics.filter { !$0.flashcards.isEmpty }
+            guard !topicsWithCards.isEmpty else { continue }
+            let seed = wordOfDaySessionSeed + subject.id * 1000
+            let topicIdx = abs(seed) % topicsWithCards.count
+            let topic = topicsWithCards[topicIdx]
+            let all = topic.flashcards
+            let count = min(5 + (abs(seed + 1) % 6), all.count) // 5–10 từ
+            guard count > 0 else { continue }
+            let maxStart = max(0, all.count - count)
+            let startIdx = maxStart > 0 ? abs(seed + 2) % (maxStart + 1) : 0
+            let selected = Array(all.dropFirst(startIdx).prefix(count))
+            result.append((subject, topic, selected))
+        }
+        return result
     }
 
     /// Search in flashcard question/answer within the given subject. Returns (topic, flashcard) pairs.
@@ -719,6 +746,17 @@ class ContentViewModel: ObservableObject {
             if let s = subjects.first(where: { $0.id == id }) {
                 selectSubject(s)
                 switchToLearningMode()
+            }
+        case .switchToWordOfDay(let subjectId, let topicId, let flashcardIds):
+            if let s = subjects.first(where: { $0.id == subjectId }),
+               let t = s.topics.first(where: { $0.id == topicId }) {
+                let cards = flashcardIds.compactMap { id in t.flashcards.first(where: { $0.id == id }) }
+                guard !cards.isEmpty, let firstCard = cards.first else { break }
+                selectSubject(s)
+                selectTopic(t)
+                selectFlashcard(firstCard)
+                switchToLearningMode()
+                wordOfDayToPractice = (t, cards, s)
             }
         case .switchToReviewMistakes:
             switchToReviewMistakes()
